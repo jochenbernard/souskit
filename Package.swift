@@ -14,6 +14,10 @@ let package = Package(
     ],
     products: [
         .library(
+            name: "SousCore",
+            targets: ["SousCore"]
+        ),
+        .library(
             name: "SousKit",
             targets: ["SousKit"]
         )
@@ -26,19 +30,37 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "SousCore",
+            swiftSettings: .shared,
+            plugins: .shared
+        ),
+        .target(
             name: "SousKit",
-            swiftSettings: [
-                .enableUpcomingFeature("InferIsolatedConformances"),
-                .enableUpcomingFeature("MemberImportVisibility"),
-                .enableUpcomingFeature("NonisolatedNonsendingByDefault")
-            ],
-            plugins: [
-                .plugin(
-                    name: "SwiftLintBuildToolPlugin",
-                    package: "SwiftLintPlugins"
-                )
-            ]
+            dependencies: ["SousCore"],
+            swiftSettings: .shared,
+            plugins: .shared
         )
     ],
     swiftLanguageModes: [.v6]
 )
+
+private extension [SwiftSetting] {
+    static var shared: [SwiftSetting] {
+        [
+            .enableUpcomingFeature("InferIsolatedConformances"),
+            .enableUpcomingFeature("MemberImportVisibility"),
+            .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+        ]
+    }
+}
+
+private extension [Target.PluginUsage] {
+    static var shared: [Target.PluginUsage] {
+        [
+            .plugin(
+                name: "SwiftLintBuildToolPlugin",
+                package: "SwiftLintPlugins"
+            )
+        ]
+    }
+}
