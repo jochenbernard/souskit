@@ -37,6 +37,14 @@ struct IngredientTests {
     }
 
     @Test
+    func allowsNoSpaceBetweenTheAmountFenceAndTheName() throws {
+        let parsed = SousParser().parseRecipe("Cook @{200 g}pasta@.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "pasta")
+    }
+
+    @Test
     func extractsSeveralIngredientsFromOneStep() throws {
         let parsed = SousParser().parseRecipe("Fry @garlic@ and add @baby spinach@.")
 

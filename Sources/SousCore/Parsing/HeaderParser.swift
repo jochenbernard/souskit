@@ -11,6 +11,7 @@ enum HeaderParser {
 
     static func split(
         _ lines: [Substring],
+        map: SourceMap,
         diagnostics: inout [Diagnostic]
     ) -> (header: [Substring], body: [Substring]) {
         guard let first = lines.first, SourceText.isFence(first) else {
@@ -22,15 +23,19 @@ enum HeaderParser {
         }
 
         // No closing fence: recover by reading to the end of the file so an obvious title is not lost.
-        diagnostics.append(.warning(.unterminatedHeader, "Header is missing a closing fence."))
+        diagnostics.append(.warning(
+            .unterminatedHeader,
+            "Header is missing a closing fence.",
+            at: map.range(from: first.startIndex, length: first.count)
+        ))
 
         return (header: Array(lines.dropFirst()), body: [])
     }
 
     /// The typed accessors are views over the raw store, so they are derived from the
     /// entries rather than accumulated alongside them.
-    static func parse(_ lines: [Substring], diagnostics: inout [Diagnostic]) -> Metadata {
-        let entries = self.entries(in: lines, diagnostics: &diagnostics)
+    static func parse(_ lines: [Substring], map: SourceMap, diagnostics: inout [Diagnostic]) -> Metadata {
+        let entries = self.entries(in: lines, map: map, diagnostics: &diagnostics)
 
         return Metadata(
             title: entries.lastScalar("title"),
@@ -43,12 +48,17 @@ enum HeaderParser {
         )
     }
 
-    private static func entries(in lines: [Substring], diagnostics: inout [Diagnostic]) -> [Metadata.Entry] {
+    private static func entries(
+        in lines: [Substring],
+        map: SourceMap,
+        diagnostics: inout [Diagnostic]
+    ) -> [Metadata.Entry] {
         var entries: [Metadata.Entry] = []
         var seenScalarKeys: Set<String> = []
 
         for line in lines {
             guard let entry = self.entry(in: line) else { continue }
+            let keyRange = map.range(from: line.startIndex, length: entry.key.count)
 
             guard !listKeys.contains(entry.key) else {
                 entries.append(Metadata.Entry(key: entry.key, value: .list(list(in: entry.value))))
@@ -58,12 +68,20 @@ enum HeaderParser {
             entries.append(Metadata.Entry(key: entry.key, value: .scalar(entry.value)))
 
             guard scalarKeys.contains(entry.key) else {
-                diagnostics.append(.warning(.unknownHeaderKey, "Unrecognized header key '\(entry.key)'."))
+                diagnostics.append(.warning(
+                    .unknownHeaderKey,
+                    "Unrecognized header key '\(entry.key)'.",
+                    at: keyRange
+                ))
                 continue
             }
 
             if !seenScalarKeys.insert(entry.key).inserted {
-                diagnostics.append(.warning(.repeatedScalarKey, "Repeated header key '\(entry.key)'."))
+                diagnostics.append(.warning(
+                    .repeatedScalarKey,
+                    "Repeated header key '\(entry.key)'.",
+                    at: keyRange
+                ))
             }
         }
 

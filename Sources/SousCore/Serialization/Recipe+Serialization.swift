@@ -1,7 +1,8 @@
 extension Recipe {
     /// Renders the recipe back to Sous source text.
     ///
-    /// The round-trip is non-destructive: any content the reader did not modify is reproduced exactly.
+    /// Content is preserved, while incidental layout such as repeated blank lines is
+    /// normalized, so re-reading the result yields the same recipe.
     ///
     /// - Returns: The recipe rendered as Sous source text.
     public func serialized() -> String {

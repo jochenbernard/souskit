@@ -44,4 +44,53 @@ struct SerializationTests {
 
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
+
+    // Incidental layout, such as repeated blank lines or a trailing newline, is normalized
+    // rather than preserved. What must hold is that the output re-reads to the same recipe.
+
+    @Test(arguments: [
+        "Toast the bread.\n",
+        "Toast the bread.\n\n",
+        "\nToast the bread.",
+        "First step.\n\n\nSecond step.",
+        "---\n---",
+        "---\ntitle: Toast\n---\nBody line.",
+        "Cook @{200 g}pasta@."
+    ])
+    func normalizingLayoutIsStable(source: String) {
+        let parser = SousParser()
+        let normalized = parser.parseRecipe(source).value.serialized()
+
+        #expect(parser.parseRecipe(normalized).value.serialized() == normalized)
+    }
+
+    @Test
+    func reReadingTheOutputYieldsTheSameRecipe() {
+        let source = """
+        ---
+        title: Garlic Pasta
+        servings: 2
+        tags: [italian, quick]
+        ---
+
+
+        Cook @{200 g}pasta@ in a #large pot#.
+
+
+        Season with @{a pinch} salt@ and serve.
+        """
+
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+        let reRead = parser.parseRecipe(recipe.serialized()).value
+        let ingredients = recipe.steps.flatMap(\.ingredients)
+        let reReadIngredients = reRead.steps.flatMap(\.ingredients)
+        let cookware = recipe.steps.flatMap(\.cookware)
+        let reReadCookware = reRead.steps.flatMap(\.cookware)
+
+        #expect(reRead.metadata == recipe.metadata)
+        #expect(reRead.steps.count == recipe.steps.count)
+        #expect(reReadIngredients == ingredients)
+        #expect(reReadCookware == cookware)
+    }
 }

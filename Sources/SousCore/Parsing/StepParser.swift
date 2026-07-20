@@ -10,9 +10,19 @@ enum StepParser {
         case literal(String, next: Int)
     }
 
+    /// Where a paragraph sits in the source, so offsets within it can be reported.
+    struct Origin {
+        var index: String.Index
+        var map: SourceMap
+
+        func range(offset: Int, length: Int) -> SourceRange {
+            map.range(from: index, offset: offset, length: length)
+        }
+    }
+
     private static let escapable: Set<Character> = ["@", "#", "~", ">", "{"]
 
-    static func parse(_ text: String, diagnostics: inout [Diagnostic]) -> Step {
+    static func parse(_ text: String, origin: Origin, diagnostics: inout [Diagnostic]) -> Step {
         let characters = Array(text)
         var segments: [Segment] = []
         var ingredients: [Ingredient] = []
@@ -32,7 +42,7 @@ enum StepParser {
             }
 
             if character == "@", opensSpan(characters, at: cursor) {
-                switch scanIngredient(characters, from: cursor, diagnostics: &diagnostics) {
+                switch scanIngredient(characters, from: cursor, origin: origin, diagnostics: &diagnostics) {
                 case let .annotation(ingredient, next):
                     flush(&prose, into: &segments)
                     segments.append(.ingredient(ingredient))
@@ -46,7 +56,7 @@ enum StepParser {
             }
 
             if character == "#", opensSpan(characters, at: cursor) {
-                switch scanCookware(characters, from: cursor, diagnostics: &diagnostics) {
+                switch scanCookware(characters, from: cursor, origin: origin, diagnostics: &diagnostics) {
                 case let .annotation(piece, next):
                     flush(&prose, into: &segments)
                     segments.append(.cookware(piece))
@@ -95,6 +105,7 @@ enum StepParser {
     private static func scanIngredient(
         _ characters: [Character],
         from start: Int,
+        origin: Origin,
         diagnostics: inout [Diagnostic]
     ) -> Outcome<Ingredient> {
         var cursor = start + 1
@@ -103,43 +114,66 @@ enum StepParser {
         if characters[cursor] == "{" {
             guard let closingBrace = index(of: "}", in: characters, from: cursor + 1) else {
                 // An amount fence with no closing brace makes the whole span not well-formed.
-                diagnostics.append(.warning(.unclosedSpan, "Amount fence is missing a closing brace."))
-                if let closingSigil = index(of: "@", in: characters, from: cursor) {
-                    return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
-                }
-                return .literal(String(characters[start...]), next: characters.count)
+                let end = index(of: "@", in: characters, from: cursor) ?? characters.count - 1
+                diagnostics.append(.warning(
+                    .unclosedSpan,
+                    "Amount fence is missing a closing brace.",
+                    at: origin.range(offset: start, length: end - start + 1)
+                ))
+
+                return .literal(String(characters[start...end]), next: end + 1)
             }
 
             amount = AmountParser.parse(String(characters[(cursor + 1)..<closingBrace]))
             cursor = closingBrace + 1
 
-            // One space separates the fence from the name.
+            // One space usually separates the fence from the name, but it is optional.
             if cursor < characters.count, characters[cursor] == " " { cursor += 1 }
         }
 
         guard let closingSigil = index(of: "@", in: characters, from: cursor) else {
-            diagnostics.append(.warning(.unclosedSpan, "Ingredient span is missing a closing sigil."))
+            diagnostics.append(.warning(
+                .unclosedSpan,
+                "Ingredient span is missing a closing sigil.",
+                at: origin.range(offset: start, length: 1)
+            ))
+
             return .literal(String(characters[start]), next: start + 1)
         }
 
-        let ingredient = Ingredient(
-            name: String(characters[cursor..<closingSigil]),
-            amount: amount
-        )
+        let name = String(characters[cursor..<closingSigil])
 
-        return .annotation(ingredient, next: closingSigil + 1)
+        // A span that names nothing is ordinary text, not an annotation of nothing.
+        guard !name.isEmpty else {
+            return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
+        }
+
+        return .annotation(Ingredient(name: name, amount: amount), next: closingSigil + 1)
     }
 
     private static func scanCookware(
         _ characters: [Character],
         from start: Int,
+        origin: Origin,
         diagnostics: inout [Diagnostic]
     ) -> Outcome<Cookware> {
         guard let closingSigil = index(of: "#", in: characters, from: start + 1) else {
-            diagnostics.append(.warning(.unclosedSpan, "Cookware span is missing a closing sigil."))
+            diagnostics.append(.warning(
+                .unclosedSpan,
+                "Cookware span is missing a closing sigil.",
+                at: origin.range(offset: start, length: 1)
+            ))
+
             return .literal(String(characters[start]), next: start + 1)
         }
 
-        return .annotation(Cookware(name: String(characters[(start + 1)..<closingSigil])), next: closingSigil + 1)
+        let name = String(characters[(start + 1)..<closingSigil])
+
+        // "##" names nothing, and a line-initial "## " is a group heading from v0.4.
+        guard !name.isEmpty else {
+            return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
+        }
+
+        return .annotation(Cookware(name: name), next: closingSigil + 1)
     }
 }

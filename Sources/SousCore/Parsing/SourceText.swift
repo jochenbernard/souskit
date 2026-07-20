@@ -6,8 +6,10 @@ enum SourceText {
         text.hasPrefix("\u{FEFF}") ? String(text.dropFirst()) : text
     }
 
+    /// Splits on any newline, so a CRLF file reads the same as an LF one. Swift treats
+    /// "\r\n" as a single character, which a plain "\n" separator would never match.
     static func lines(of text: String) -> [Substring] {
-        text.split(separator: "\n", omittingEmptySubsequences: false)
+        text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
     }
 
     static func isBlank(_ line: Substring) -> Bool {

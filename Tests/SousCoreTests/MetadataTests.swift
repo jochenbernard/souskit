@@ -190,6 +190,96 @@ struct MetadataTests {
     }
 
     @Test
+    func ignoresALeadingByteOrderMark() {
+        let source = "\u{FEFF}---\ntitle: Buttered Toast\n---"
+
+        #expect(SousParser().parseRecipe(source).value.metadata.title == "Buttered Toast")
+    }
+
+    @Test
+    func readsAKeyEndingTheLineAsAnEmptyValue() throws {
+        let source = """
+        ---
+        title:
+        ---
+        """
+
+        let title = try #require(SousParser().parseRecipe(source).value.metadata.title)
+        #expect(title.isEmpty)
+    }
+
+    @Test
+    func leavesNonNumericServingsUnsetButPreserved() {
+        let source = """
+        ---
+        servings: six
+        ---
+        """
+
+        let metadata = SousParser().parseRecipe(source).value.metadata
+        #expect(metadata.servings == nil)
+        #expect(metadata["servings"] == "six")
+    }
+
+    @Test
+    func skipsAHeaderLineWithNoKeyValueSeparator() {
+        let source = """
+        ---
+        title: Toast
+        stray line
+        ---
+        """
+
+        let metadata = SousParser().parseRecipe(source).value.metadata
+        #expect(metadata.title == "Toast")
+        #expect(metadata.entries.map(\.key) == ["title"])
+    }
+
+    @Test
+    func readsAnUnbracketedListValueAsASingleItem() {
+        let source = """
+        ---
+        tags: italian
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian"])
+    }
+
+    @Test
+    func readsAnUnterminatedBracketAsLiteralText() {
+        let source = """
+        ---
+        tags: [italian
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["[italian"])
+    }
+
+    @Test
+    func readsAListKeyWithNoValueAsNoItems() {
+        let source = """
+        ---
+        tags:
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
+    }
+
+    @Test
+    func readsAnEmptyInlineListAsNoItems() {
+        let source = """
+        ---
+        tags: []
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
+    }
+
+    @Test
     func parsesAnEmptyHeader() {
         let source = """
         ---

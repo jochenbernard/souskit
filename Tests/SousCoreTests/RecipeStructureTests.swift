@@ -63,6 +63,17 @@ struct RecipeStructureTests {
     }
 
     @Test
+    func normalizesWindowsLineEndings() throws {
+        let source = "---\r\ntitle: Buttered Toast\r\n---\r\n\r\nWarm a #pan#."
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.metadata.title == "Buttered Toast")
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.text == "Warm a #pan#.")
+        #expect(step.cookware.map(\.name) == ["pan"])
+    }
+
+    @Test
     func doesNotTreatUnmarkedProseAsAnnotations() throws {
         let parsed = SousParser().parseRecipe("Add salt and pepper to taste.")
 

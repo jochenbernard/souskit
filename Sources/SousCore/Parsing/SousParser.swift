@@ -11,10 +11,12 @@ public struct SousParser {
     /// - Returns: The parsed recipe together with any diagnostics.
     public func parseRecipe(_ text: String) -> Parsed<Recipe> {
         var diagnostics: [Diagnostic] = []
-        let lines = SourceText.lines(of: SourceText.withoutByteOrderMark(text))
-        let split = HeaderParser.split(lines, diagnostics: &diagnostics)
-        let metadata = HeaderParser.parse(split.header, diagnostics: &diagnostics)
-        let steps = Self.steps(in: split.body, diagnostics: &diagnostics)
+        let source = SourceText.withoutByteOrderMark(text)
+        let map = SourceMap(source)
+        let lines = SourceText.lines(of: source)
+        let split = HeaderParser.split(lines, map: map, diagnostics: &diagnostics)
+        let metadata = HeaderParser.parse(split.header, map: map, diagnostics: &diagnostics)
+        let steps = Self.steps(in: split.body, map: map, diagnostics: &diagnostics)
 
         return Parsed(
             value: Recipe(metadata: metadata, steps: steps),
@@ -23,13 +25,22 @@ public struct SousParser {
     }
 
     /// A step is one paragraph: a maximal run of consecutive non-blank lines.
-    private static func steps(in lines: [Substring], diagnostics: inout [Diagnostic]) -> [Step] {
+    private static func steps(
+        in lines: [Substring],
+        map: SourceMap,
+        diagnostics: inout [Diagnostic]
+    ) -> [Step] {
         var steps: [Step] = []
         var paragraph: [Substring] = []
 
         func endParagraph() {
-            guard !paragraph.isEmpty else { return }
-            steps.append(StepParser.parse(paragraph.joined(separator: "\n"), diagnostics: &diagnostics))
+            guard let first = paragraph.first else { return }
+
+            steps.append(StepParser.parse(
+                paragraph.joined(separator: "\n"),
+                origin: StepParser.Origin(index: first.startIndex, map: map),
+                diagnostics: &diagnostics
+            ))
             paragraph = []
         }
 

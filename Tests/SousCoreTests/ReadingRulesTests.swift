@@ -67,6 +67,81 @@ struct ReadingRulesTests {
     }
 
     @Test
+    func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
+        // "## Name" is a v0.4 group heading, so a v0.1 reader leaves it as ordinary text.
+        let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == "## Sauce\nBrown the beef.")
+    }
+
+    @Test
+    func doesNotProduceAnAnnotationWithAnEmptyName() throws {
+        let parsed = SousParser().parseRecipe("Use ## here and @@ there.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.isEmpty)
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // Forward compatibility: constructs from later versions are not understood by a v0.1
+    // reader, so they stay ordinary text and survive unchanged.
+    @Test(arguments: [
+        "Simmer ~40 min~ gently.",
+        "Spread the >sauce> on top.",
+        "Season with @salt@:staple and stir in @{=1 tsp} soda@."
+    ])
+    func preservesConstructsFromLaterVersions(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
+
+    @Test
+    func treatsReservedMarkdownCharactersAsOrdinaryText() throws {
+        let parsed = SousParser().parseRecipe("Use *bold*, _italic_, `code`, and [brackets] plainly.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func closesASpanOnALaterLineOfTheSameParagraph() throws {
+        let parsed = SousParser().parseRecipe("Add @baby\nspinach@ to the pan.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "baby\nspinach")
+    }
+
+    @Test
+    func doesNotCloseASpanAcrossAParagraphBreak() {
+        let source = """
+        Add @garlic
+
+        spinach@ to the pan.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        let ingredients = parsed.value.steps.flatMap(\.ingredients)
+        #expect(parsed.value.steps.count == 2)
+        #expect(ingredients.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func recoversFromAnUnclosedAmountFenceWithNoClosingSigil() throws {
+        let parsed = SousParser().parseRecipe("Cook @{200 g pasta")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.text == "Cook @{200 g pasta")
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
     func reportsAnUnclosedSpanAsAWarning() throws {
         let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")
 
