@@ -333,4 +333,24 @@ struct MetadataTests {
         #expect(metadata.title == nil)
         #expect(metadata.entries.isEmpty)
     }
+
+    @Test
+    func readsServingsSurroundedByWhitespaceAsAnIntegerWhilePreservingItVerbatim() {
+        let source = "---\nservings: 6 \n---"
+
+        let metadata = SousParser().parseRecipe(source).value.metadata
+        #expect(metadata.servings == 6)
+        #expect(metadata["servings"] == "6 ")
+    }
+
+    @Test
+    func dropsEmptyItemsFromAnInlineList() {
+        let source = """
+        ---
+        tags: [italian, , make-ahead,]
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "make-ahead"])
+    }
 }

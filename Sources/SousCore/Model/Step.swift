@@ -9,6 +9,6 @@ public struct Step: Equatable, Hashable, Sendable {
     /// The cookware annotated in the step, in document order.
     public var cookware: [Cookware]
 
-    /// The verbatim source text of the step.
+    /// The step's source text, with any line endings within it normalized to line feeds.
     public var text: String
 }

@@ -41,7 +41,7 @@ enum HeaderParser {
             title: entries.lastScalar("title"),
             language: entries.lastScalar("language"),
             version: entries.lastScalar("version"),
-            servings: entries.lastScalar("servings").flatMap(Int.init),
+            servings: entries.lastScalar("servings").flatMap({ Int(SourceText.trimmed($0)) }),
             tags: entries.mergedList("tags"),
             source: entries.lastScalar("source"),
             entries: entries
@@ -111,6 +111,8 @@ enum HeaderParser {
     }
 
     /// Only a list-valued field reads `[...]` as a list; elsewhere the brackets are literal.
+    /// Items are trimmed of surrounding whitespace, and an empty item, such as one left by
+    /// a stray or trailing comma, is dropped.
     private static func list(in value: String) -> [String] {
         guard value.hasPrefix("["), value.hasSuffix("]") else {
             return value.isEmpty ? [] : [value]
@@ -119,6 +121,9 @@ enum HeaderParser {
         let inner = value.dropFirst().dropLast()
         guard !SourceText.trimmed(inner).isEmpty else { return [] }
 
-        return inner.split(separator: ",", omittingEmptySubsequences: false).map(SourceText.trimmed)
+        return inner
+            .split(separator: ",", omittingEmptySubsequences: false)
+            .map(SourceText.trimmed)
+            .filter({ !$0.isEmpty })
     }
 }

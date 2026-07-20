@@ -74,6 +74,14 @@ struct RecipeStructureTests {
     }
 
     @Test
+    func normalizesLineEndingsWithinAMultiLineStep() throws {
+        let parsed = SousParser().parseRecipe("Add @baby\r\nspinach@ to the pan.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.text == "Add @baby\nspinach@ to the pan.")
+    }
+
+    @Test
     func doesNotTreatUnmarkedProseAsAnnotations() throws {
         let parsed = SousParser().parseRecipe("Add salt and pepper to taste.")
 

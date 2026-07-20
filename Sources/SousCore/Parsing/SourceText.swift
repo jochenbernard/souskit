@@ -35,6 +35,10 @@ enum SourceText {
         String(withoutTrailingWhitespace(text).drop(while: \.isWhitespace))
     }
 
+    static func trimmed(_ text: String) -> String {
+        trimmed(text[...])
+    }
+
     static func isDigit(_ character: Character) -> Bool {
         character.isASCII && character.isNumber
     }
