@@ -34,9 +34,21 @@ let package = Package(
             swiftSettings: .shared,
             plugins: .shared
         ),
+        .testTarget(
+            name: "SousCoreTests",
+            dependencies: ["SousCore"],
+            swiftSettings: .shared,
+            plugins: .shared
+        ),
         .target(
             name: "SousKit",
             dependencies: ["SousCore"],
+            swiftSettings: .shared,
+            plugins: .shared
+        ),
+        .testTarget(
+            name: "SousKitTests",
+            dependencies: ["SousKit"],
             swiftSettings: .shared,
             plugins: .shared
         )

@@ -13,3 +13,4 @@ disabled_rules:
   - nesting
   - no_empty_block
   - sorted_enum_cases
+  - trailing_closure
