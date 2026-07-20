@@ -41,6 +41,27 @@ public struct Metadata: Equatable, Hashable, Sendable {
 
     /// The last scalar value written for the given key, or `nil` when the key is absent.
     public subscript(key: String) -> String? {
-        nil
+        entries.lastScalar(key)
+    }
+}
+
+// The single last-wins lookup over the raw store, shared by the subscript and by the
+// header reader that derives the typed accessors, so the two cannot drift apart.
+
+extension [Metadata.Entry] {
+    func lastScalar(_ key: String) -> String? {
+        for entry in reversed() where entry.key == key {
+            if case let .scalar(value) = entry.value { return value }
+        }
+
+        return nil
+    }
+
+    func lastList(_ key: String) -> [String] {
+        for entry in reversed() where entry.key == key {
+            if case let .list(items) = entry.value { return items }
+        }
+
+        return []
     }
 }

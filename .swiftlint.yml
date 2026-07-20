@@ -5,6 +5,7 @@ opt_in_rules:
   - all
 
 disabled_rules:
+  - conditional_returns_on_newline
   - contrasted_opening_brace
   - explicit_acl
   - explicit_top_level_acl
@@ -12,5 +13,9 @@ disabled_rules:
   - extension_access_modifier
   - nesting
   - no_empty_block
+  - no_magic_numbers
   - sorted_enum_cases
+  - switch_case_on_newline
   - trailing_closure
+  - type_contents_order
+  - vertical_whitespace_between_cases

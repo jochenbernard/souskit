@@ -7,6 +7,7 @@ struct AmountTests {
         (source: "Cook @{200 g} pasta@.", value: 200.0, text: "200", unit: "g"),
         (source: "Add @{2 cloves} garlic@.", value: 2.0, text: "2", unit: "cloves"),
         (source: "Mix @{1 1/2 cups} flour@.", value: 1.5, text: "1 1/2", unit: "cups"),
+        (source: "Add @{1/2 cup} sugar@.", value: 0.5, text: "1/2", unit: "cup"),
         (source: "Pour @{2 fl oz} milk@.", value: 2.0, text: "2", unit: "fl oz"),
         (source: "Add @{3.2 kg} potatoes@.", value: 3.2, text: "3.2", unit: "kg")
     ])
