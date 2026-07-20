@@ -143,6 +143,49 @@ struct MetadataTests {
     }
 
     @Test
+    func warnsAboutARepeatedUnrecognizedKeyAndKeepsTheLastValue() {
+        let source = """
+        ---
+        chef: Alice
+        chef: Bob
+        ---
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .repeatedScalarKey }))
+        #expect(parsed.value.metadata["chef"] == "Bob")
+    }
+
+    @Test
+    func warnsAboutARepeatedListKeyAndMergesItsItems() {
+        let source = """
+        ---
+        tags: [italian]
+        tags: [quick]
+        ---
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .repeatedListKey }))
+        #expect(parsed.value.metadata.tags == ["italian", "quick"])
+    }
+
+    @Test
+    func mergesItemsAcrossRepeatedListKeysInDocumentOrder() {
+        let source = """
+        ---
+        tags: [comfort food, italian]
+        tags: [make-ahead]
+        ---
+        """
+
+        #expect(
+            SousParser().parseRecipe(source).value.metadata.tags
+                == ["comfort food", "italian", "make-ahead"]
+        )
+    }
+
+    @Test
     func recoversFromAnUnterminatedHeader() {
         let source = """
         ---

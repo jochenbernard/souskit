@@ -148,4 +148,29 @@ struct ReadingRulesTests {
         let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
         #expect(diagnostic.severity == .warning)
     }
+
+    @Test
+    func honorsAnEscapedClosingSigilInsideAnIngredientSpan() throws {
+        let parsed = SousParser().parseRecipe("Add @a\\@b@ now.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "a\\@b")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func honorsAnEscapedClosingSigilInsideACookwareSpan() throws {
+        let parsed = SousParser().parseRecipe("Use a #8\\# pan#.")
+
+        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        #expect(cookware.name == "8\\# pan")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func roundTripsAnEscapedSigilInsideASpan() {
+        let source = "Add @a\\@b@ now."
+
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
 }

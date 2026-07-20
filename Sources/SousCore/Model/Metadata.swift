@@ -57,11 +57,14 @@ extension [Metadata.Entry] {
         return nil
     }
 
-    func lastList(_ key: String) -> [String] {
-        for entry in reversed() where entry.key == key {
-            if case let .list(items) = entry.value { return items }
+    /// A repeated list key accumulates: the items of every occurrence are concatenated in
+    /// document order, rather than the last occurrence overwriting the earlier ones.
+    func mergedList(_ key: String) -> [String] {
+        var items: [String] = []
+        for entry in self where entry.key == key {
+            if case let .list(values) = entry.value { items += values }
         }
 
-        return []
+        return items
     }
 }

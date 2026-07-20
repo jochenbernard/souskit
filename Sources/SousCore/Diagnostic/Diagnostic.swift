@@ -22,6 +22,9 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
 
         /// The metadata header repeated a scalar key.
         case repeatedScalarKey
+
+        /// The metadata header repeated a list key.
+        case repeatedListKey
     }
 
     /// The diagnostic's severity.

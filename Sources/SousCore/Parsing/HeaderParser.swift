@@ -42,7 +42,7 @@ enum HeaderParser {
             language: entries.lastScalar("language"),
             version: entries.lastScalar("version"),
             servings: entries.lastScalar("servings").flatMap(Int.init),
-            tags: entries.lastList("tags"),
+            tags: entries.mergedList("tags"),
             source: entries.lastScalar("source"),
             entries: entries
         )
@@ -54,31 +54,32 @@ enum HeaderParser {
         diagnostics: inout [Diagnostic]
     ) -> [Metadata.Entry] {
         var entries: [Metadata.Entry] = []
-        var seenScalarKeys: Set<String> = []
+        var seenKeys: Set<String> = []
 
         for line in lines {
             guard let entry = self.entry(in: line) else { continue }
             let keyRange = map.range(from: line.startIndex, length: entry.key.count)
+            let isList = listKeys.contains(entry.key)
 
-            guard !listKeys.contains(entry.key) else {
-                entries.append(Metadata.Entry(key: entry.key, value: .list(list(in: entry.value))))
-                continue
-            }
+            entries.append(Metadata.Entry(
+                key: entry.key,
+                value: isList ? .list(list(in: entry.value)) : .scalar(entry.value)
+            ))
 
-            entries.append(Metadata.Entry(key: entry.key, value: .scalar(entry.value)))
-
-            guard scalarKeys.contains(entry.key) else {
+            // An unknown key is preserved and warned about, whether scalar or repeated.
+            if !isList, !scalarKeys.contains(entry.key) {
                 diagnostics.append(.warning(
                     .unknownHeaderKey,
                     "Unrecognized header key '\(entry.key)'.",
                     at: keyRange
                 ))
-                continue
             }
 
-            if !seenScalarKeys.insert(entry.key).inserted {
+            // A repeated key keeps every occurrence; the last-wins accessors interpret the
+            // latest. A list key repeat is distinguished so consumers can switch on it.
+            if !seenKeys.insert(entry.key).inserted {
                 diagnostics.append(.warning(
-                    .repeatedScalarKey,
+                    isList ? .repeatedListKey : .repeatedScalarKey,
                     "Repeated header key '\(entry.key)'.",
                     at: keyRange
                 ))

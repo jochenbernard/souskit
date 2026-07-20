@@ -102,6 +102,21 @@ enum StepParser {
         return nil
     }
 
+    /// Finds the span's closing sigil, skipping any escaped sigil so `\@` inside `@...@`
+    /// stays part of the name rather than closing it. The escape is kept verbatim.
+    private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
+        var cursor = start
+        while cursor < characters.count {
+            if characters[cursor] == "\\", cursor + 1 < characters.count, escapable.contains(characters[cursor + 1]) {
+                cursor += 2
+                continue
+            }
+            if characters[cursor] == sigil { return cursor }
+            cursor += 1
+        }
+        return nil
+    }
+
     private static func scanIngredient(
         _ characters: [Character],
         from start: Int,
@@ -131,7 +146,7 @@ enum StepParser {
             if cursor < characters.count, characters[cursor] == " " { cursor += 1 }
         }
 
-        guard let closingSigil = index(of: "@", in: characters, from: cursor) else {
+        guard let closingSigil = closingSigil("@", in: characters, from: cursor) else {
             diagnostics.append(.warning(
                 .unclosedSpan,
                 "Ingredient span is missing a closing sigil.",
@@ -157,7 +172,7 @@ enum StepParser {
         origin: Origin,
         diagnostics: inout [Diagnostic]
     ) -> Outcome<Cookware> {
-        guard let closingSigil = index(of: "#", in: characters, from: start + 1) else {
+        guard let closingSigil = closingSigil("#", in: characters, from: start + 1) else {
             diagnostics.append(.warning(
                 .unclosedSpan,
                 "Cookware span is missing a closing sigil.",
