@@ -55,13 +55,10 @@ enum AmountParser {
             end = decimals.end
         }
 
-        if end < characters.count,
-           characters[end] == "/",
-           let denominator = digits(in: characters, from: end + 1),
-           denominator.value != 0.0 {
+        if let bare = denominator(in: characters, from: end) {
             // A bare fraction, whose numerator is the run just scanned.
-            value /= denominator.value
-            end = denominator.end
+            value /= bare.value
+            end = bare.end
         } else if end < characters.count,
                   characters[end] == " ",
                   let mixed = fraction(in: characters, from: end + 1) {
@@ -76,13 +73,22 @@ enum AmountParser {
     /// Scans an `n/n` fraction, returning its value and the index just past it.
     private static func fraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         guard let numerator = digits(in: characters, from: start),
-              numerator.end < characters.count,
-              characters[numerator.end] == "/",
-              let denominator = digits(in: characters, from: numerator.end + 1),
-              denominator.value != 0.0
+              let denominator = denominator(in: characters, from: numerator.end)
         else { return nil }
 
         return (numerator.value / denominator.value, denominator.end)
+    }
+
+    /// Scans a `/n` denominator with a non-zero value, returning its value and the index
+    /// just past it. A zero denominator does not match, so it is never divided by.
+    private static func denominator(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
+        guard start < characters.count,
+              characters[start] == "/",
+              let run = digits(in: characters, from: start + 1),
+              run.value != 0.0
+        else { return nil }
+
+        return (run.value, run.end)
     }
 
     /// Scans a run of ASCII digits, returning its value and the index just past it.

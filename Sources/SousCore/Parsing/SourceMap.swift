@@ -7,33 +7,19 @@ struct SourceMap {
     private let source: String
     private let lineStarts: [String.Index]
 
-    init(_ source: String) {
+    /// The lines are the source already split on newlines, so their start indices are the
+    /// line starts and the source is not scanned a second time.
+    init(_ source: String, lines: [Substring]) {
         self.source = source
-
-        var starts = [source.startIndex]
-        var cursor = source.startIndex
-        while cursor < source.endIndex {
-            if source[cursor].isNewline {
-                starts.append(source.index(after: cursor))
-            }
-            cursor = source.index(after: cursor)
-        }
-        lineStarts = starts
+        self.lineStarts = lines.map(\.startIndex)
     }
 
     func location(at index: String.Index) -> SourceLocation {
-        var line = 1
-        var lineStart = source.startIndex
-
-        for (number, start) in lineStarts.enumerated() {
-            guard start <= index else { break }
-            line = number + 1
-            lineStart = start
-        }
+        let number = lineStarts.lastIndex(where: { $0 <= index }) ?? 0
 
         return SourceLocation(
-            line: line,
-            column: source.distance(from: lineStart, to: index) + 1,
+            line: number + 1,
+            column: source.distance(from: lineStarts[number], to: index) + 1,
             offset: source.distance(from: source.startIndex, to: index)
         )
     }

@@ -32,12 +32,7 @@ enum SourceText {
     }
 
     static func trimmed(_ text: Substring) -> String {
-        let withoutTrailing = withoutTrailingWhitespace(text)
-        var start = withoutTrailing.startIndex
-        while start < withoutTrailing.endIndex, withoutTrailing[start].isWhitespace {
-            start = withoutTrailing.index(after: start)
-        }
-        return String(withoutTrailing[start..<withoutTrailing.endIndex])
+        String(withoutTrailingWhitespace(text).drop(while: \.isWhitespace))
     }
 
     static func isDigit(_ character: Character) -> Bool {

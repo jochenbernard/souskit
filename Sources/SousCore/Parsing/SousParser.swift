@@ -12,8 +12,8 @@ public struct SousParser {
     public func parseRecipe(_ text: String) -> Parsed<Recipe> {
         var diagnostics: [Diagnostic] = []
         let source = SourceText.withoutByteOrderMark(text)
-        let map = SourceMap(source)
         let lines = SourceText.lines(of: source)
+        let map = SourceMap(source, lines: lines)
         let split = HeaderParser.split(lines, map: map, diagnostics: &diagnostics)
         let metadata = HeaderParser.parse(split.header, map: map, diagnostics: &diagnostics)
         let steps = Self.steps(in: split.body, map: map, diagnostics: &diagnostics)

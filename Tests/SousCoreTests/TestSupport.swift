@@ -47,12 +47,4 @@ extension Segment {
             nil
         }
     }
-
-    var cookwareValue: Cookware? {
-        if case let .cookware(cookware) = self {
-            cookware
-        } else {
-            nil
-        }
-    }
 }
