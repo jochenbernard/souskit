@@ -45,6 +45,18 @@ struct SerializationTests {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
 
+    @Test(arguments: [
+        "Add a \\@ symbol here.",
+        "Write a \\{ brace here.",
+        "All five: \\@ \\# \\~ \\> \\{ done.",
+        "Add @\\{not a fence@ now.",
+        "Use a #8\\# pan#.",
+        "Mix @{200 g} flour@ and \\@ the rest."
+    ])
+    func reproducesEscapedCharactersExactly(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
+
     // Incidental layout, such as repeated blank lines or a trailing newline, is normalized
     // rather than preserved. What must hold is that the output re-reads to the same recipe.
 
