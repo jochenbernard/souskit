@@ -13,7 +13,11 @@ extension Step {
             case let .text(text):
                 // A run of prose is one segment, so whatever follows it opens with a sigil.
                 // Escaping ahead of anything else would be harmless, so the test stays simple.
-                result += Self.escapedProse(text, beforeAnnotation: index + 1 < segments.count)
+                result += Self.escapedProse(
+                    text,
+                    afterFlags: index > 0 && Self.carriesFlags(segments[index - 1]),
+                    beforeAnnotation: index + 1 < segments.count
+                )
             case let .ingredient(ingredient):
                 result += Self.rendered(ingredient)
             case let .cookware(cookware):
@@ -82,12 +86,19 @@ extension Step {
         return result
     }
 
+    /// Whether a flag chain may follow the segment, which is what makes prose after it able to
+    /// open one.
+    private static func carriesFlags(_ segment: Segment) -> Bool {
+        if case .ingredient = segment { true } else { false }
+    }
+
     /// Escapes a prose character that would otherwise be read as something else: a sigil that
-    /// would open a span, or a backslash that would escape the character after it.
+    /// would open a span, a character that would open a flag where a chain may follow, or a
+    /// backslash that would escape the character after it.
     ///
     /// Whether a character needs an escape depends on whether the one after it gets one, so
     /// the run is decided from its end backwards.
-    private static func escapedProse(_ text: String, beforeAnnotation: Bool) -> String {
+    private static func escapedProse(_ text: String, afterFlags: Bool, beforeAnnotation: Bool) -> String {
         let characters = Array(text)
         var escapes = [Bool](repeating: false, count: characters.count)
 
@@ -102,6 +113,12 @@ extension Step {
             )
         }
 
+        // A flag chain reads on from the closing sigil, so only the character right after one
+        // can open a flag, and only there does prose need the escape.
+        if afterFlags, let first = characters.first {
+            escapes[0] = escapes[0] || opensFlag(first, followedBy: characters.count > 1 ? characters[1] : nil)
+        }
+
         var result = ""
         for (character, escaped) in zip(characters, escapes) {
             if escaped { result.append("\\") }
@@ -109,6 +126,14 @@ extension Step {
         }
 
         return result
+    }
+
+    /// Whether the character opens a flag: the shorthand always does, and the separator does
+    /// when a flag word follows it.
+    private static func opensFlag(_ character: Character, followedBy following: Character?) -> Bool {
+        if character == Flag.shorthand { return true }
+
+        return character == Flag.separator && (following.map(Flag.continuesWord) ?? false)
     }
 
     /// Whether a prose character needs an escape, given the character that follows it in the

@@ -3,7 +3,7 @@
 // Reading and writing share this one table, so the sigil a writer wraps a span in is the
 // sigil a reader opens it on, and a sigil a later version activates is added once.
 
-enum Annotation: Character {
+enum Annotation: Character, CaseIterable {
     case ingredient = "@"
     case cookware = "#"
     case timer = "~"

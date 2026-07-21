@@ -93,6 +93,16 @@ struct ExhaustiveRoundTripTests {
     }
 
     @Test
+    func everyEscapedFlagCharacter() {
+        expectRoundTrips(["\\", ":", "?", "a", "-"], upTo: 4, prefix: "Add @salt@")
+    }
+
+    @Test
+    func everyEscapeOfALaterSigil() {
+        expectRoundTrips(["\\", ">", "@", "a"], upTo: 4)
+    }
+
+    @Test
     func everyFlagChain() {
         let pieces = [":", "?", "staple", "non-food", "optional", "homemade", " x"]
 

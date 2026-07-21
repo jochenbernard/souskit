@@ -76,6 +76,10 @@ struct SerializationTests {
         "Add @salt@:staple?y here.",
         "Add @sauce@:homemade now.",
         "Add @sauce@:homemade?2 now.",
+        "Is it @salt@\\? Yes.",
+        "Serve @rice@\\:about 200 g each.",
+        "Season with @salt@:staple\\?y.",
+        "Add @sauce@:homemade\\:more now.",
         "Season with @salt@: to taste.",
         "Use a #{200 g} pan#.",
         "Add @{} salt@.",
@@ -226,7 +230,7 @@ struct SerializationTests {
     @Test(arguments: [
         "Add a \\@ symbol here.",
         "Write a \\{ brace here.",
-        "All six: \\@ \\# \\~ \\> \\{ \\\\ done.",
+        "All of them: \\@ \\# \\~ \\{ \\: \\? \\\\ done.",
         "Mix @{200 g} flour@ and \\@ the rest.",
         "Halve the \\\\ ratio.",
         "Add @a\\\\b@ now."

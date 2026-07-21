@@ -233,14 +233,15 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // A backslash produces the literal character for each of the six escapable characters,
-    // and for nothing else.
+    // A backslash produces the literal character for each character this version gives a
+    // meaning to, and for nothing else.
     @Test(arguments: [
         (source: "Use \\@ here.", prose: "Use @ here."),
         (source: "Use \\# here.", prose: "Use # here."),
         (source: "Use \\~ here.", prose: "Use ~ here."),
-        (source: "Use \\> here.", prose: "Use > here."),
         (source: "Use \\{ here.", prose: "Use { here."),
+        (source: "Use \\: here.", prose: "Use : here."),
+        (source: "Use \\? here.", prose: "Use ? here."),
         (source: "Use \\\\ here.", prose: "Use \\ here.")
     ])
     func unescapesAnEscapedCharacterInProse(source: String, prose: String) throws {
@@ -249,6 +250,29 @@ struct ReadingRulesTests {
         let step = try #require(parsed.value.steps.first)
         #expect(step.segments.first?.proseText == prose)
         #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // A reader resolves an escape only for the characters it gives a meaning to. A backslash
+    // before a sigil a later version introduces is ordinary text and is kept, so the escape
+    // survives for the reader that does give that sigil a meaning.
+
+    @Test
+    func keepsAnEscapeForASigilALaterVersionIntroduces() throws {
+        let parsed = SousParser().parseRecipe("Reduce by \\>half.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.segments.first?.proseText == "Reduce by \\>half.")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test(arguments: [
+        "Heat to \\>200C, then cool to \\>50C before adding @salt@.",
+        "Spread the \\>sauce\\> on top.",
+        "Layer the \\>{300 g} bolognese\\> in a dish.",
+        "Reduce by \\>half."
+    ])
+    func writesAnEscapeForALaterSigilBackUnchanged(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
 
     @Test

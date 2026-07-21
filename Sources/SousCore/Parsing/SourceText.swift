@@ -53,7 +53,13 @@ enum SourceText {
         escapable.contains(character)
     }
 
-    private static let escapable: Set<Character> = ["@", "#", "~", ">", "{", "\\"]
+    /// A reader escapes exactly the characters it gives a meaning to: the sigils it opens a
+    /// span on, the brace that opens an amount fence, the two that open a flag, and the
+    /// backslash itself. A sigil a later version introduces is none of them, so a backslash
+    /// before one is ordinary text and is kept, which is what carries the escape through to
+    /// the reader that does give that sigil a meaning.
+    private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
+        .union([Flag.separator, Flag.shorthand, "{", "\\"])
 
     /// Whether a backslash before the character produces that character literally inside an
     /// inline list value. A list's structure is its brackets and its separating comma rather

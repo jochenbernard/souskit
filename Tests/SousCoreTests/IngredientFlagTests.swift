@@ -152,6 +152,39 @@ struct IngredientFlagTests {
         #expect(step.segments.last?.proseText == " :staple.")
     }
 
+    // A flag opens on the character right after the closing sigil, so prose that needs a
+    // literal `?` or `:` there escapes it, exactly as prose needs `\@` for a literal sigil.
+
+    @Test
+    func doesNotReadAnEscapedShorthandAsAFlag() throws {
+        let parsed = SousParser().parseRecipe("Is it @salt@\\? Yes.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.first?.flags.isOptional == false)
+        #expect(step.segments.last?.proseText == "? Yes.")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func doesNotReadAnEscapedColonAsAFlag() throws {
+        let parsed = SousParser().parseRecipe("Serve @rice@\\:about 200 g each.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.first?.flags.unrecognized.isEmpty == true)
+        #expect(step.segments.last?.proseText == ":about 200 g each.")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func endsTheChainAtAnEscapedShorthand() throws {
+        let parsed = SousParser().parseRecipe("Season with @salt@:staple\\?y.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.first?.flags.isStaple == true)
+        #expect(step.ingredients.first?.flags.isOptional == false)
+        #expect(step.segments.last?.proseText == "?y.")
+    }
+
     @Test
     func doesNotAttachFlagsToCookware() throws {
         // Cookware carries a single value, so a colon after it is ordinary prose.
