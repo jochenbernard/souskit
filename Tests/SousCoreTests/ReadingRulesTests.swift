@@ -29,14 +29,51 @@ struct ReadingRulesTests {
         #expect(step.cookware.map(\.name) == ["large pot"])
     }
 
-    @Test(arguments: ["Add a \\@ symbol here.", "Use a \\# symbol here.", "Write a \\{ brace here."])
+    @Test(arguments: [
+        "Add a \\@ symbol here.",
+        "Use a \\# symbol here.",
+        "Write a \\{ brace here.",
+        "Wait \\~40 min and check."
+    ])
     func doesNotOpenASpanForAnEscapedSigil(source: String) throws {
         let parsed = SousParser().parseRecipe(source)
 
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.isEmpty)
         #expect(step.cookware.isEmpty)
+        #expect(step.timers.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func doesNotOpenATimerWhenTheSigilIsFollowedByWhitespace() throws {
+        let parsed = SousParser().parseRecipe("Bake ~ 40 min~ until done.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.timers.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func recoversFromAnUnclosedTimerSpan() throws {
+        let parsed = SousParser().parseRecipe("Simmer ~40 min gently.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.timers.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func doesNotCloseATimerAcrossAParagraphBreak() {
+        let source = """
+        Simmer ~40
+
+        min~ gently.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.timers.isEmpty)
+        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unclosedSpan }))
     }
 
     @Test
@@ -79,20 +116,21 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotProduceAnAnnotationWithAnEmptyName() throws {
-        let parsed = SousParser().parseRecipe("Use ## here and @@ there.")
+        let parsed = SousParser().parseRecipe("Use ## here, @@ there, and ~~ throughout.")
 
         let step = try #require(parsed.value.steps.first)
         #expect(step.cookware.isEmpty)
         #expect(step.ingredients.isEmpty)
+        #expect(step.timers.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // Forward compatibility: constructs from later versions are not understood by a v0.1
+    // Forward compatibility: constructs from later versions are not understood by a v0.2
     // reader, so they stay ordinary text and survive unchanged.
     @Test(arguments: [
-        "Simmer ~40 min~ gently.",
         "Spread the >sauce> on top.",
-        "Season with @salt@:staple and stir in @{=1 tsp} soda@."
+        "Layer the >{300 g} bolognese> in a dish.",
+        "Serve with >chili-oil>? on the side."
     ])
     func preservesConstructsFromLaterVersions(source: String) {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)

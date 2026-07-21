@@ -62,6 +62,21 @@ struct SerializationTests {
         Melt @{30 g} butter@ in a #pan#, fry @{2 cloves} garlic@.
         """,
         "Mix @salt@@pepper@ in.",
+        "Simmer gently for ~40 min~, then rest ~overnight~.",
+        "Bake ~8-10 min~ and rest ~1 h 30 min~.",
+        "Chill ~over\\~night~ now.",
+        "Wait \\~40 min here.",
+        "Stir in @{=1 tsp} baking soda@.",
+        "Season with @salt@:staple and @black pepper@:staple.",
+        "Scatter @rosemary@? over the top.",
+        "Scatter @rosemary@?y over the top.",
+        "Loosen with @{50 ml} water@:non-food if needed.",
+        "Add @{=10 g} salt@:staple now.",
+        "Add @water@:staple:non-food now.",
+        "Add @salt@:staple?y here.",
+        "Add @sauce@:homemade now.",
+        "Add @sauce@:homemade?2 now.",
+        "Season with @salt@: to taste.",
         "Use a #{200 g} pan#.",
         "Add @{} salt@.",
         "Season with salt @",
@@ -111,6 +126,22 @@ struct SerializationTests {
 
         #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
         #expect(reRead.ingredients == recipe.ingredients)
+    }
+
+    // A flag chain is written in one canonical order: the named flags, then the unrecognized
+    // ones in document order, and last of all the optional shorthand. The shorthand goes last
+    // because a flag word runs on through letters, so a named flag written before prose that
+    // starts with one would read back as a single unrecognized flag.
+
+    @Test(arguments: [
+        (source: "Add @water@:non-food:staple now.", written: "Add @water@:staple:non-food now."),
+        (source: "Add @salt@:optional now.", written: "Add @salt@? now."),
+        (source: "Add @salt@:staple:staple now.", written: "Add @salt@:staple now."),
+        (source: "Add @salt@?:staple now.", written: "Add @salt@:staple? now."),
+        (source: "Add @sauce@:homemade:staple now.", written: "Add @sauce@:staple:homemade now.")
+    ])
+    func writesAFlagChainInItsCanonicalOrder(source: String, written: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == written)
     }
 
     // The inline form is the only one a list is written in, because escaping lets any item

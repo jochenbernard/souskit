@@ -3,7 +3,7 @@ import Testing
 
 // The complete files the Sous documentation works through, read back here so the
 // outcomes it states stay the outcomes this reader produces. Each also round-trips byte
-// for byte, including the constructs later versions introduce, which a v0.1 reader
+// for byte, including the constructs later versions introduce, which a v0.2 reader
 // carries through as ordinary prose.
 
 @Suite("Specification examples")
@@ -37,6 +37,9 @@ struct SpecificationExampleTests {
             "2 tbsp", "1", "2 cloves", "800 g", "500 ml", nil, nil, nil
         ])
         #expect(recipe.cookware.map(\.name) == ["large pot"])
+        #expect(recipe.timers.map(\.text) == ["5 min", "20 min"])
+        #expect(recipe.timers.allSatisfy({ $0.kind == .precise }))
+        #expect(recipe.ingredients.suffix(2).map(\.flags.isStaple) == [true, true])
         #expect(parsed.diagnostics.isEmpty)
         #expect(recipe.serialized() == source)
     }
@@ -65,6 +68,67 @@ struct SpecificationExampleTests {
         let spaghetti = try #require(recipe.ingredients.first?.amount)
         #expect(spaghetti.kind.preciseQuantity?.value == 200)
         #expect(spaghetti.unit == "g")
+
+        // Chili flakes are optional and salt is a staple; nothing else carries a flag.
+        #expect(recipe.ingredients.map(\.flags.isOptional) == [false, false, false, true, false, false])
+        #expect(recipe.ingredients.map(\.flags.isStaple) == [false, false, false, false, true, false])
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(recipe.serialized() == source)
+    }
+
+    @Test
+    func readsTheHerbOmeletteExample() {
+        let source = """
+        ---
+        title: Herb Omelette
+        language: en
+        version: 1.0
+        servings: 1
+        prep-time: 5 min
+        cook-time: 5 min
+        tags: [breakfast, quick, vegetarian]
+        diet: [vegetarian]
+        ---
+
+        Whisk @{3} eggs@ with @salt@:staple and @black pepper@:staple until just combined.
+
+        Melt @{15 g} butter@ in a #non-stick pan# over medium heat. Pour in the eggs and
+        cook ~2-3 min~, drawing the edges in, until almost set.
+
+        Scatter over chopped @{2 tbsp} chives@ and grated @cheese@?, fold, and serve.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        let recipe = parsed.value
+        #expect(recipe.metadata.title == "Herb Omelette")
+        #expect(recipe.metadata.servings == 1)
+        #expect(recipe.steps.count == 3)
+        #expect(recipe.ingredients.map(\.name)
+            == ["eggs", "salt", "black pepper", "butter", "chives", "cheese"])
+        #expect(recipe.cookware.map(\.name) == ["non-stick pan"])
+        #expect(recipe.timers.map(\.kind) == [.range])
+        #expect(recipe.ingredients.last?.flags.isOptional == true)
+
+        let staples = recipe.ingredients.filter(\.flags.isStaple)
+        #expect(staples.map(\.name) == ["salt", "black pepper"])
+
+        // The fields later versions introduce are unknown here, so each is preserved and warned about.
+        #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
+        #expect(recipe.serialized() == source)
+    }
+
+    @Test
+    func readsTheTimersPageExample() {
+        let source = """
+        Bring the dough together and refrigerate ~overnight~ (or up to ~2 days~).
+        The next day, prove until puffy, about ~1-2 h~, then bake for ~20-25 min~.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        let recipe = parsed.value
+        #expect(recipe.timers.map(\.text) == ["overnight", "2 days", "1-2 h", "20-25 min"])
+        #expect(recipe.timers.map(\.kind) == [.qualitative, .precise, .range, .range])
+        #expect(recipe.timers.dropFirst().compactMap({ $0.components.first?.unit }) == ["days", "h", "min"])
         #expect(parsed.diagnostics.isEmpty)
         #expect(recipe.serialized() == source)
     }
