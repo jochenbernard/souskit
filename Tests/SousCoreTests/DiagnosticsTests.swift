@@ -95,6 +95,23 @@ struct DiagnosticsTests {
     }
 
     @Test
+    func locatesAMalformedHeaderLine() throws {
+        let source = """
+        ---
+        title: Toast
+        stray line
+        ---
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .malformedHeaderLine }))
+        let range = try #require(diagnostic.range)
+        #expect(range.start.line == 3)
+        #expect(range.start.column == 1)
+        #expect(diagnostic.severity == .warning)
+    }
+
+    @Test
     func locatesAnUnterminatedHeaderAtItsOpeningFence() throws {
         let parsed = SousParser().parseRecipe("---\ntitle: Buttered Toast")
 

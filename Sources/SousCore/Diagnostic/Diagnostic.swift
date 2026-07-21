@@ -25,6 +25,9 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
 
         /// The metadata header repeated a list key.
         case repeatedListKey
+
+        /// The metadata header had a line that is not a recognized `key: value` entry.
+        case malformedHeaderLine
     }
 
     /// The diagnostic's severity.

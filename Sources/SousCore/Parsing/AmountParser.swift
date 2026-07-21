@@ -5,6 +5,13 @@
 // no leading digit is an imprecise amount, kept verbatim.
 
 enum AmountParser {
+    /// The value of the leading numeric quantity in `text`, or `nil` when it has no leading
+    /// number. Integers, decimals, fractions, and mixed numbers are all recognized, exactly
+    /// as in an amount fence.
+    static func leadingValue(in text: String) -> Double? {
+        number(in: Array(text), from: 0)?.quantity.value
+    }
+
     static func parse(_ fence: String) -> Amount {
         let characters = Array(fence)
 

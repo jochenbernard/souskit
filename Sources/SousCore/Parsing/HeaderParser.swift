@@ -41,7 +41,7 @@ enum HeaderParser {
             title: entries.lastScalar("title"),
             language: entries.lastScalar("language"),
             version: entries.lastScalar("version"),
-            servings: entries.lastScalar("servings").flatMap({ Int(SourceText.trimmed($0)) }),
+            servings: entries.lastScalar("servings").flatMap({ AmountParser.leadingValue(in: SourceText.trimmed($0)) }),
             tags: entries.mergedList("tags"),
             source: entries.lastScalar("source"),
             entries: entries
@@ -57,30 +57,46 @@ enum HeaderParser {
         var seenKeys: Set<String> = []
 
         for line in lines {
-            guard let entry = self.entry(in: line) else { continue }
-            let keyRange = map.range(from: line.startIndex, length: entry.key.count)
-            let isList = listKeys.contains(entry.key)
+            // A blank line is insignificant layout, so it is dropped rather than preserved.
+            if SourceText.isBlank(line) { continue }
+
+            // A top-level entry has no leading whitespace and a `key: value` separator.
+            // Anything else, including an indented nesting or block-list line from a later
+            // version, is preserved verbatim and warned about rather than reshaped or dropped.
+            let isIndented = line.first?.isWhitespace ?? false
+            guard !isIndented, let field = self.entry(in: line) else {
+                entries.append(Metadata.Entry(key: "", value: .raw(String(line))))
+                diagnostics.append(.warning(
+                    .malformedHeaderLine,
+                    "Header line is not a 'key: value' entry.",
+                    at: map.range(from: line.startIndex, length: line.count)
+                ))
+                continue
+            }
+
+            let keyRange = map.range(from: line.startIndex, length: field.key.count)
+            let isList = listKeys.contains(field.key)
 
             entries.append(Metadata.Entry(
-                key: entry.key,
-                value: isList ? .list(list(in: entry.value)) : .scalar(entry.value)
+                key: field.key,
+                value: isList ? .list(list(in: field.value)) : .scalar(field.value)
             ))
 
             // An unknown key is preserved and warned about, whether scalar or repeated.
-            if !isList, !scalarKeys.contains(entry.key) {
+            if !isList, !scalarKeys.contains(field.key) {
                 diagnostics.append(.warning(
                     .unknownHeaderKey,
-                    "Unrecognized header key '\(entry.key)'.",
+                    "Unrecognized header key '\(field.key)'.",
                     at: keyRange
                 ))
             }
 
             // A repeated key keeps every occurrence; the last-wins accessors interpret the
             // latest. A list key repeat is distinguished so consumers can switch on it.
-            if !seenKeys.insert(entry.key).inserted {
+            if !seenKeys.insert(field.key).inserted {
                 diagnostics.append(.warning(
                     isList ? .repeatedListKey : .repeatedScalarKey,
-                    "Repeated header key '\(entry.key)'.",
+                    "Repeated header key '\(field.key)'.",
                     at: keyRange
                 ))
             }

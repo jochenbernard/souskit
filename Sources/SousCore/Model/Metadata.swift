@@ -2,13 +2,16 @@
 public struct Metadata: Equatable, Hashable, Sendable {
     /// A single raw header entry.
     public struct Entry: Equatable, Hashable, Sendable {
-        /// The value of a header entry: a scalar or a list.
+        /// The value of a header entry: a scalar, a list, or a verbatim line.
         public enum Value: Equatable, Hashable, Sendable {
             /// A single literal value.
             case scalar(String)
 
             /// An inline list of literal values.
             case list([String])
+
+            /// A header line that is not a recognized `key: value` entry, preserved verbatim.
+            case raw(String)
         }
 
         /// The entry's key.
@@ -28,7 +31,9 @@ public struct Metadata: Equatable, Hashable, Sendable {
     public var version: String?
 
     /// The `servings` field, the number of portions the recipe makes.
-    public var servings: Int?
+    ///
+    /// It is read as the value's leading numeric quantity, or `nil` when the value has no leading number.
+    public var servings: Double?
 
     /// The `tags` field, a list of free-form labels.
     public var tags: [String]

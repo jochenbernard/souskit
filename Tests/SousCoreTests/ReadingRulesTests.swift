@@ -150,20 +150,39 @@ struct ReadingRulesTests {
     }
 
     @Test
-    func honorsAnEscapedClosingSigilInsideAnIngredientSpan() throws {
+    func unescapesAnEscapedClosingSigilInsideAnIngredientName() throws {
         let parsed = SousParser().parseRecipe("Add @a\\@b@ now.")
 
         let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
-        #expect(ingredient.name == "a\\@b")
+        #expect(ingredient.name == "a@b")
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
-    func honorsAnEscapedClosingSigilInsideACookwareSpan() throws {
+    func unescapesAnEscapedClosingSigilInsideACookwareName() throws {
         let parsed = SousParser().parseRecipe("Use a #8\\# pan#.")
 
         let cookware = try #require(parsed.value.steps.first?.cookware.first)
-        #expect(cookware.name == "8\\# pan")
+        #expect(cookware.name == "8# pan")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func unescapesAnEscapedSigilInProse() throws {
+        let parsed = SousParser().parseRecipe("Use \\@ here.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.segments.first?.proseText == "Use @ here.")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func unescapesAnEscapedLeadingBraceInAnIngredientName() throws {
+        let parsed = SousParser().parseRecipe("Add @\\{note}@ now.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "{note}")
+        #expect(ingredient.amount == nil)
         #expect(parsed.diagnostics.isEmpty)
     }
 

@@ -74,9 +74,9 @@ enum StepParser {
         while cursor < characters.count {
             let character = characters[cursor]
 
-            // A backslash produces the literal sigil, kept verbatim so it round-trips.
+            // A backslash produces the literal character, so the escape is resolved and the
+            // backslash dropped. Serialization escapes the character again where needed.
             if character == "\\", cursor + 1 < characters.count, escapable.contains(characters[cursor + 1]) {
-                prose.append(character)
                 prose.append(characters[cursor + 1])
                 cursor += 2
                 continue
@@ -144,8 +144,9 @@ enum StepParser {
     }
 
     /// Scans one annotation span that opens at `start`. A well-formed span becomes a named
-    /// annotation; an unclosed span, or an amount fence with no closing brace, degrades to
-    /// literal text with a warning so the surrounding paragraph still reads.
+    /// annotation; an unclosed span, or an amount fence with no closing brace before the
+    /// closing sigil, degrades to literal text with a warning so the surrounding paragraph
+    /// still reads.
     private static func scanSpan(
         _ characters: [Character],
         from start: Int,
@@ -154,30 +155,11 @@ enum StepParser {
         diagnostics: inout [Diagnostic]
     ) -> Span {
         let sigil = annotation.sigil
-        var cursor = start + 1
-        var amount: Amount?
+        let contentStart = start + 1
 
-        if annotation.allowsAmount, characters[cursor] == "{" {
-            guard let closingBrace = characters[(cursor + 1)...].firstIndex(of: "}") else {
-                // An amount fence with no closing brace makes the whole span not well-formed.
-                let end = characters[cursor...].firstIndex(of: sigil) ?? characters.count - 1
-                diagnostics.append(.warning(
-                    .unclosedSpan,
-                    "Amount fence is missing a closing brace.",
-                    at: origin.range(offset: start, length: end - start + 1)
-                ))
-
-                return .literal(String(characters[start...end]), next: end + 1)
-            }
-
-            amount = AmountParser.parse(String(characters[(cursor + 1)..<closingBrace]))
-            cursor = closingBrace + 1
-
-            // One space usually separates the fence from the name, but it is optional.
-            if cursor < characters.count, characters[cursor] == " " { cursor += 1 }
-        }
-
-        guard let closingSigil = closingSigil(sigil, in: characters, from: cursor) else {
+        // The closing sigil bounds the span, so it is located before the amount fence: a
+        // fence brace past it belongs to a later span, not to this one.
+        guard let closingSigil = closingSigil(sigil, in: characters, from: contentStart) else {
             diagnostics.append(.warning(
                 .unclosedSpan,
                 "\(annotation.noun) span is missing a closing sigil.",
@@ -187,7 +169,30 @@ enum StepParser {
             return .literal(String(characters[start]), next: start + 1)
         }
 
-        let name = String(characters[cursor..<closingSigil])
+        var nameStart = contentStart
+        var amount: Amount?
+
+        if annotation.allowsAmount, characters[contentStart] == "{" {
+            guard let closingBrace = characters[(contentStart + 1)..<closingSigil].firstIndex(of: "}") else {
+                // An amount fence with no closing brace before the closing sigil makes the
+                // whole span not well-formed.
+                diagnostics.append(.warning(
+                    .unclosedSpan,
+                    "Amount fence is missing a closing brace.",
+                    at: origin.range(offset: start, length: closingSigil - start + 1)
+                ))
+
+                return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
+            }
+
+            amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
+            nameStart = closingBrace + 1
+
+            // One space usually separates the fence from the name, but it is optional.
+            if nameStart < closingSigil, characters[nameStart] == " " { nameStart += 1 }
+        }
+
+        let name = unescaped(characters, from: nameStart, to: closingSigil)
 
         // A span that names nothing is ordinary text, not an annotation of nothing.
         guard !name.isEmpty else {
@@ -195,5 +200,23 @@ enum StepParser {
         }
 
         return .named(name: name, amount: amount, next: closingSigil + 1)
+    }
+
+    /// Resolves each escape in a range of characters to the literal character it produces,
+    /// dropping the backslash.
+    private static func unescaped(_ characters: [Character], from start: Int, to end: Int) -> String {
+        var result = ""
+        var cursor = start
+        while cursor < end {
+            if characters[cursor] == "\\", cursor + 1 < end, escapable.contains(characters[cursor + 1]) {
+                result.append(characters[cursor + 1])
+                cursor += 2
+            } else {
+                result.append(characters[cursor])
+                cursor += 1
+            }
+        }
+
+        return result
     }
 }

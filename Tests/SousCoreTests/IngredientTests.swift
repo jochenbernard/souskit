@@ -51,4 +51,25 @@ struct IngredientTests {
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.map(\.name) == ["garlic", "baby spinach"])
     }
+
+    @Test
+    func doesNotLetAnUnclosedFenceConsumeALaterIngredient() throws {
+        let parsed = SousParser().parseRecipe("Add @{200 g pasta@ and @{100 g} sauce@.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.count == 1)
+        let sauce = try #require(step.ingredients.first)
+        #expect(sauce.name == "sauce")
+        #expect(sauce.amount?.text == "100 g")
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func treatsALiteralSigilInsideAFenceAsAMalformedSpan() throws {
+        let parsed = SousParser().parseRecipe("Add @{a@b} sauce@ now.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
 }

@@ -47,7 +47,7 @@ struct MetadataTests {
     }
 
     @Test
-    func parsesTheServingsAsAnInteger() {
+    func parsesTheServingsAsANumber() {
         let source = """
         ---
         servings: 6
@@ -55,6 +55,39 @@ struct MetadataTests {
         """
 
         #expect(SousParser().parseRecipe(source).value.metadata.servings == 6)
+    }
+
+    @Test
+    func parsesADecimalServingsValue() {
+        let source = """
+        ---
+        servings: 2.5
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.servings == 2.5)
+    }
+
+    @Test
+    func parsesAFractionServingsValue() {
+        let source = """
+        ---
+        servings: 1/2
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.servings == 0.5)
+    }
+
+    @Test
+    func parsesAMixedNumberServingsValue() {
+        let source = """
+        ---
+        servings: 1 1/2
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.servings == 1.5)
     }
 
     @Test
@@ -265,20 +298,6 @@ struct MetadataTests {
     }
 
     @Test
-    func skipsAHeaderLineWithNoKeyValueSeparator() {
-        let source = """
-        ---
-        title: Toast
-        stray line
-        ---
-        """
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
-        #expect(metadata.title == "Toast")
-        #expect(metadata.entries.map(\.key) == ["title"])
-    }
-
-    @Test
     func readsAnUnbracketedListValueAsASingleItem() {
         let source = """
         ---
@@ -335,7 +354,7 @@ struct MetadataTests {
     }
 
     @Test
-    func readsServingsSurroundedByWhitespaceAsAnIntegerWhilePreservingItVerbatim() {
+    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim() {
         let source = "---\nservings: 6 \n---"
 
         let metadata = SousParser().parseRecipe(source).value.metadata

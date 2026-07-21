@@ -42,19 +42,48 @@ struct SerializationTests {
     func preservesAnUnclosedSpanAsLiteralTextOnRoundTrip() {
         let source = "Fry @garlic until fragrant."
 
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+        let reRead = parser.parseRecipe(recipe.serialized()).value
+
+        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
+        #expect(reRead.ingredients.isEmpty)
+    }
+
+    @Test(arguments: [
+        "Add @\\{not a fence@ now.",
+        "Use a #8\\# pan#.",
+        "Add @a\\@b@ now.",
+        "Email \\@user today.",
+        "Weigh a \\#5 sieve here."
+    ])
+    func reEscapesParsedEscapesForByteExactRoundTrip(source: String) {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
+
+    @Test
+    func reEscapesAProseSigilAdjacentToAnAnnotation() {
+        let source = "\\@@garlic@ now."
+
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
+
+    // An escape that was not needed, such as a sigil already followed by whitespace, loses
+    // its backslash on the way out. The recipe it re-reads to is unchanged.
 
     @Test(arguments: [
         "Add a \\@ symbol here.",
         "Write a \\{ brace here.",
         "All five: \\@ \\# \\~ \\> \\{ done.",
-        "Add @\\{not a fence@ now.",
-        "Use a #8\\# pan#.",
         "Mix @{200 g} flour@ and \\@ the rest."
     ])
-    func reproducesEscapedCharactersExactly(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    func normalizesAnUnneededEscapeButPreservesTheRecipe(source: String) {
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+        let reRead = parser.parseRecipe(recipe.serialized()).value
+
+        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
+        #expect(reRead.metadata == recipe.metadata)
     }
 
     // Incidental layout, such as repeated blank lines or a trailing newline, is normalized

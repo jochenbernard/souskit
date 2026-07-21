@@ -108,4 +108,28 @@ struct RecipeStructureTests {
         #expect(segments.dropFirst().first?.ingredientValue?.name == "garlic")
         #expect(segments.last?.proseText == " until fragrant.")
     }
+
+    @Test
+    func collectsIngredientsAcrossStepsInDocumentOrder() {
+        let source = """
+        Fry @garlic@ and add @baby spinach@.
+
+        Finish with @{50 g} parmesan@.
+        """
+
+        let ingredients = SousParser().parseRecipe(source).value.ingredients
+        #expect(ingredients.map(\.name) == ["garlic", "baby spinach", "parmesan"])
+    }
+
+    @Test
+    func collectsCookwareAcrossStepsInDocumentOrder() {
+        let source = """
+        Bring a #large pot# of water to a boil.
+
+        Warm a #frying pan# and a #ladle#.
+        """
+
+        let cookware = SousParser().parseRecipe(source).value.cookware
+        #expect(cookware.map(\.name) == ["large pot", "frying pan", "ladle"])
+    }
 }
