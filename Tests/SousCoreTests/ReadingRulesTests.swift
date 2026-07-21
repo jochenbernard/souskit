@@ -1,0 +1,225 @@
+import SousCore
+import Testing
+
+@Suite("Reading rules and escaping")
+struct ReadingRulesTests {
+    @Test
+    func doesNotOpenASpanWhenTheSigilIsFollowedByWhitespace() throws {
+        let parsed = SousParser().parseRecipe("Bake @ 180C until done.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func doesNotTreatALineBeginningWithHashSpaceAsCookware() throws {
+        let parsed = SousParser().parseRecipe("# not cookware")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func opensACookwareSpanAtTheStartOfALine() throws {
+        let parsed = SousParser().parseRecipe("#large pot# of salted water.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.map(\.name) == ["large pot"])
+    }
+
+    @Test(arguments: ["Add a \\@ symbol here.", "Use a \\# symbol here.", "Write a \\{ brace here."])
+    func doesNotOpenASpanForAnEscapedSigil(source: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func recoversFromAnUnclosedIngredientSpan() throws {
+        let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func recoversFromAnUnclosedCookwareSpan() throws {
+        let parsed = SousParser().parseRecipe("Use a #pan to fry the eggs.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func recoversFromAnUnclosedAmountFence() throws {
+        let parsed = SousParser().parseRecipe("Cook @{200 g pasta@ now.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
+        // "## Name" is a v0.4 group heading, so a v0.1 reader leaves it as ordinary text.
+        let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == "## Sauce\nBrown the beef.")
+    }
+
+    @Test
+    func doesNotProduceAnAnnotationWithAnEmptyName() throws {
+        let parsed = SousParser().parseRecipe("Use ## here and @@ there.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.isEmpty)
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // Forward compatibility: constructs from later versions are not understood by a v0.1
+    // reader, so they stay ordinary text and survive unchanged.
+    @Test(arguments: [
+        "Simmer ~40 min~ gently.",
+        "Spread the >sauce> on top.",
+        "Season with @salt@:staple and stir in @{=1 tsp} soda@."
+    ])
+    func preservesConstructsFromLaterVersions(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
+
+    @Test
+    func treatsReservedMarkdownCharactersAsOrdinaryText() throws {
+        let parsed = SousParser().parseRecipe("Use *bold*, _italic_, `code`, and [brackets] plainly.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // A line-initial markdown form carries a space, so the opener rule already leaves it as
+    // ordinary text. It is reserved for possible rich text after 1.0.
+    @Test(arguments: ["- Chop the onion.", "> Chop the onion."])
+    func treatsAReservedLineInitialMarkdownFormAsOrdinaryText(source: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == source)
+    }
+
+    @Test
+    func closesASpanOnALaterLineOfTheSameParagraph() throws {
+        let parsed = SousParser().parseRecipe("Add @baby\nspinach@ to the pan.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "baby\nspinach")
+    }
+
+    @Test
+    func doesNotCloseASpanAcrossAParagraphBreak() {
+        let source = """
+        Add @garlic
+
+        spinach@ to the pan.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.steps.count == 2)
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func doesNotCloseAnAmountFenceAcrossAParagraphBreak() {
+        // The brace a fence closes on is looked for in the span's own paragraph, so a "}"
+        // in a later paragraph leaves the fence unclosed.
+        let source = """
+        Add @{200 g
+
+        pasta} water@.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g", "pasta} water@."])
+        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func recoversFromAnUnclosedAmountFenceWithNoClosingSigil() throws {
+        let parsed = SousParser().parseRecipe("Cook @{200 g pasta")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.text == "Cook @{200 g pasta")
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func reportsAnUnclosedSpanAsAWarning() throws {
+        let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")
+
+        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
+        #expect(diagnostic.severity == .warning)
+    }
+
+    @Test
+    func unescapesAnEscapedClosingSigilInsideAnIngredientName() throws {
+        let parsed = SousParser().parseRecipe("Add @a\\@b@ now.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "a@b")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func unescapesAnEscapedClosingSigilInsideACookwareName() throws {
+        let parsed = SousParser().parseRecipe("Use a #8\\# pan#.")
+
+        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        #expect(cookware.name == "8# pan")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // A backslash produces the literal character for each of the six escapable characters,
+    // and for nothing else.
+    @Test(arguments: [
+        (source: "Use \\@ here.", prose: "Use @ here."),
+        (source: "Use \\# here.", prose: "Use # here."),
+        (source: "Use \\~ here.", prose: "Use ~ here."),
+        (source: "Use \\> here.", prose: "Use > here."),
+        (source: "Use \\{ here.", prose: "Use { here."),
+        (source: "Use \\\\ here.", prose: "Use \\ here.")
+    ])
+    func unescapesAnEscapedCharacterInProse(source: String, prose: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.segments.first?.proseText == prose)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func unescapesAnEscapedLeadingBraceInAnIngredientName() throws {
+        let parsed = SousParser().parseRecipe("Add @\\{note}@ now.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "{note}")
+        #expect(ingredient.amount == nil)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+}

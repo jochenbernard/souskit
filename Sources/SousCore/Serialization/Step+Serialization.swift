@@ -1,0 +1,118 @@
+// Renders one step back to source text, escaping exactly what the reader would otherwise
+// read as something other than the text it stands for.
+//
+// The sigils and the opener rule come from the shared annotation table, so the writer
+// never restates a rule the reader owns.
+
+extension Step {
+    var rendered: String {
+        var result = ""
+
+        for index in segments.indices {
+            switch segments[index] {
+            case let .text(text):
+                // A run of prose is one segment, so whatever follows it opens with a sigil.
+                // Escaping ahead of anything else would be harmless, so the test stays simple.
+                result += Self.escapedProse(text, beforeAnnotation: index + 1 < segments.count)
+            case let .ingredient(ingredient):
+                result += Self.rendered(ingredient)
+            case let .cookware(cookware):
+                result += Annotation.cookware.span(around: Self.escapedName(cookware.name, in: .cookware))
+            }
+        }
+
+        return result
+    }
+
+    private static func rendered(_ ingredient: Ingredient) -> String {
+        guard let amount = ingredient.amount else {
+            return Annotation.ingredient.span(around: escapedName(ingredient.name, in: .ingredient))
+        }
+
+        // The fence and the name are separated by a space, so a leading brace in the name
+        // cannot open a second fence and needs no escape.
+        let name = escapedName(ingredient.name, in: .ingredient, afterAmount: true)
+
+        return Annotation.ingredient.span(around: "{\(amount.text)} \(name)")
+    }
+
+    /// Escapes each occurrence of the span's own closing sigil in a name, a backslash that
+    /// would otherwise escape what follows it, and a leading brace where it could otherwise
+    /// open an amount fence, so the name re-reads verbatim.
+    private static func escapedName(_ name: String, in annotation: Annotation, afterAmount: Bool = false) -> String {
+        let characters = Array(name)
+        let escapesLeadingBrace = annotation.allowsAmount && !afterAmount
+        var result = ""
+
+        for index in characters.indices {
+            let character = characters[index]
+            // The closing sigil follows the last character, and a sigil is escapable, so a
+            // name ending in a backslash escapes it.
+            let following = index + 1 < characters.count ? characters[index + 1] : annotation.sigil
+            let escaped = character == annotation.sigil
+                || (character == "\\" && SourceText.isEscapable(following))
+                || (escapesLeadingBrace && index == 0 && character == "{")
+
+            if escaped { result.append("\\") }
+            result.append(character)
+        }
+
+        return result
+    }
+
+    /// Escapes a prose character that would otherwise be read as something else: a sigil that
+    /// would open a span, or a backslash that would escape the character after it.
+    ///
+    /// Whether a character needs an escape depends on whether the one after it gets one, so
+    /// the run is decided from its end backwards.
+    private static func escapedProse(_ text: String, beforeAnnotation: Bool) -> String {
+        let characters = Array(text)
+        var escapes = [Bool](repeating: false, count: characters.count)
+
+        for index in characters.indices.reversed() {
+            let hasFollowing = index + 1 < characters.count
+
+            escapes[index] = needsEscape(
+                characters[index],
+                followedBy: hasFollowing ? characters[index + 1] : nil,
+                escaped: hasFollowing && escapes[index + 1],
+                beforeAnnotation: beforeAnnotation
+            )
+        }
+
+        var result = ""
+        for (character, escaped) in zip(characters, escapes) {
+            if escaped { result.append("\\") }
+            result.append(character)
+        }
+
+        return result
+    }
+
+    /// Whether a prose character needs an escape, given the character that follows it in the
+    /// output and whether that character is itself escaped there. The last character of a run
+    /// is followed by the annotation's opening sigil, when one follows, and by nothing
+    /// otherwise.
+    private static func needsEscape(
+        _ character: Character,
+        followedBy following: Character?,
+        escaped: Bool,
+        beforeAnnotation: Bool
+    ) -> Bool {
+        // A backslash escapes whatever follows it, so a literal one is escaped in turn. An
+        // annotation opens with a sigil, which is escapable.
+        if character == "\\" {
+            return following.map(SourceText.isEscapable) ?? beforeAnnotation
+        }
+
+        guard Annotation(rawValue: character) != nil else { return false }
+        guard let following else { return beforeAnnotation }
+
+        // A sigil opens a span when a non-whitespace character follows it. An adjacent pair
+        // of identical sigils is left alone, because the reader closes the span the first one
+        // opens on the second one at once and keeps both as text. That holds only while the
+        // second stays unescaped: escaping it lets the span reach past it and swallow the
+        // text beyond.
+        return Annotation.opensSpan(before: following) && (following != character || escaped)
+    }
+}
