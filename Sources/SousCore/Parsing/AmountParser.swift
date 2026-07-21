@@ -5,6 +5,9 @@
 // no leading digit is an imprecise amount, kept verbatim.
 
 enum AmountParser {
+    /// The marker that fixes an amount, holding it constant when the recipe is scaled.
+    private static let fixedMarker: Character = "="
+
     /// The value of the leading numeric quantity in `text`, or `nil` when it has no leading
     /// number. Integers, decimals, fractions, and mixed numbers are all recognized, exactly
     /// as in an amount fence.
@@ -14,9 +17,11 @@ enum AmountParser {
 
     static func parse(_ fence: String) -> Amount {
         let characters = Array(fence)
+        // The marker fixes an amount only immediately before a numeric quantity. Anywhere
+        // else it is ordinary text, and the amount it opens is imprecise like any other.
+        let isFixed = characters.first == fixedMarker && number(in: characters, from: 1) != nil
 
-        // The `=` marker is read when version 0.2 is implemented, so no amount is fixed yet.
-        guard let first = number(in: characters, from: 0) else {
+        guard let quantity = quantity(in: characters, from: isFixed ? 1 : 0) else {
             return Amount(
                 kind: .imprecise(fence),
                 unit: nil,
@@ -25,29 +30,31 @@ enum AmountParser {
             )
         }
 
-        let kind: Amount.Kind
-        var cursor = first.end
-
-        if cursor < characters.count,
-           characters[cursor] == "-",
-           let second = number(in: characters, from: cursor + 1) {
-            kind = .range(first.quantity, second.quantity)
-            cursor = second.end
-        } else {
-            kind = .precise(first.quantity)
-        }
-
         // A single space separates the quantity from the unit; anything else belongs to the unit.
+        var cursor = quantity.end
         if cursor < characters.count, characters[cursor] == " " {
             cursor += 1
         }
 
         return Amount(
-            kind: kind,
+            kind: quantity.kind,
             unit: String(characters[cursor...]),
-            isFixed: false,
+            isFixed: isFixed,
             text: fence
         )
+    }
+
+    /// Scans the quantity at `start`: one number, or a range between two of them. Returns the
+    /// form it takes and the index just past it.
+    static func quantity(in characters: [Character], from start: Int) -> (kind: Amount.Kind, end: Int)? {
+        guard let first = number(in: characters, from: start) else { return nil }
+
+        guard first.end < characters.count,
+              characters[first.end] == "-",
+              let second = number(in: characters, from: first.end + 1)
+        else { return (.precise(first.quantity), first.end) }
+
+        return (.range(first.quantity, second.quantity), second.end)
     }
 
     /// Scans one quantity: a number, a fraction, or a mixed number.

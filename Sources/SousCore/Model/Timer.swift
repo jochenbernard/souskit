@@ -20,7 +20,9 @@ public struct Timer: Equatable, Hashable, Sendable {
     /// A qualitative duration has none, a precise or range duration has one, and a compound duration has two or more.
     public var components: [Amount]
 
-    /// The verbatim content of the timer span, without its sigils. It is the text a qualitative duration displays.
+    /// The timer's content, captured with nothing stripped and each escape resolved.
+    ///
+    /// It is the text a qualitative duration displays.
     public var text: String
 
     /// The form this duration takes, classified from the components.

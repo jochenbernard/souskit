@@ -21,6 +21,7 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// Whether an `=` before the quantity marks the amount as fixed, holding it constant when the recipe is scaled.
     public var isFixed: Bool
 
-    /// The verbatim content of the amount fence, without its braces.
+    /// The verbatim text the amount was read from: the content of an amount fence, without its
+    /// braces, or the one part of a timer it states.
     public var text: String
 }

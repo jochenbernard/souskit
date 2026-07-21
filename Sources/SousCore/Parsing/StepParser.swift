@@ -46,16 +46,17 @@ enum StepParser {
                     cursor = next
                 case let .named(name, amount, next):
                     flush(&prose, into: &segments)
-                    // Flag reading arrives with the version 0.2 parser, so an ingredient is
-                    // unflagged for now.
-                    let flags = Flags(isOptional: false, isStaple: false, isNonFood: false, unrecognized: [])
-                    switch annotation {
-                    case .ingredient:
-                        segments.append(.ingredient(Ingredient(name: name, amount: amount, flags: flags)))
-                    case .cookware:
-                        segments.append(.cookware(Cookware(name: name)))
-                    }
                     cursor = next
+                    // An ingredient reads the flag chain that follows its closing sigil, so
+                    // the cursor moves on past that chain too.
+                    let flags = FlagParser.parse(
+                        after: annotation,
+                        in: characters,
+                        from: &cursor,
+                        origin: origin,
+                        diagnostics: &diagnostics
+                    )
+                    segments.append(annotated(annotation, name: name, amount: amount, flags: flags))
                 }
                 continue
             }
@@ -67,6 +68,21 @@ enum StepParser {
         flush(&prose, into: &segments)
 
         return Step(segments: segments, text: text)
+    }
+
+    /// The segment a well-formed span stands for. Only the annotations that carry an amount or
+    /// flags are given them; the others read their content alone.
+    private static func annotated(
+        _ annotation: Annotation,
+        name: String,
+        amount: Amount?,
+        flags: Flags
+    ) -> Segment {
+        switch annotation {
+        case .ingredient: .ingredient(Ingredient(name: name, amount: amount, flags: flags))
+        case .cookware: .cookware(Cookware(name: name))
+        case .timer: .timer(TimerParser.parse(name))
+        }
     }
 
     private static func flush(_ prose: inout String, into segments: inout [Segment]) {

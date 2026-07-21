@@ -1,5 +1,5 @@
 extension Diagnostic {
-    /// Every problem the v0.1 reader can report is recoverable, so it is a warning.
+    /// Every problem the v0.2 reader can report is recoverable, so it is a warning.
     static func warning(
         _ kind: Kind,
         _ message: String,

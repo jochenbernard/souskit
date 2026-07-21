@@ -19,10 +19,7 @@ extension Step {
             case let .cookware(cookware):
                 result += Annotation.cookware.span(around: Self.escapedName(cookware.name, in: .cookware))
             case let .timer(timer):
-                // The `~` sigil joins the shared annotation table when the version 0.2 parser
-                // reads it. Until then no timer segment is produced, and one renders its own
-                // source text back.
-                result += "~\(timer.text)~"
+                result += Annotation.timer.span(around: Self.escapedName(timer.text, in: .timer))
             }
         }
 
@@ -30,15 +27,35 @@ extension Step {
     }
 
     private static func rendered(_ ingredient: Ingredient) -> String {
-        guard let amount = ingredient.amount else {
-            return Annotation.ingredient.span(around: escapedName(ingredient.name, in: .ingredient))
+        let content: String
+
+        if let amount = ingredient.amount {
+            // The fence and the name are separated by a space, so a leading brace in the name
+            // cannot open a second fence and needs no escape.
+            let name = escapedName(ingredient.name, in: .ingredient, afterAmount: true)
+            content = "{\(amount.text)} \(name)"
+        } else {
+            content = escapedName(ingredient.name, in: .ingredient)
         }
 
-        // The fence and the name are separated by a space, so a leading brace in the name
-        // cannot open a second fence and needs no escape.
-        let name = escapedName(ingredient.name, in: .ingredient, afterAmount: true)
+        return Annotation.ingredient.span(around: content) + rendered(ingredient.flags)
+    }
 
-        return Annotation.ingredient.span(around: "{\(amount.text)} \(name)")
+    /// Writes the flag chain in one canonical order: the named flags, then the unrecognized
+    /// ones as they were written, and last of all the optional shorthand.
+    ///
+    /// The shorthand comes last because a flag word runs on through the letters after it, so
+    /// a named flag written directly before prose that starts with one would read back as a
+    /// single unrecognized flag. The shorthand is one character and cannot be run into.
+    private static func rendered(_ flags: Flags) -> String {
+        var result = ""
+
+        if flags.isStaple { result += Flag.staple.written }
+        if flags.isNonFood { result += Flag.nonFood.written }
+        for word in flags.unrecognized { result += "\(Flag.separator)\(word)" }
+        if flags.isOptional { result.append(Flag.shorthand) }
+
+        return result
     }
 
     /// Escapes each occurrence of the span's own closing sigil in a name, a backslash that
