@@ -83,7 +83,7 @@ struct SourceLocationTests {
 
     @Test
     func reportsEveryProblemAsAWarning() {
-        // Version 0.1 recovers from everything it can flag, so nothing is an error.
+        // Version 0.2 recovers from everything it can flag, so nothing is an error.
         let source = """
         ---
         chef: Alice

@@ -24,7 +24,7 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// The verbatim text the amount was read from: the content of an amount fence, without its
     /// braces, or the one part of a timer it states.
     ///
-    /// It is what writing an amount emits, so ``kind``, ``unit``, and ``isFixed`` are views over
-    /// it rather than values it is built from.
+    /// It is the only property writing an amount emits. ``kind``, ``unit``, and ``isFixed`` were
+    /// read from it, so changing one of them states something the written amount does not.
     public var text: String
 }

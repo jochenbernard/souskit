@@ -15,7 +15,7 @@ enum FlagParser {
         origin: StepParser.Origin,
         diagnostics: inout [Diagnostic]
     ) -> Flags {
-        var flags = Flags(isOptional: false, isStaple: false, isNonFood: false, unrecognized: [])
+        var flags = Flags.empty
         guard annotation.allowsFlags else { return flags }
 
         while cursor < characters.count,

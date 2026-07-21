@@ -196,6 +196,19 @@ struct IngredientFlagTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
+    @Test
+    func doesNotAttachFlagsToATimer() throws {
+        // A timer carries a single duration, so a colon after it is ordinary prose. Nothing
+        // opens a flag there, so the prose keeps its colon unescaped and reads back the same.
+        let parsed = SousParser().parseRecipe("Wait ~40 min~:staple here.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.timers.map(\.text) == ["40 min"])
+        #expect(step.segments.last?.proseText == ":staple here.")
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == "Wait ~40 min~:staple here.")
+    }
+
     // An unrecognized flag is never fatal: it is preserved as written and warned about, so a
     // file using a flag from a later version still reads.
 

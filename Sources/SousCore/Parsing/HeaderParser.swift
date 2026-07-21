@@ -5,7 +5,7 @@
 // warned about, never dropped.
 
 enum HeaderParser {
-    /// The keys v0.1 recognizes. Everything else is preserved and reported as unknown.
+    /// The keys v0.2 recognizes. Everything else is preserved and reported as unknown.
     private static let listKeys: Set<String> = ["tags"]
     private static let scalarKeys: Set<String> = ["title", "language", "version", "servings", "source"]
 

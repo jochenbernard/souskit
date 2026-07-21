@@ -42,7 +42,7 @@ extension Step {
             // The fence and the name are separated by a space, so a leading brace in the name
             // cannot open a second fence and needs no escape.
             let name = escapedName(ingredient.name, in: .ingredient, afterAmount: true)
-            content = "{\(amount.text)} \(name)"
+            content = "\(AmountFence.around(amount.text)) \(name)"
         } else {
             content = escapedName(ingredient.name, in: .ingredient)
         }
@@ -87,7 +87,7 @@ extension Step {
             let following = index + 1 < characters.count ? characters[index + 1] : annotation.sigil
             let escaped = character == annotation.sigil
                 || (character == "\\" && SourceText.isEscapable(following))
-                || (escapesLeadingBrace && index == 0 && character == "{")
+                || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
 
             if escaped { result.append("\\") }
             result.append(character)

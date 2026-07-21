@@ -47,7 +47,16 @@ struct DiagnosticsTests {
 
         let diagnostics = sources.flatMap({ SousParser().parseRecipe($0).diagnostics })
         // Every kind v0.2 can report, each describing itself and pointing at its construct.
-        #expect(Set(diagnostics.map(\.kind)).count == 7)
+        // Naming them rather than counting them says which one a failure is missing.
+        #expect(Set(diagnostics.map(\.kind)) == [
+            .unclosedSpan,
+            .unterminatedHeader,
+            .unknownHeaderKey,
+            .repeatedScalarKey,
+            .repeatedListKey,
+            .malformedHeaderLine,
+            .unknownFlag
+        ])
         #expect(diagnostics.allSatisfy({ !$0.message.isEmpty }))
         #expect(diagnostics.allSatisfy({ $0.range != nil }))
     }

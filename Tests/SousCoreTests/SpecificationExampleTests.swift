@@ -112,8 +112,11 @@ struct SpecificationExampleTests {
         let staples = recipe.ingredients.filter(\.flags.isStaple)
         #expect(staples.map(\.name) == ["salt", "black pepper"])
 
-        // The fields later versions introduce are unknown here, so each is preserved and warned about.
-        #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
+        // The three fields later versions introduce, `prep-time`, `cook-time`, and `diet`, are
+        // unknown here, so each is preserved and warned about rather than dropped.
+        #expect(recipe.metadata["prep-time"] == "5 min")
+        #expect(parsed.diagnostics.count == 3)
+        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey && $0.severity == .warning }))
         #expect(recipe.serialized() == source)
     }
 

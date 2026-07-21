@@ -59,7 +59,7 @@ enum SourceText {
     /// before one is ordinary text and is kept, which is what carries the escape through to
     /// the reader that does give that sigil a meaning.
     private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
-        .union([Flag.separator, Flag.shorthand, "{", "\\"])
+        .union([Flag.separator, Flag.shorthand, AmountFence.opening, "\\"])
 
     /// Whether a backslash before the character produces that character literally inside an
     /// inline list value. A list's structure is its brackets and its separating comma rather

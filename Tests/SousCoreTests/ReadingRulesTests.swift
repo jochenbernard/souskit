@@ -73,7 +73,9 @@ struct ReadingRulesTests {
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.timers.isEmpty)
-        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unclosedSpan }))
+        // The first sigil opens a span its own paragraph never closes, so it is warned about.
+        // The second is followed by a space, so it never opens one and has nothing to report.
+        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
 
     @Test
@@ -105,7 +107,7 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
-        // "## Name" is a v0.4 group heading, so a v0.1 reader leaves it as ordinary text.
+        // "## Name" is a v0.4 group heading, so a v0.2 reader leaves it as ordinary text.
         let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
 
         let step = try #require(parsed.value.steps.first)

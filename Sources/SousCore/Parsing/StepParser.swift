@@ -133,8 +133,8 @@ enum StepParser {
 
         // Every sigil is inert between the braces, the span's own included, so the fence is
         // read first and the closing sigil is looked for after it.
-        if annotation.allowsAmount, characters[contentStart] == "{" {
-            guard let closingBrace = characters[(contentStart + 1)...].firstIndex(of: "}") else {
+        if annotation.allowsAmount, characters[contentStart] == AmountFence.opening {
+            guard let closingBrace = characters[(contentStart + 1)...].firstIndex(of: AmountFence.closing) else {
                 return degradedFence(characters, from: start, as: annotation, origin: origin, diagnostics: &diagnostics)
             }
 
