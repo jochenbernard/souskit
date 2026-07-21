@@ -32,6 +32,25 @@ struct DiagnosticsTests {
         #expect(parsed.value.metadata["chef"] == "Alice")
     }
 
+    // Every problem must carry enough information to find and fix it by hand, so each
+    // diagnostic describes itself and points at the construct it came from.
+
+    @Test
+    func describesAndLocatesEveryDiagnostic() {
+        let sources = [
+            "---\nchef: Alice\nchef: Bob\nstray line\ntags: [italian]\ntags: [quick]\n---",
+            "---\ntitle: Buttered Toast",
+            "Fry @garlic and warm a #pan.",
+            "Cook @{200 g pasta"
+        ]
+
+        let diagnostics = sources.flatMap({ SousParser().parseRecipe($0).diagnostics })
+        // Every kind v0.1 can report, each describing itself and pointing at its construct.
+        #expect(Set(diagnostics.map(\.kind)).count == 6)
+        #expect(diagnostics.allSatisfy({ !$0.message.isEmpty }))
+        #expect(diagnostics.allSatisfy({ $0.range != nil }))
+    }
+
     @Test
     func locatesAnUnclosedSpan() throws {
         let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")

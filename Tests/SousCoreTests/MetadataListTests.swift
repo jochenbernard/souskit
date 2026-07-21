@@ -209,6 +209,18 @@ struct MetadataListTests {
     }
 
     @Test
+    func mergesItemsAcrossRepeatedListKeysWrittenInDifferentForms() {
+        let source = """
+        ---
+        tags: italian
+        tags: [quick, make-ahead]
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "quick", "make-ahead"])
+    }
+
+    @Test
     func mergesItemsAcrossRepeatedListKeysInDocumentOrder() {
         let source = """
         ---

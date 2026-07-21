@@ -3,11 +3,11 @@ import Testing
 
 @Suite("Header preservation")
 struct HeaderPreservationTests {
+    private static let strayLineHeader = "---\ntitle: Toast\nstray line\n---"
+
     @Test
     func preservesAHeaderLineWithNoSeparatorAsARawEntry() {
-        let source = "---\ntitle: Toast\nstray line\n---"
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
+        let metadata = SousParser().parseRecipe(Self.strayLineHeader).value.metadata
         #expect(metadata.title == "Toast")
         #expect(metadata.entries.contains(where: { $0.value == .raw("stray line") }))
     }
@@ -40,8 +40,6 @@ struct HeaderPreservationTests {
 
     @Test
     func preservesARawHeaderLineOnRoundTrip() {
-        let source = "---\ntitle: Toast\nstray line\n---"
-
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(SousParser().parseRecipe(Self.strayLineHeader).value.serialized() == Self.strayLineHeader)
     }
 }

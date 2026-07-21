@@ -57,6 +57,17 @@ struct AmountTests {
         #expect(amount.unit == nil)
     }
 
+    // The quantity is built from the digits 0 to 9, so a numeral outside that set leaves the
+    // fence with no leading number.
+    @Test(arguments: ["\u{0663}", "\u{FF13}"])
+    func treatsANonAsciiNumeralAsImprecise(digit: String) throws {
+        let parsed = SousParser().parseRecipe("Add @{\(digit) g} sugar@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        #expect(amount.kind.impreciseText == "\(digit) g")
+        #expect(amount.unit == nil)
+    }
+
     @Test
     func usesOnlyADotAsTheDecimalPoint() throws {
         let parsed = SousParser().parseRecipe("Add @{3,2 kg} flour@.")
@@ -130,6 +141,40 @@ struct AmountTests {
         #expect(quantity.value == 0.75)
         #expect(quantity.text == "1.5/2")
         #expect(amount.unit == "cups")
+    }
+
+    @Test
+    func parsesAFractionWithADecimalDenominator() throws {
+        let parsed = SousParser().parseRecipe("Add @{1/2.5 cups} milk@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 0.4)
+        #expect(quantity.text == "1/2.5")
+        #expect(amount.unit == "cups")
+    }
+
+    @Test
+    func doesNotDivideByADenominatorThatIsADecimalZero() throws {
+        let parsed = SousParser().parseRecipe("Add @{1/0.0 cup} flour@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 1.0)
+        #expect(quantity.text == "1")
+        #expect(amount.unit == "/0.0 cup")
+    }
+
+    @Test
+    func readsAFractionAsAMixedNumberOnlyAfterAWholeNumber() throws {
+        // The mixed form follows a whole number, so a decimal one does not open one.
+        let parsed = SousParser().parseRecipe("Add @{1.5 1/2 cups} flour@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 1.5)
+        #expect(quantity.text == "1.5")
+        #expect(amount.unit == "1/2 cups")
     }
 
     @Test

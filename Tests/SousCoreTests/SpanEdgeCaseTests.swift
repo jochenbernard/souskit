@@ -37,6 +37,19 @@ struct SpanEdgeCaseTests {
     }
 
     @Test
+    func closesASpanOnlyOnItsOwnSigil() throws {
+        // A span runs to its matching sigil, so another kind of sigil inside it is part of
+        // the name rather than a nested annotation.
+        let parsed = SousParser().parseRecipe("Use a #pan @garlic@ style#.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.cookware.map(\.name) == ["pan @garlic@ style"])
+        #expect(step.ingredients.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == "Use a #pan @garlic@ style#.")
+    }
+
+    @Test
     func readsTwoAdjacentSpans() {
         let parsed = SousParser().parseRecipe("Mix @salt@@pepper@ in.")
 

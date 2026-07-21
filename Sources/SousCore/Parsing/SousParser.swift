@@ -31,28 +31,16 @@ public struct SousParser {
         diagnostics: inout [Diagnostic]
     ) -> [Step] {
         var steps: [Step] = []
-        var paragraph: [Substring] = []
 
-        func endParagraph() {
-            guard let first = paragraph.first else { return }
+        for paragraph in lines.split(whereSeparator: SourceText.isBlank) {
+            guard let first = paragraph.first else { continue }
 
             steps.append(StepParser.parse(
                 paragraph.joined(separator: "\n"),
                 origin: StepParser.Origin(index: first.startIndex, map: map),
                 diagnostics: &diagnostics
             ))
-            paragraph = []
         }
-
-        for line in lines {
-            if SourceText.isBlank(line) {
-                endParagraph()
-            } else {
-                paragraph.append(line)
-            }
-        }
-
-        endParagraph()
 
         return steps
     }

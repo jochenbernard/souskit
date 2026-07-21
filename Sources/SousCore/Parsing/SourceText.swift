@@ -1,9 +1,14 @@
 // Shared, Foundation-free helpers for looking at raw Sous source text.
 
 enum SourceText {
+    /// The mark a UTF-8 file may open with. Reading and writing share it, so a mark a reader
+    /// takes for the file's own is one a writer keeps out of that position.
+    static let byteOrderMark = "\u{FEFF}"
+
     /// A leading byte-order mark is ignored, so a header still counts as starting the file.
+    /// One anywhere else is ordinary text.
     static func withoutByteOrderMark(_ text: String) -> String {
-        text.hasPrefix("\u{FEFF}") ? String(text.dropFirst()) : text
+        text.hasPrefix(byteOrderMark) ? String(text.dropFirst()) : text
     }
 
     /// Splits on any newline, so a CRLF file reads the same as an LF one. Swift treats
@@ -16,27 +21,23 @@ enum SourceText {
         line.allSatisfy(\.isWhitespace)
     }
 
+    /// The line that opens and closes a metadata header. Reading and writing share it, so
+    /// a fence a reader recognizes is a fence a writer produces.
+    static let fence = "---"
+
     /// A fence line is exactly three hyphens, optionally followed by trailing whitespace.
     static func isFence(_ line: Substring) -> Bool {
-        withoutTrailingWhitespace(line) == "---"
+        withoutTrailingWhitespace(line) == fence
     }
 
-    static func withoutTrailingWhitespace(_ text: Substring) -> Substring {
-        var end = text.endIndex
-        while end > text.startIndex {
-            let previous = text.index(before: end)
-            guard text[previous].isWhitespace else { break }
-            end = previous
-        }
-        return text[text.startIndex..<end]
-    }
+    private static func withoutTrailingWhitespace(_ text: Substring) -> Substring {
+        guard let last = text.lastIndex(where: { !$0.isWhitespace }) else { return text.prefix(0) }
 
-    static func trimmed(_ text: Substring) -> String {
-        String(withoutTrailingWhitespace(text).drop(while: \.isWhitespace))
+        return text[...last]
     }
 
     static func trimmed(_ text: String) -> String {
-        trimmed(text[...])
+        String(withoutTrailingWhitespace(text[...]).drop(while: \.isWhitespace))
     }
 
     static func isDigit(_ character: Character) -> Bool {
@@ -62,4 +63,32 @@ enum SourceText {
     }
 
     private static let listEscapable: Set<Character> = [",", "[", "]", "\\"]
+
+    /// Resolves each escape to the literal character it produces, dropping the backslash.
+    /// A backslash before a character the context does not escape, or before nothing at
+    /// all, is ordinary text and is kept.
+    ///
+    /// The body and an inline list escape different sets, so each passes its own.
+    static func unescaped(
+        _ characters: some Sequence<Character>,
+        escaping isEscapable: (Character) -> Bool
+    ) -> String {
+        var result = ""
+        var escaping = false
+
+        for character in characters {
+            if escaping {
+                if !isEscapable(character) { result.append("\\") }
+                escaping = false
+            } else if character == "\\" {
+                escaping = true
+                continue
+            }
+            result.append(character)
+        }
+
+        if escaping { result.append("\\") }
+
+        return result
+    }
 }

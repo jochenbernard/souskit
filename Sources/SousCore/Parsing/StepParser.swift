@@ -5,45 +5,6 @@
 // literal text with a warning, so the surrounding paragraph still reads.
 
 enum StepParser {
-    /// A kind of annotation span, together with the sigil-specific rules that drive it.
-    private enum Annotation {
-        case ingredient
-        case cookware
-
-        /// The annotation opened by the given sigil, or `nil` for an ordinary character.
-        init?(_ character: Character) {
-            switch character {
-            case "@": self = .ingredient
-            case "#": self = .cookware
-            default: return nil
-            }
-        }
-
-        /// The sigil that opens and closes the span.
-        var sigil: Character {
-            switch self {
-            case .ingredient: "@"
-            case .cookware: "#"
-            }
-        }
-
-        /// The name used to describe the span in a diagnostic.
-        var noun: String {
-            switch self {
-            case .ingredient: "Ingredient"
-            case .cookware: "Cookware"
-            }
-        }
-
-        /// Whether the span may open with an `{...}` amount fence.
-        var allowsAmount: Bool {
-            switch self {
-            case .ingredient: true
-            case .cookware: false
-            }
-        }
-    }
-
     /// The result of scanning a span: a well-formed annotation, or literal text recovered
     /// from a span that is not well-formed.
     private enum Span {
@@ -57,15 +18,13 @@ enum StepParser {
         var map: SourceMap
 
         func range(offset: Int, length: Int) -> SourceRange {
-            map.range(from: index, offset: offset, length: length)
+            map.range(from: map.index(index, offsetBy: offset), length: length)
         }
     }
 
     static func parse(_ text: String, origin: Origin, diagnostics: inout [Diagnostic]) -> Step {
         let characters = Array(text)
         var segments: [Segment] = []
-        var ingredients: [Ingredient] = []
-        var cookware: [Cookware] = []
         var prose = ""
         var cursor = 0
 
@@ -80,7 +39,7 @@ enum StepParser {
                 continue
             }
 
-            if let annotation = Annotation(character), opensSpan(characters, at: cursor) {
+            if let annotation = Annotation(rawValue: character), opensSpan(characters, at: cursor) {
                 switch scanSpan(characters, from: cursor, as: annotation, origin: origin, diagnostics: &diagnostics) {
                 case let .literal(literal, next):
                     prose += literal
@@ -88,14 +47,8 @@ enum StepParser {
                 case let .named(name, amount, next):
                     flush(&prose, into: &segments)
                     switch annotation {
-                    case .ingredient:
-                        let ingredient = Ingredient(name: name, amount: amount)
-                        segments.append(.ingredient(ingredient))
-                        ingredients.append(ingredient)
-                    case .cookware:
-                        let piece = Cookware(name: name)
-                        segments.append(.cookware(piece))
-                        cookware.append(piece)
+                    case .ingredient: segments.append(.ingredient(Ingredient(name: name, amount: amount)))
+                    case .cookware: segments.append(.cookware(Cookware(name: name)))
                     }
                     cursor = next
                 }
@@ -108,12 +61,7 @@ enum StepParser {
 
         flush(&prose, into: &segments)
 
-        return Step(
-            segments: segments,
-            ingredients: ingredients,
-            cookware: cookware,
-            text: text
-        )
+        return Step(segments: segments, text: text)
     }
 
     private static func flush(_ prose: inout String, into segments: inout [Segment]) {
@@ -123,7 +71,7 @@ enum StepParser {
     }
 
     private static func opensSpan(_ characters: [Character], at index: Int) -> Bool {
-        index + 1 < characters.count && !characters[index + 1].isWhitespace
+        Annotation.opensSpan(before: index + 1 < characters.count ? characters[index + 1] : nil)
     }
 
     /// Whether an escape begins at the given index, within the given end. A trailing
@@ -186,7 +134,7 @@ enum StepParser {
             return .literal(String(characters[start]), next: start + 1)
         }
 
-        let name = unescaped(characters, from: nameStart, to: closingSigil)
+        let name = SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
 
         // A span that names nothing is ordinary text, not an annotation of nothing.
         guard !name.isEmpty else {
@@ -215,23 +163,5 @@ enum StepParser {
         ))
 
         return .literal(String(characters[start...end]), next: end + 1)
-    }
-
-    /// Resolves each escape in a range of characters to the literal character it produces,
-    /// dropping the backslash.
-    private static func unescaped(_ characters: [Character], from start: Int, to end: Int) -> String {
-        var result = ""
-        var cursor = start
-        while cursor < end {
-            if opensEscape(characters, at: cursor, end: end) {
-                result.append(characters[cursor + 1])
-                cursor += 2
-            } else {
-                result.append(characters[cursor])
-                cursor += 1
-            }
-        }
-
-        return result
     }
 }

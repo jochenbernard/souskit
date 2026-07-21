@@ -47,26 +47,21 @@ enum AmountParser {
         )
     }
 
-    /// Scans one quantity: an integer, a decimal, a fraction, or a mixed number.
+    /// Scans one quantity: a number, a fraction, or a mixed number.
     private static func number(in characters: [Character], from start: Int) -> (quantity: Quantity, end: Int)? {
-        guard let leading = digits(in: characters, from: start) else { return nil }
+        guard let leading = decimal(in: characters, from: start) else { return nil }
 
         var end = leading.end
         var value = leading.value
-
-        // The decimal point is always ".", so "3,2" stops at the comma.
-        if end + 1 < characters.count,
-           characters[end] == ".",
-           let decimals = digits(in: characters, from: end + 1) {
-            value = Double(String(characters[start..<decimals.end])) ?? value
-            end = decimals.end
-        }
+        // The mixed form follows a whole number, so a decimal one never opens one.
+        let isWhole = !characters[start..<end].contains(".")
 
         if let bare = denominator(in: characters, from: end) {
-            // A bare fraction, whose numerator is the run just scanned.
+            // A bare fraction, whose numerator is the number just scanned.
             value /= bare.value
             end = bare.end
-        } else if end < characters.count,
+        } else if isWhole,
+                  end < characters.count,
                   characters[end] == " ",
                   let mixed = fraction(in: characters, from: end + 1) {
             // A mixed number: a whole number, a single space, then a fraction.
@@ -77,25 +72,40 @@ enum AmountParser {
         return (Quantity(value: value, text: String(characters[start..<end])), end)
     }
 
-    /// Scans an `n/n` fraction, returning its value and the index just past it.
+    /// Scans a fraction, a `/` between two numbers, returning its value and the index just
+    /// past it.
     private static func fraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
-        guard let numerator = digits(in: characters, from: start),
+        guard let numerator = decimal(in: characters, from: start),
               let denominator = denominator(in: characters, from: numerator.end)
         else { return nil }
 
         return (numerator.value / denominator.value, denominator.end)
     }
 
-    /// Scans a `/n` denominator with a non-zero value, returning its value and the index
-    /// just past it. A zero denominator does not match, so it is never divided by.
+    /// Scans a `/` and the number after it, whose value must be non-zero, so a fraction is
+    /// never divided by zero.
     private static func denominator(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         guard start < characters.count,
               characters[start] == "/",
-              let run = digits(in: characters, from: start + 1),
+              let run = decimal(in: characters, from: start + 1),
               run.value != 0.0
         else { return nil }
 
         return (run.value, run.end)
+    }
+
+    /// Scans a number: a run of digits, optionally followed by a decimal point and another
+    /// run. The point belongs to the number only between digits, so `3.` stops at the `3`
+    /// and `3,2` stops at the comma.
+    private static func decimal(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
+        guard let leading = digits(in: characters, from: start) else { return nil }
+
+        guard leading.end + 1 < characters.count,
+              characters[leading.end] == ".",
+              let decimals = digits(in: characters, from: leading.end + 1)
+        else { return leading }
+
+        return (Double(String(characters[start..<decimals.end])) ?? leading.value, decimals.end)
     }
 
     /// Scans a run of ASCII digits, returning its value and the index just past it.

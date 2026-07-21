@@ -18,8 +18,8 @@ enum HeaderParser {
             return (header: [], body: lines)
         }
 
-        for index in lines.indices.dropFirst() where SourceText.isFence(lines[index]) {
-            return (header: Array(lines[1..<index]), body: Array(lines[(index + 1)...]))
+        if let closing = lines.dropFirst().firstIndex(where: SourceText.isFence) {
+            return (header: Array(lines[1..<closing]), body: Array(lines[(closing + 1)...]))
         }
 
         // No closing fence: recover by reading to the end of the file so an obvious title is not lost.
@@ -58,7 +58,7 @@ enum HeaderParser {
                 entries.append(Metadata.Entry(key: "", value: .raw(String(line))))
                 diagnostics.append(.warning(
                     .malformedHeaderLine,
-                    "Header line is not a 'key: value' entry.",
+                    "Header line is not a top-level 'key: value' entry.",
                     at: map.range(from: line.startIndex, length: line.count)
                 ))
                 continue
@@ -98,19 +98,12 @@ enum HeaderParser {
     /// A key ends at the first colon followed by a space or the end of the line, so a
     /// colon inside a value such as a URL does not split it.
     private static func entry(in line: Substring) -> (key: String, value: String)? {
-        let characters = Array(line)
-        var cursor = 0
+        for colon in line.indices where line[colon] == ":" {
+            let afterColon = line.index(after: colon)
+            let key = String(line[..<colon])
 
-        while cursor < characters.count {
-            if characters[cursor] == ":" {
-                if cursor + 1 == characters.count {
-                    return (String(characters[0..<cursor]), "")
-                }
-                if characters[cursor + 1] == " " {
-                    return (String(characters[0..<cursor]), String(characters[(cursor + 2)...]))
-                }
-            }
-            cursor += 1
+            if afterColon == line.endIndex { return (key, "") }
+            if line[afterColon] == " " { return (key, String(line[line.index(after: afterColon)...])) }
         }
 
         return nil
@@ -119,7 +112,7 @@ enum HeaderParser {
     /// Only a list-valued field reads `[...]` as a list; elsewhere the brackets are literal.
     /// A value that is not a well-formed inline list is one literal item, so `tags: italian`
     /// is the one-item list `italian`.
-    static func list(in value: String) -> [String] {
+    private static func list(in value: String) -> [String] {
         let trimmed = SourceText.trimmed(value)
 
         guard isInlineList(trimmed) else {
@@ -159,7 +152,7 @@ enum HeaderParser {
         var escaping = false
 
         func endItem() {
-            let value = unescaped(SourceText.trimmed(item))
+            let value = SourceText.unescaped(SourceText.trimmed(item), escaping: SourceText.isEscapableInList)
             if !value.isEmpty { items.append(value) }
             item = ""
         }
@@ -179,27 +172,5 @@ enum HeaderParser {
         endItem()
 
         return items
-    }
-
-    /// Resolves each escape in an inline-list item to the character it produces. A backslash
-    /// before anything else is ordinary text, exactly as in the body.
-    private static func unescaped(_ item: String) -> String {
-        var result = ""
-        var escaping = false
-
-        for character in item {
-            if escaping {
-                if !SourceText.isEscapableInList(character) { result.append("\\") }
-                escaping = false
-            } else if character == "\\" {
-                escaping = true
-                continue
-            }
-            result.append(character)
-        }
-
-        if escaping { result.append("\\") }
-
-        return result
     }
 }

@@ -2,8 +2,9 @@ import SousCore
 import Testing
 
 // The scalar fields: what a value reads as, and how an unrecognized or repeated key is
-// handled. The header's shape is covered by the header suites, and list-valued fields by
-// the list suite.
+// handled. Values are literal text with no type coercion, so "1.0" stays the string it was
+// written as. The header's shape is covered by the header suites, and list-valued fields
+// by the list suite.
 
 @Suite("Metadata header")
 struct MetadataTests {
@@ -27,62 +28,17 @@ struct MetadataTests {
         #expect(metadata.source == "https://example.com/omelette")
     }
 
-    @Test
-    func keepsValuesAsLiteralTextWithoutCoercion() {
-        let source = """
-        ---
-        version: 1.0
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.version == "1.0")
-    }
-
     // The servings value reads as its leading numeric quantity, in every form an amount
     // fence allows.
 
-    @Test
-    func parsesTheServingsAsANumber() {
-        let source = """
-        ---
-        servings: 6
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.servings == 6)
-    }
-
-    @Test
-    func parsesADecimalServingsValue() {
-        let source = """
-        ---
-        servings: 2.5
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.servings == 2.5)
-    }
-
-    @Test
-    func parsesAFractionServingsValue() {
-        let source = """
-        ---
-        servings: 1/2
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.servings == 0.5)
-    }
-
-    @Test
-    func parsesAMixedNumberServingsValue() {
-        let source = """
-        ---
-        servings: 1 1/2
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.servings == 1.5)
+    @Test(arguments: [
+        (value: "6", servings: 6.0),
+        (value: "2.5", servings: 2.5),
+        (value: "1/2", servings: 0.5),
+        (value: "1 1/2", servings: 1.5)
+    ])
+    func parsesEveryQuantityFormOfTheServingsValue(value: String, servings: Double) {
+        #expect(SousParser().parseRecipe("---\nservings: \(value)\n---").value.metadata.servings == servings)
     }
 
     @Test
@@ -98,38 +54,29 @@ struct MetadataTests {
         #expect(metadata["servings"] == "six")
     }
 
-    @Test
-    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim() {
-        let source = "---\nservings: 6 \n---"
-
+    @Test(arguments: [
+        (source: "---\nservings: 6 \n---", value: "6 "),
+        (source: "---\nservings:  6\n---", value: " 6")
+    ])
+    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim(source: String, value: String) {
         let metadata = SousParser().parseRecipe(source).value.metadata
         #expect(metadata.servings == 6)
-        #expect(metadata["servings"] == "6 ")
+        #expect(metadata["servings"] == value)
     }
 
     // An unrecognized key is preserved and warned about, never dropped.
 
     @Test
-    func preservesAnUnrecognizedKey() {
+    func warnsAboutAnUnrecognizedKeyAndPreservesIt() {
         let source = """
         ---
         chef: Alice
         ---
         """
 
-        #expect(SousParser().parseRecipe(source).value.metadata["chef"] == "Alice")
-    }
-
-    @Test
-    func warnsAboutAnUnrecognizedKey() {
-        let source = """
-        ---
-        chef: Alice
-        ---
-        """
-
-        let diagnostics = SousParser().parseRecipe(source).diagnostics
-        #expect(diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.metadata["chef"] == "Alice")
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
     }
 
     @Test

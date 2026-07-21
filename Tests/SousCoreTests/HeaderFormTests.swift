@@ -85,6 +85,15 @@ struct HeaderFormTests {
     }
 
     @Test
+    func splitsAtTheFirstColonFollowedByASpaceRatherThanTheFirstColon() {
+        // A colon with nothing after it is ordinary text, so the key runs on past it.
+        let parsed = SousParser().parseRecipe("---\na:b: c\n---")
+
+        #expect(parsed.value.metadata.entries.map(\.key) == ["a:b"])
+        #expect(parsed.value.metadata["a:b"] == "c")
+    }
+
+    @Test
     func doesNotSplitAtAColonThatIsNotFollowedByASpace() {
         let source = """
         ---

@@ -3,6 +3,46 @@ import Testing
 
 @Suite("Serialization round-trip")
 struct SerializationTests {
+    /// The recipe a source reads as, and the recipe its serialized output re-reads as, which
+    /// is the pair a round-trip expectation is stated over.
+    private func roundTrip(_ source: String) -> (recipe: Recipe, reRead: Recipe) {
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+
+        return (recipe, parser.parseRecipe(recipe.serialized()).value)
+    }
+
+    /// Expects a source to survive being written back and read again as the same recipe, which
+    /// is what the round-trip guarantee promises whatever a writer normalizes on the way out.
+    private func expectTheRecipeSurvivesARoundTrip(
+        _ source: String,
+        sourceLocation: Testing.SourceLocation = #_sourceLocation
+    ) {
+        let (recipe, reRead) = roundTrip(source)
+
+        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments), sourceLocation: sourceLocation)
+        #expect(reRead.metadata == recipe.metadata, sourceLocation: sourceLocation)
+    }
+
+    /// Layout a writer is free to normalize: a trailing newline, a run of blank lines, a
+    /// whitespace-only line, a fence line with trailing space, and the space an amount fence
+    /// is set off from its name by.
+    private static let normalizedLayouts = [
+        "Toast the bread.\n",
+        "Toast the bread.\n\n",
+        "\nToast the bread.",
+        "First step.\n\n\nSecond step.",
+        "---\n---",
+        "---\ntitle: Toast\n---\nBody line.",
+        "Cook @{200 g}pasta@.",
+        "Toast the bread.\n   \nSpread with butter.",
+        "--- \ntitle: Toast\n--- ",
+        "Add @{200 g}@ now.",
+        "Toast the bread\u{2028}and butter it.",
+        "---\ntags: [italian, quick] \n---",
+        "---\ntags:  [italian, quick]\n---"
+    ]
+
     @Test(arguments: [
         "Toast the bread and spread it with butter.",
         "Fry @garlic@ until fragrant, then add @baby spinach@.",
@@ -67,9 +107,7 @@ struct SerializationTests {
         "\\@\\@\\@a\\@"
     ])
     func keepsProseWithAnEscapedSigilPairOnRoundTrip(source: String) {
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
-        let reRead = parser.parseRecipe(recipe.serialized()).value
+        let (recipe, reRead) = roundTrip(source)
 
         #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
         #expect(reRead.ingredients == recipe.ingredients)
@@ -102,9 +140,7 @@ struct SerializationTests {
         "---\ntags: [a, b] \n---"
     ])
     func keepsEveryListItemOnRoundTrip(source: String) {
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
-        let reRead = parser.parseRecipe(recipe.serialized()).value
+        let (recipe, reRead) = roundTrip(source)
 
         #expect(reRead.metadata.tags == recipe.metadata.tags)
         #expect(reRead.metadata.entries == recipe.metadata.entries)
@@ -129,11 +165,7 @@ struct SerializationTests {
 
     @Test
     func preservesAnUnclosedSpanAsLiteralTextOnRoundTrip() {
-        let source = "Fry @garlic until fragrant."
-
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
-        let reRead = parser.parseRecipe(recipe.serialized()).value
+        let (recipe, reRead) = roundTrip("Fry @garlic until fragrant.")
 
         #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
         #expect(reRead.ingredients.isEmpty)
@@ -169,30 +201,14 @@ struct SerializationTests {
         "Add @a\\\\b@ now."
     ])
     func normalizesAnUnneededEscapeButPreservesTheRecipe(source: String) {
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
-        let reRead = parser.parseRecipe(recipe.serialized()).value
-
-        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
-        #expect(reRead.metadata == recipe.metadata)
+        expectTheRecipeSurvivesARoundTrip(source)
     }
 
     // Incidental layout, such as repeated blank lines or a trailing newline, is normalized
-    // rather than preserved. What must hold is that the output re-reads to the same recipe.
+    // rather than preserved. What must hold is that the output re-reads to the same recipe,
+    // and that normalizing an already normalized file changes nothing further.
 
-    @Test(arguments: [
-        "Toast the bread.\n",
-        "Toast the bread.\n\n",
-        "\nToast the bread.",
-        "First step.\n\n\nSecond step.",
-        "---\n---",
-        "---\ntitle: Toast\n---\nBody line.",
-        "Cook @{200 g}pasta@.",
-        "Toast the bread.\n   \nSpread with butter.",
-        "--- \ntitle: Toast\n--- ",
-        "Add @{200 g}@ now.",
-        "Toast the bread\u{2028}and butter it."
-    ])
+    @Test(arguments: normalizedLayouts)
     func normalizingLayoutIsStable(source: String) {
         let parser = SousParser()
         let normalized = parser.parseRecipe(source).value.serialized()
@@ -200,21 +216,9 @@ struct SerializationTests {
         #expect(parser.parseRecipe(normalized).value.serialized() == normalized)
     }
 
-    @Test(arguments: [
-        "Toast the bread.\n   \nSpread with butter.",
-        "--- \ntitle: Toast\n--- ",
-        "Add @{200 g}@ now.",
-        "Toast the bread\u{2028}and butter it.",
-        "---\ntags: [italian, quick] \n---",
-        "---\ntags:  [italian, quick]\n---"
-    ])
+    @Test(arguments: normalizedLayouts)
     func normalizingLayoutKeepsTheContent(source: String) {
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
-        let reRead = parser.parseRecipe(recipe.serialized()).value
-
-        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
-        #expect(reRead.metadata == recipe.metadata)
+        expectTheRecipeSurvivesARoundTrip(source)
     }
 
     // A body step that opens with a fence line would read back as a metadata header, so the
@@ -227,10 +231,25 @@ struct SerializationTests {
         "\n---\n\nSpread with butter."
     ])
     func keepsABodyThatOpensWithAFenceLineInTheBody(source: String) {
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
+        let (recipe, reRead) = roundTrip(source)
 
-        #expect(parser.parseRecipe(recipe.serialized()).value == recipe)
+        #expect(reRead == recipe)
+    }
+
+    // A body that opens with a byte-order mark would have it stripped as the file's own on the
+    // way back in, so the output keeps it in the body rather than losing it.
+
+    @Test(arguments: [
+        "\u{FEFF}",
+        "\u{FEFF}x",
+        "\n\u{FEFF}",
+        "\u{FEFF}\u{FEFF}x",
+        "\u{FEFF}\u{FEFF}\n\nSpread with butter."
+    ])
+    func keepsABodyThatOpensWithAByteOrderMarkInTheBody(source: String) {
+        let (recipe, reRead) = roundTrip(source)
+
+        #expect(reRead == recipe)
     }
 
     @Test
@@ -256,17 +275,11 @@ struct SerializationTests {
         Season with @{a pinch} salt@ and serve.
         """
 
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
-        let reRead = parser.parseRecipe(recipe.serialized()).value
-        let ingredients = recipe.steps.flatMap(\.ingredients)
-        let reReadIngredients = reRead.steps.flatMap(\.ingredients)
-        let cookware = recipe.steps.flatMap(\.cookware)
-        let reReadCookware = reRead.steps.flatMap(\.cookware)
+        let (recipe, reRead) = roundTrip(source)
 
         #expect(reRead.metadata == recipe.metadata)
         #expect(reRead.steps.count == recipe.steps.count)
-        #expect(reReadIngredients == ingredients)
-        #expect(reReadCookware == cookware)
+        #expect(reRead.ingredients == recipe.ingredients)
+        #expect(reRead.cookware == recipe.cookware)
     }
 }

@@ -138,10 +138,25 @@ struct ReadingRulesTests {
         """
 
         let parsed = SousParser().parseRecipe(source)
-        let ingredients = parsed.value.steps.flatMap(\.ingredients)
         #expect(parsed.value.steps.count == 2)
-        #expect(ingredients.isEmpty)
+        #expect(parsed.value.ingredients.isEmpty)
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func doesNotCloseAnAmountFenceAcrossAParagraphBreak() {
+        // The brace a fence closes on is looked for in the span's own paragraph, so a "}"
+        // in a later paragraph leaves the fence unclosed.
+        let source = """
+        Add @{200 g
+
+        pasta} water@.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g", "pasta} water@."])
+        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unclosedSpan }))
     }
 
     @Test
@@ -206,12 +221,5 @@ struct ReadingRulesTests {
         #expect(ingredient.name == "{note}")
         #expect(ingredient.amount == nil)
         #expect(parsed.diagnostics.isEmpty)
-    }
-
-    @Test
-    func roundTripsAnEscapedSigilInsideASpan() {
-        let source = "Add @a\\@b@ now."
-
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
 }

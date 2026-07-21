@@ -18,6 +18,6 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// The unit, captured verbatim. It is `nil` for an imprecise amount and may be empty when a quantity has no unit.
     public var unit: String?
 
-    /// The verbatim source text of the amount.
+    /// The verbatim content of the amount fence, without its braces.
     public var text: String
 }

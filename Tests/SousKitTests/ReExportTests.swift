@@ -1,3 +1,6 @@
+// Every symbol below resolves to SousCore, which is what this file exists to prove, so
+// the import only looks unused.
+// swiftlint:disable:next unused_import
 import SousKit
 import Testing
 

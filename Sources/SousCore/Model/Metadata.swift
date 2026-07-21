@@ -7,14 +7,15 @@ public struct Metadata: Equatable, Hashable, Sendable {
             /// A single literal value.
             case scalar(String)
 
-            /// An inline list of literal values.
+            /// An inline list of literal values, each with its escapes resolved.
             case list([String])
 
-            /// A header line that is not a recognized `key: value` entry, preserved verbatim.
+            /// A header line that is not a top-level `key: value` entry, preserved verbatim.
             case raw(String)
         }
 
-        /// The entry's key.
+        /// The entry's key. A preserved line has no key of its own, so it is empty for every
+        /// `raw` value, as it is for a line that opens with the separator.
         public var key: String
 
         /// The entry's value.
@@ -49,6 +50,8 @@ public struct Metadata: Equatable, Hashable, Sendable {
     }
 
     /// The `tags` field, a list of free-form labels.
+    ///
+    /// Repeated `tags` entries combine, their items appended in document order.
     public var tags: [String] {
         entries.mergedList("tags")
     }
@@ -58,7 +61,7 @@ public struct Metadata: Equatable, Hashable, Sendable {
         entries.lastScalar("source")
     }
 
-    /// The last scalar value written for the given key, or `nil` when the key is absent.
+    /// The last scalar value written for the given key, or `nil` when the key holds no scalar value.
     public subscript(key: String) -> String? {
         entries.lastScalar(key)
     }
