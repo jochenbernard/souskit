@@ -15,19 +15,24 @@ extension Step {
                 // Escaping ahead of anything else would be harmless, so the test stays simple.
                 result += Self.escapedProse(
                     text,
-                    afterFlags: index > 0 && Self.carriesFlags(segments[index - 1]),
+                    afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
                     beforeAnnotation: index + 1 < segments.count
                 )
             case let .ingredient(ingredient):
                 result += Self.rendered(ingredient)
             case let .cookware(cookware):
-                result += Annotation.cookware.span(around: Self.escapedName(cookware.name, in: .cookware))
+                result += Self.rendered(cookware.name, as: .cookware)
             case let .timer(timer):
-                result += Annotation.timer.span(around: Self.escapedName(timer.text, in: .timer))
+                result += Self.rendered(timer.text, as: .timer)
             }
         }
 
         return result
+    }
+
+    /// The span an annotation that carries its content alone is written as.
+    private static func rendered(_ content: String, as annotation: Annotation) -> String {
+        annotation.span(around: escapedName(content, in: annotation))
     }
 
     private static func rendered(_ ingredient: Ingredient) -> String {
@@ -54,9 +59,14 @@ extension Step {
     private static func rendered(_ flags: Flags) -> String {
         var result = ""
 
-        if flags.isStaple { result += Flag.staple.written }
-        if flags.isNonFood { result += Flag.nonFood.written }
-        for word in flags.unrecognized { result += "\(Flag.separator)\(word)" }
+        // The shorthand stands for `:optional`, so that one flag is left to the end rather
+        // than written as its word here.
+        for flag in Flag.allCases where flag != .optional && flags[keyPath: flag.property] {
+            result += flag.written
+        }
+        for word in flags.unrecognized {
+            result += Flag.written(word)
+        }
         if flags.isOptional { result.append(Flag.shorthand) }
 
         return result
@@ -86,12 +96,6 @@ extension Step {
         return result
     }
 
-    /// Whether a flag chain may follow the segment, which is what makes prose after it able to
-    /// open one.
-    private static func carriesFlags(_ segment: Segment) -> Bool {
-        if case .ingredient = segment { true } else { false }
-    }
-
     /// Escapes a prose character that would otherwise be read as something else: a sigil that
     /// would open a span, a character that would open a flag where a chain may follow, or a
     /// backslash that would escape the character after it.
@@ -116,7 +120,8 @@ extension Step {
         // A flag chain reads on from the closing sigil, so only the character right after one
         // can open a flag, and only there does prose need the escape.
         if afterFlags, let first = characters.first {
-            escapes[0] = escapes[0] || opensFlag(first, followedBy: characters.count > 1 ? characters[1] : nil)
+            escapes[0] = escapes[0]
+                || Flag.opens(first, followedBy: characters.count > 1 ? characters[1] : nil)
         }
 
         var result = ""
@@ -126,14 +131,6 @@ extension Step {
         }
 
         return result
-    }
-
-    /// Whether the character opens a flag: the shorthand always does, and the separator does
-    /// when a flag word follows it.
-    private static func opensFlag(_ character: Character, followedBy following: Character?) -> Bool {
-        if character == Flag.shorthand { return true }
-
-        return character == Flag.separator && (following.map(Flag.continuesWord) ?? false)
     }
 
     /// Whether a prose character needs an escape, given the character that follows it in the

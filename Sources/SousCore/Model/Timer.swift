@@ -22,7 +22,8 @@ public struct Timer: Equatable, Hashable, Sendable {
 
     /// The timer's content, captured with nothing stripped and each escape resolved.
     ///
-    /// It is the text a qualitative duration displays.
+    /// It is the text a qualitative duration displays, and it is what writing a timer emits, so
+    /// ``components`` and ``kind`` are views over it rather than values it is built from.
     public var text: String
 
     /// The form this duration takes, classified from the components.

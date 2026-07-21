@@ -3,7 +3,7 @@
 // Reading and writing share this one table, so a word a reader recognizes is a word a
 // writer produces, and a flag a later version adds is added once.
 
-enum Flag: String {
+enum Flag: String, CaseIterable {
     case optional = "optional"
     case staple = "staple"
     case nonFood = "non-food"
@@ -14,18 +14,33 @@ enum Flag: String {
     /// The shorthand for `:optional`, a single character needing no flag word.
     static let shorthand: Character = "?"
 
-    /// The span a flag is written as.
-    var written: String {
-        "\(Self.separator)\(rawValue)"
+    /// The property the flag states on a set of flags. Reading sets it and writing reads it,
+    /// so the two never disagree on which property a flag word stands for.
+    var property: WritableKeyPath<Flags, Bool> {
+        switch self {
+        case .optional: \.isOptional
+        case .staple: \.isStaple
+        case .nonFood: \.isNonFood
+        }
     }
 
-    /// Sets this flag on the given set.
-    func set(on flags: inout Flags) {
-        switch self {
-        case .optional: flags.isOptional = true
-        case .staple: flags.isStaple = true
-        case .nonFood: flags.isNonFood = true
-        }
+    /// The span this flag is written as.
+    var written: String {
+        Self.written(rawValue)
+    }
+
+    /// The span a flag word is written as, recognized or not.
+    static func written(_ word: String) -> String {
+        "\(separator)\(word)"
+    }
+
+    /// Whether the character opens a flag: the shorthand always does, and the separator does
+    /// when a flag word follows it. Reading and writing share this one rule, so a character
+    /// a reader would take for a flag is one a writer escapes.
+    static func opens(_ character: Character, followedBy following: Character?) -> Bool {
+        if character == shorthand { return true }
+
+        return character == separator && (following.map(continuesWord) ?? false)
     }
 
     /// Whether the character may appear in a flag word, which is a run of letters, digits,

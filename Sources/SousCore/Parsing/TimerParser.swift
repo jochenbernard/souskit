@@ -14,10 +14,13 @@ enum TimerParser {
         var components: [Amount] = []
         var start = 0
 
-        while let quantity = AmountParser.quantity(in: characters, from: start) {
+        while start < characters.count, let quantity = AmountParser.quantity(in: characters, from: start) {
             let end = partEnd(in: characters, from: quantity.end)
             components.append(AmountParser.parse(SourceText.trimmed(String(characters[start..<end]))))
-            start = skippingWhitespace(in: characters, from: end)
+            // A part ends at the one whitespace before the next part's number, so the next
+            // part starts just past it. Any whitespace before that is the unit's own, which
+            // trimming the part removes.
+            start = end + 1
         }
 
         return components
@@ -39,12 +42,5 @@ enum TimerParser {
         }
 
         return characters.count
-    }
-
-    private static func skippingWhitespace(in characters: [Character], from start: Int) -> Int {
-        var cursor = start
-        while cursor < characters.count, characters[cursor].isWhitespace { cursor += 1 }
-
-        return cursor
     }
 }

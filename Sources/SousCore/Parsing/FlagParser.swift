@@ -18,25 +18,25 @@ enum FlagParser {
         var flags = Flags(isOptional: false, isStaple: false, isNonFood: false, unrecognized: [])
         guard annotation.allowsFlags else { return flags }
 
-        while cursor < characters.count {
+        while cursor < characters.count,
+              Flag.opens(characters[cursor], followedBy: following(characters, after: cursor)) {
             if characters[cursor] == Flag.shorthand {
                 flags.isOptional = true
                 cursor += 1
                 continue
             }
 
-            guard characters[cursor] == Flag.separator,
-                  let end = wordEnd(in: characters, from: cursor + 1)
-            else { break }
-
+            // The chain opened on the separator, so a flag word follows it.
+            let end = wordEnd(in: characters, from: cursor + 1)
             let word = String(characters[(cursor + 1)..<end])
+
             if let flag = Flag(rawValue: word) {
-                flag.set(on: &flags)
+                flags[keyPath: flag.property] = true
             } else {
                 flags.unrecognized.append(word)
                 diagnostics.append(.warning(
                     .unknownFlag,
-                    "Flag \"\(word)\" is not recognized.",
+                    "Unrecognized flag '\(word)'.",
                     at: origin.range(offset: cursor, length: end - cursor)
                 ))
             }
@@ -47,12 +47,16 @@ enum FlagParser {
         return flags
     }
 
-    /// The index just past the flag word starting at `start`, or `nil` when no flag word
-    /// starts there, which is what ends the chain on a bare colon.
-    private static func wordEnd(in characters: [Character], from start: Int) -> Int? {
+    /// The index just past the flag word starting at `start`, which the chain only opens on
+    /// when at least one character belongs to that word.
+    private static func wordEnd(in characters: [Character], from start: Int) -> Int {
         var cursor = start
         while cursor < characters.count, Flag.continuesWord(characters[cursor]) { cursor += 1 }
 
-        return cursor > start ? cursor : nil
+        return cursor
+    }
+
+    private static func following(_ characters: [Character], after index: Int) -> Character? {
+        index + 1 < characters.count ? characters[index + 1] : nil
     }
 }

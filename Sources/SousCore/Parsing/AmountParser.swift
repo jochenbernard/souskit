@@ -18,10 +18,11 @@ enum AmountParser {
     static func parse(_ fence: String) -> Amount {
         let characters = Array(fence)
         // The marker fixes an amount only immediately before a numeric quantity. Anywhere
-        // else it is ordinary text, and the amount it opens is imprecise like any other.
-        let isFixed = characters.first == fixedMarker && number(in: characters, from: 1) != nil
+        // else it is ordinary text, and the amount it opens is imprecise like any other,
+        // which is what the quantity scan failing below already reports.
+        let isMarked = characters.first == fixedMarker
 
-        guard let quantity = quantity(in: characters, from: isFixed ? 1 : 0) else {
+        guard let quantity = quantity(in: characters, from: isMarked ? 1 : 0) else {
             return Amount(
                 kind: .imprecise(fence),
                 unit: nil,
@@ -39,7 +40,7 @@ enum AmountParser {
         return Amount(
             kind: quantity.kind,
             unit: String(characters[cursor...]),
-            isFixed: isFixed,
+            isFixed: isMarked,
             text: fence
         )
     }

@@ -25,7 +25,7 @@ struct StepProjectionTests {
     @Test
     func derivesTheTimersFromTheSegments() {
         var step = SousParser().parseRecipe("Simmer ~40 min~ and rest ~10 min~.").value.steps[0]
-        step.segments = Array(step.segments.dropLast(2))
+        step.segments.removeLast(2)
 
         #expect(step.timers.map(\.text) == ["40 min"])
     }
