@@ -108,6 +108,19 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
+    // A line-initial markdown form carries a space, so the opener rule already leaves it as
+    // ordinary text. It is reserved for possible rich text after 1.0.
+    @Test(arguments: ["- Chop the onion.", "> Chop the onion."])
+    func treatsAReservedLineInitialMarkdownFormAsOrdinaryText(source: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == source)
+    }
+
     @Test
     func closesASpanOnALaterLineOfTheSameParagraph() throws {
         let parsed = SousParser().parseRecipe("Add @baby\nspinach@ to the pan.")
@@ -167,12 +180,21 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    @Test
-    func unescapesAnEscapedSigilInProse() throws {
-        let parsed = SousParser().parseRecipe("Use \\@ here.")
+    // A backslash produces the literal character for each of the six escapable characters,
+    // and for nothing else.
+    @Test(arguments: [
+        (source: "Use \\@ here.", prose: "Use @ here."),
+        (source: "Use \\# here.", prose: "Use # here."),
+        (source: "Use \\~ here.", prose: "Use ~ here."),
+        (source: "Use \\> here.", prose: "Use > here."),
+        (source: "Use \\{ here.", prose: "Use { here."),
+        (source: "Use \\\\ here.", prose: "Use \\ here.")
+    ])
+    func unescapesAnEscapedCharacterInProse(source: String, prose: String) throws {
+        let parsed = SousParser().parseRecipe(source)
 
         let step = try #require(parsed.value.steps.first)
-        #expect(step.segments.first?.proseText == "Use @ here.")
+        #expect(step.segments.first?.proseText == prose)
         #expect(parsed.diagnostics.isEmpty)
     }
 

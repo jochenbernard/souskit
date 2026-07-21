@@ -42,4 +42,15 @@ enum SourceText {
     static func isDigit(_ character: Character) -> Bool {
         character.isASCII && character.isNumber
     }
+
+    /// Whether a backslash before the character produces that character literally. The
+    /// backslash is itself escapable, so a literal one can sit directly before a sigil.
+    ///
+    /// Reading and writing share this one set, so an escape a reader resolves is an escape
+    /// a writer produces.
+    static func isEscapable(_ character: Character) -> Bool {
+        escapable.contains(character)
+    }
+
+    private static let escapable: Set<Character> = ["@", "#", "~", ">", "{", "\\"]
 }

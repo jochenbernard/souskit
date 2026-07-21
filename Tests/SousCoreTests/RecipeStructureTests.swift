@@ -109,6 +109,39 @@ struct RecipeStructureTests {
         #expect(segments.last?.proseText == " until fragrant.")
     }
 
+    @Test(arguments: ["", "   ", "\n\n"])
+    func readsAFileWithNoContentAsAnEmptyRecipe(source: String) {
+        let parsed = SousParser().parseRecipe(source)
+
+        #expect(parsed.value.steps.isEmpty)
+        #expect(parsed.value.metadata.entries.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized().isEmpty)
+    }
+
+    @Test
+    func separatesStepsOnALineOfOnlyWhitespace() {
+        let parsed = SousParser().parseRecipe("Toast the bread.\n   \nSpread with butter.")
+
+        #expect(parsed.value.steps.map(\.text) == ["Toast the bread.", "Spread with butter."])
+    }
+
+    @Test
+    func keepsTheWhitespaceAroundAStepVerbatim() {
+        let parsed = SousParser().parseRecipe("  Toast the bread.  ")
+
+        #expect(parsed.value.steps.map(\.text) == ["  Toast the bread.  "])
+    }
+
+    @Test
+    func normalizesEveryKindOfLineBreakWithinAStep() {
+        // A line separator and a vertical tab are line breaks too, so a step carries them
+        // as line feeds, exactly as it does a Windows line ending.
+        let parsed = SousParser().parseRecipe("Toast the bread\u{2028}and butter it\u{0B}while warm.")
+
+        #expect(parsed.value.steps.map(\.text) == ["Toast the bread\nand butter it\nwhile warm."])
+    }
+
     @Test
     func collectsIngredientsAcrossStepsInDocumentOrder() {
         let source = """

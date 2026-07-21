@@ -100,6 +100,123 @@ struct AmountTests {
     }
 
     @Test
+    func doesNotDivideByAZeroDenominator() throws {
+        let parsed = SousParser().parseRecipe("Add @{1/0 cup} flour@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 1.0)
+        #expect(quantity.text == "1")
+        #expect(amount.unit == "/0 cup")
+    }
+
+    @Test
+    func doesNotDivideByAZeroDenominatorInAMixedNumber() throws {
+        let parsed = SousParser().parseRecipe("Add @{1 1/0 cup} flour@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 1.0)
+        #expect(quantity.text == "1")
+        #expect(amount.unit == "1/0 cup")
+    }
+
+    @Test
+    func parsesAFractionWithADecimalNumerator() throws {
+        let parsed = SousParser().parseRecipe("Add @{1.5/2 cups} milk@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 0.75)
+        #expect(quantity.text == "1.5/2")
+        #expect(amount.unit == "cups")
+    }
+
+    @Test
+    func parsesAFractionWithNoUnit() throws {
+        let parsed = SousParser().parseRecipe("Use @{2/4} lemon@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        let unit = try #require(amount.unit)
+        #expect(quantity.value == 0.5)
+        #expect(quantity.text == "2/4")
+        #expect(unit.isEmpty)
+    }
+
+    @Test(arguments: [
+        (source: "Add @{1-2} olive oil@.", low: 1.0, high: 2.0, unit: ""),
+        (source: "Add @{0.5-1.5 cups} milk@.", low: 0.5, high: 1.5, unit: "cups"),
+        (source: "Add @{1/2-1 cup} water@.", low: 0.5, high: 1.0, unit: "cup")
+    ])
+    func parsesARangeOfEveryQuantityForm(source: String, low: Double, high: Double, unit: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let range = try #require(amount.kind.rangeQuantities)
+        #expect(range.low.value == low)
+        #expect(range.high.value == high)
+        #expect(amount.unit == unit)
+    }
+
+    @Test
+    func parsesARangeThatStartsWithAMixedNumber() throws {
+        let parsed = SousParser().parseRecipe("Add @{1 1/2-2 cups} flour@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let range = try #require(amount.kind.rangeQuantities)
+        #expect(range.low.value == 1.5)
+        #expect(range.low.text == "1 1/2")
+        #expect(range.high.value == 2.0)
+        #expect(range.high.text == "2")
+        #expect(amount.unit == "cups")
+    }
+
+    @Test
+    func treatsAHyphenWithNoFollowingNumberAsPartOfTheUnit() throws {
+        let parsed = SousParser().parseRecipe("Add @{1- 2 tbsp} olive oil@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 1.0)
+        #expect(amount.unit == "- 2 tbsp")
+    }
+
+    @Test(arguments: [
+        (source: "Add @{3. kg} flour@.", unit: ". kg"),
+        (source: "Add @{3.x} flour@.", unit: ".x")
+    ])
+    func stopsTheQuantityAtADecimalPointWithNoDigitsAfterIt(source: String, unit: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        let quantity = try #require(amount.kind.preciseQuantity)
+        #expect(quantity.value == 3.0)
+        #expect(quantity.text == "3")
+        #expect(amount.unit == unit)
+    }
+
+    @Test
+    func keepsAnyExtraSpaceBeforeTheUnitInTheUnit() throws {
+        // A single space separates the quantity from the unit; a second one is unit text.
+        let parsed = SousParser().parseRecipe("Add @{200  g} flour@.")
+
+        let amount = try #require(parsed.value.steps.first?.ingredients.first?.amount)
+        #expect(amount.unit == " g")
+    }
+
+    @Test
+    func readsAnEmptyFenceAsAnEmptyImpreciseAmount() throws {
+        let parsed = SousParser().parseRecipe("Add @{} salt@.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let amount = try #require(ingredient.amount)
+        #expect(ingredient.name == "salt")
+        #expect(amount.kind.impreciseText?.isEmpty == true)
+        #expect(amount.unit == nil)
+    }
+
+    @Test
     func capturesTheVerbatimFenceContentAsText() throws {
         let parsed = SousParser().parseRecipe("Cook @{200 g} pasta@.")
 

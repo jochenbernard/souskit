@@ -32,20 +32,10 @@ enum HeaderParser {
         return (header: Array(lines.dropFirst()), body: [])
     }
 
-    /// The typed accessors are views over the raw store, so they are derived from the
-    /// entries rather than accumulated alongside them.
+    /// The typed accessors are views over the raw store, so reading the header is reading
+    /// its entries; nothing else is accumulated alongside them.
     static func parse(_ lines: [Substring], map: SourceMap, diagnostics: inout [Diagnostic]) -> Metadata {
-        let entries = self.entries(in: lines, map: map, diagnostics: &diagnostics)
-
-        return Metadata(
-            title: entries.lastScalar("title"),
-            language: entries.lastScalar("language"),
-            version: entries.lastScalar("version"),
-            servings: entries.lastScalar("servings").flatMap({ AmountParser.leadingValue(in: SourceText.trimmed($0)) }),
-            tags: entries.mergedList("tags"),
-            source: entries.lastScalar("source"),
-            entries: entries
-        )
+        Metadata(entries: entries(in: lines, map: map, diagnostics: &diagnostics))
     }
 
     private static func entries(

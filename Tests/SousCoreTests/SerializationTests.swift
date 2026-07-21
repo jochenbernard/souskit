@@ -20,7 +20,22 @@ struct SerializationTests {
         ---
 
         Melt @{30 g} butter@ in a #pan#, fry @{2 cloves} garlic@.
-        """
+        """,
+        "Mix @salt@@pepper@ in.",
+        "Use a #{200 g} pan#.",
+        "Add @{} salt@.",
+        "Season with salt @",
+        "Season to taste \\",
+        "Read the \\note here.",
+        "Note the path C:\\Users, then add @garlic@.",
+        "Use a #8\\ pan#.",
+        "Path C:\\\\@garlic@ now.",
+        "Add @flour\\\\@ now.",
+        "  Toast the bread.  ",
+        "---\n: Alice\n---",
+        "---\ntitle:  Toast\n---",
+        "---\ntitle: a: b\n---",
+        "---\nprep-time: 15 min\n---"
     ])
     func reproducesTheSourceExactly(source: String) {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
@@ -74,8 +89,10 @@ struct SerializationTests {
     @Test(arguments: [
         "Add a \\@ symbol here.",
         "Write a \\{ brace here.",
-        "All five: \\@ \\# \\~ \\> \\{ done.",
-        "Mix @{200 g} flour@ and \\@ the rest."
+        "All six: \\@ \\# \\~ \\> \\{ \\\\ done.",
+        "Mix @{200 g} flour@ and \\@ the rest.",
+        "Halve the \\\\ ratio.",
+        "Add @a\\\\b@ now."
     ])
     func normalizesAnUnneededEscapeButPreservesTheRecipe(source: String) {
         let parser = SousParser()
@@ -96,13 +113,55 @@ struct SerializationTests {
         "First step.\n\n\nSecond step.",
         "---\n---",
         "---\ntitle: Toast\n---\nBody line.",
-        "Cook @{200 g}pasta@."
+        "Cook @{200 g}pasta@.",
+        "Toast the bread.\n   \nSpread with butter.",
+        "--- \ntitle: Toast\n--- ",
+        "Add @{200 g}@ now.",
+        "Toast the bread\u{2028}and butter it."
     ])
     func normalizingLayoutIsStable(source: String) {
         let parser = SousParser()
         let normalized = parser.parseRecipe(source).value.serialized()
 
         #expect(parser.parseRecipe(normalized).value.serialized() == normalized)
+    }
+
+    @Test(arguments: [
+        "Toast the bread.\n   \nSpread with butter.",
+        "--- \ntitle: Toast\n--- ",
+        "Add @{200 g}@ now.",
+        "Toast the bread\u{2028}and butter it."
+    ])
+    func normalizingLayoutKeepsTheContent(source: String) {
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+        let reRead = parser.parseRecipe(recipe.serialized()).value
+
+        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
+        #expect(reRead.metadata == recipe.metadata)
+    }
+
+    // A body step that opens with a fence line would read back as a metadata header, so the
+    // output keeps it in the body rather than losing it.
+
+    @Test(arguments: [
+        "\n---",
+        "\n---\nBring the water to a boil.",
+        "\n\n--- ",
+        "\n---\n\nSpread with butter."
+    ])
+    func keepsABodyThatOpensWithAFenceLineInTheBody(source: String) {
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+
+        #expect(parser.parseRecipe(recipe.serialized()).value == recipe)
+    }
+
+    @Test
+    func doesNotSeparateABodyFenceLineFromAHeaderThatPrecedesIt() {
+        let source = "---\ntitle: Toast\n---\n\n---\nBring the water to a boil."
+
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
 
     @Test

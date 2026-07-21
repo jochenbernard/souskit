@@ -21,28 +21,42 @@ public struct Metadata: Equatable, Hashable, Sendable {
         public var value: Value
     }
 
+    /// Every header entry in document order, including unrecognized keys and repeats.
+    ///
+    /// The entries are the store the typed accessors read, so editing them moves the accessors with them.
+    public var entries: [Entry]
+
     /// The `title` field, the recipe's name.
-    public var title: String?
+    public var title: String? {
+        entries.lastScalar("title")
+    }
 
     /// The `language` field, a short content-language code.
-    public var language: String?
+    public var language: String? {
+        entries.lastScalar("language")
+    }
 
     /// The `version` field, the language version the file targets.
-    public var version: String?
+    public var version: String? {
+        entries.lastScalar("version")
+    }
 
     /// The `servings` field, the number of portions the recipe makes.
     ///
     /// It is read as the value's leading numeric quantity, or `nil` when the value has no leading number.
-    public var servings: Double?
+    public var servings: Double? {
+        entries.lastScalar("servings").flatMap({ AmountParser.leadingValue(in: SourceText.trimmed($0)) })
+    }
 
     /// The `tags` field, a list of free-form labels.
-    public var tags: [String]
+    public var tags: [String] {
+        entries.mergedList("tags")
+    }
 
     /// The `source` field, where the recipe came from.
-    public var source: String?
-
-    /// Every header entry in document order, including unrecognized keys and repeats.
-    public var entries: [Entry]
+    public var source: String? {
+        entries.lastScalar("source")
+    }
 
     /// The last scalar value written for the given key, or `nil` when the key is absent.
     public subscript(key: String) -> String? {
@@ -50,8 +64,8 @@ public struct Metadata: Equatable, Hashable, Sendable {
     }
 }
 
-// The single last-wins lookup over the raw store, shared by the subscript and by the
-// header reader that derives the typed accessors, so the two cannot drift apart.
+// The lookups every typed accessor and the subscript are built from, so no reading of the
+// raw store is written twice.
 
 extension [Metadata.Entry] {
     func lastScalar(_ key: String) -> String? {

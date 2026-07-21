@@ -61,8 +61,6 @@ enum StepParser {
         }
     }
 
-    private static let escapable: Set<Character> = ["@", "#", "~", ">", "{"]
-
     static func parse(_ text: String, origin: Origin, diagnostics: inout [Diagnostic]) -> Step {
         let characters = Array(text)
         var segments: [Segment] = []
@@ -76,7 +74,7 @@ enum StepParser {
 
             // A backslash produces the literal character, so the escape is resolved and the
             // backslash dropped. Serialization escapes the character again where needed.
-            if character == "\\", cursor + 1 < characters.count, escapable.contains(characters[cursor + 1]) {
+            if opensEscape(characters, at: cursor, end: characters.count) {
                 prose.append(characters[cursor + 1])
                 cursor += 2
                 continue
@@ -128,12 +126,18 @@ enum StepParser {
         index + 1 < characters.count && !characters[index + 1].isWhitespace
     }
 
-    /// Finds the span's closing sigil, skipping any escaped sigil so `\@` inside `@...@`
-    /// stays part of the name rather than closing it. The escape is kept verbatim.
+    /// Whether an escape begins at the given index, within the given end. A trailing
+    /// backslash escapes nothing, so it is ordinary text.
+    private static func opensEscape(_ characters: [Character], at index: Int, end: Int) -> Bool {
+        characters[index] == "\\" && index + 1 < end && SourceText.isEscapable(characters[index + 1])
+    }
+
+    /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays
+    /// part of the name rather than closing it.
     private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
         var cursor = start
         while cursor < characters.count {
-            if characters[cursor] == "\\", cursor + 1 < characters.count, escapable.contains(characters[cursor + 1]) {
+            if opensEscape(characters, at: cursor, end: characters.count) {
                 cursor += 2
                 continue
             }
@@ -208,7 +212,7 @@ enum StepParser {
         var result = ""
         var cursor = start
         while cursor < end {
-            if characters[cursor] == "\\", cursor + 1 < end, escapable.contains(characters[cursor + 1]) {
+            if opensEscape(characters, at: cursor, end: end) {
                 result.append(characters[cursor + 1])
                 cursor += 2
             } else {
