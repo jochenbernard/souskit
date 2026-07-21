@@ -1,11 +1,36 @@
 import SousCore
 import Testing
 
-// The header's shape: where its fences may sit, and how a line is split into a key and a
-// value. What the values then mean is covered by the metadata suites.
+// The header's shape: whether a file has one at all, where its fences may sit, and how a
+// line is split into a key and a value. What the values then mean is covered by the
+// metadata suites.
 
 @Suite("Header form")
 struct HeaderFormTests {
+    @Test
+    func parsesAnEmptyHeader() {
+        let source = """
+        ---
+        ---
+        """
+
+        let metadata = SousParser().parseRecipe(source).value.metadata
+        #expect(metadata.title == nil)
+        #expect(metadata.entries.isEmpty)
+    }
+
+    @Test
+    func treatsAFileWithoutALeadingFenceAsHavingNoHeader() {
+        let source = """
+        Toast the bread.
+        ---
+        title: X
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.title == nil)
+    }
+
     @Test
     func treatsAnIndentedOpeningFenceAsBodyText() {
         // The opening fence must be the file's first line, with nothing before it.
@@ -13,6 +38,14 @@ struct HeaderFormTests {
 
         #expect(parsed.value.metadata.entries.isEmpty)
         #expect(parsed.value.steps.count == 1)
+    }
+
+    @Test
+    func ignoresALeadingByteOrderMark() {
+        // The mark is not content, so a header still counts as starting the file.
+        let source = "\u{FEFF}---\ntitle: Buttered Toast\n---"
+
+        #expect(SousParser().parseRecipe(source).value.metadata.title == "Buttered Toast")
     }
 
     @Test
@@ -33,13 +66,18 @@ struct HeaderFormTests {
     }
 
     @Test
-    func readsALineThatOpensWithTheSeparatorAsAnEmptyKey() {
-        let parsed = SousParser().parseRecipe("---\n: Alice\n---")
+    func recoversFromAnUnterminatedHeader() {
+        let source = """
+        ---
+        title: Buttered Toast
+        """
 
-        #expect(parsed.value.metadata.entries.map(\.key) == [""])
-        #expect(parsed.value.metadata[""] == "Alice")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.metadata.title == "Buttered Toast")
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unterminatedHeader }))
     }
+
+    // A key ends at the first colon followed by a space or the end of the line.
 
     @Test
     func splitsOnlyAtTheFirstSeparator() {
@@ -47,8 +85,40 @@ struct HeaderFormTests {
     }
 
     @Test
+    func doesNotSplitAtAColonThatIsNotFollowedByASpace() {
+        let source = """
+        ---
+        source: https://example.com/recipes/1
+        ---
+        """
+
+        #expect(SousParser().parseRecipe(source).value.metadata.source == "https://example.com/recipes/1")
+    }
+
+    @Test
+    func readsAKeyEndingTheLineAsAnEmptyValue() throws {
+        let source = """
+        ---
+        title:
+        ---
+        """
+
+        let title = try #require(SousParser().parseRecipe(source).value.metadata.title)
+        #expect(title.isEmpty)
+    }
+
+    @Test
     func removesExactlyOneSpaceAfterTheSeparator() {
         #expect(SousParser().parseRecipe("---\ntitle:  Toast\n---").value.metadata.title == " Toast")
+    }
+
+    @Test
+    func readsALineThatOpensWithTheSeparatorAsAnEmptyKey() {
+        let parsed = SousParser().parseRecipe("---\n: Alice\n---")
+
+        #expect(parsed.value.metadata.entries.map(\.key) == [""])
+        #expect(parsed.value.metadata[""] == "Alice")
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
     }
 
     @Test
@@ -67,14 +137,5 @@ struct HeaderFormTests {
 
         #expect(parsed.value.metadata["prep-time"] == "15 min")
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
-    }
-
-    @Test(arguments: [
-        "---\ntags: [ ]\n---",
-        "---\ntags: [,]\n---",
-        "---\ntags: [, ,]\n---"
-    ])
-    func readsAnInlineListOfNothingButSeparatorsAsNoItems(source: String) {
-        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
     }
 }

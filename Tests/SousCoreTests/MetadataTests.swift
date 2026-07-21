@@ -1,6 +1,10 @@
 import SousCore
 import Testing
 
+// The scalar fields: what a value reads as, and how an unrecognized or repeated key is
+// handled. The header's shape is covered by the header suites, and list-valued fields by
+// the list suite.
+
 @Suite("Metadata header")
 struct MetadataTests {
     @Test
@@ -24,18 +28,6 @@ struct MetadataTests {
     }
 
     @Test
-    func splitsAKeyOnlyAtTheFirstColonFollowedByASpace() {
-        let source = """
-        ---
-        source: https://example.com/recipes/1
-        ---
-        """
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
-        #expect(metadata.source == "https://example.com/recipes/1")
-    }
-
-    @Test
     func keepsValuesAsLiteralTextWithoutCoercion() {
         let source = """
         ---
@@ -45,6 +37,9 @@ struct MetadataTests {
 
         #expect(SousParser().parseRecipe(source).value.metadata.version == "1.0")
     }
+
+    // The servings value reads as its leading numeric quantity, in every form an amount
+    // fence allows.
 
     @Test
     func parsesTheServingsAsANumber() {
@@ -91,27 +86,28 @@ struct MetadataTests {
     }
 
     @Test
-    func parsesAnInlineTagList() {
+    func leavesNonNumericServingsUnsetButPreserved() {
         let source = """
         ---
-        tags: [italian, make-ahead]
+        servings: six
         ---
         """
 
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "make-ahead"])
+        let metadata = SousParser().parseRecipe(source).value.metadata
+        #expect(metadata.servings == nil)
+        #expect(metadata["servings"] == "six")
     }
 
     @Test
-    func trimsWhitespaceAroundInlineListItems() {
-        let source = """
-        ---
-        tags: [comfort food, italian, make-ahead]
-        ---
-        """
+    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim() {
+        let source = "---\nservings: 6 \n---"
 
-        let tags = SousParser().parseRecipe(source).value.metadata.tags
-        #expect(tags == ["comfort food", "italian", "make-ahead"])
+        let metadata = SousParser().parseRecipe(source).value.metadata
+        #expect(metadata.servings == 6)
+        #expect(metadata["servings"] == "6 ")
     }
+
+    // An unrecognized key is preserved and warned about, never dropped.
 
     @Test
     func preservesAnUnrecognizedKey() {
@@ -148,6 +144,9 @@ struct MetadataTests {
         #expect(SousParser().parseRecipe(source).diagnostics.isEmpty)
     }
 
+    // A repeated scalar key warns and keeps its last occurrence, while every occurrence
+    // survives in the raw store.
+
     @Test
     func warnsAboutARepeatedScalarKeyAndKeepsTheLastValue() {
         let source = """
@@ -160,19 +159,6 @@ struct MetadataTests {
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.metadata.title == "Second")
         #expect(parsed.diagnostics.contains(where: { $0.kind == .repeatedScalarKey }))
-    }
-
-    @Test
-    func preservesEveryEntryIncludingRepeats() {
-        let source = """
-        ---
-        title: First
-        title: Second
-        ---
-        """
-
-        let entries = SousParser().parseRecipe(source).value.metadata.entries
-        #expect(entries.map(\.key) == ["title", "title"])
     }
 
     @Test
@@ -190,71 +176,7 @@ struct MetadataTests {
     }
 
     @Test
-    func warnsAboutARepeatedListKeyAndMergesItsItems() {
-        let source = """
-        ---
-        tags: [italian]
-        tags: [quick]
-        ---
-        """
-
-        let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .repeatedListKey }))
-        #expect(parsed.value.metadata.tags == ["italian", "quick"])
-    }
-
-    @Test
-    func mergesItemsAcrossRepeatedListKeysInDocumentOrder() {
-        let source = """
-        ---
-        tags: [comfort food, italian]
-        tags: [make-ahead]
-        ---
-        """
-
-        #expect(
-            SousParser().parseRecipe(source).value.metadata.tags
-                == ["comfort food", "italian", "make-ahead"]
-        )
-    }
-
-    @Test
-    func recoversFromAnUnterminatedHeader() {
-        let source = """
-        ---
-        title: Buttered Toast
-        """
-
-        let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.metadata.title == "Buttered Toast")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unterminatedHeader }))
-    }
-
-    @Test
-    func treatsAFileWithoutALeadingFenceAsHavingNoHeader() {
-        let source = """
-        Toast the bread.
-        ---
-        title: X
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.title == nil)
-    }
-
-    @Test
-    func readsBracketsAsLiteralTextForANonListField() {
-        let source = """
-        ---
-        note: [see the sidebar]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata["note"] == "[see the sidebar]")
-    }
-
-    @Test
-    func returnsTheLastValueForARepeatedKeyFromTheSubscript() {
+    func preservesEveryEntryIncludingRepeats() {
         let source = """
         ---
         title: First
@@ -262,114 +184,7 @@ struct MetadataTests {
         ---
         """
 
-        #expect(SousParser().parseRecipe(source).value.metadata["title"] == "Second")
-    }
-
-    @Test
-    func ignoresALeadingByteOrderMark() {
-        let source = "\u{FEFF}---\ntitle: Buttered Toast\n---"
-
-        #expect(SousParser().parseRecipe(source).value.metadata.title == "Buttered Toast")
-    }
-
-    @Test
-    func readsAKeyEndingTheLineAsAnEmptyValue() throws {
-        let source = """
-        ---
-        title:
-        ---
-        """
-
-        let title = try #require(SousParser().parseRecipe(source).value.metadata.title)
-        #expect(title.isEmpty)
-    }
-
-    @Test
-    func leavesNonNumericServingsUnsetButPreserved() {
-        let source = """
-        ---
-        servings: six
-        ---
-        """
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
-        #expect(metadata.servings == nil)
-        #expect(metadata["servings"] == "six")
-    }
-
-    @Test
-    func readsAnUnbracketedListValueAsASingleItem() {
-        let source = """
-        ---
-        tags: italian
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian"])
-    }
-
-    @Test
-    func readsAnUnterminatedBracketAsLiteralText() {
-        let source = """
-        ---
-        tags: [italian
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["[italian"])
-    }
-
-    @Test
-    func readsAListKeyWithNoValueAsNoItems() {
-        let source = """
-        ---
-        tags:
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
-    }
-
-    @Test
-    func readsAnEmptyInlineListAsNoItems() {
-        let source = """
-        ---
-        tags: []
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
-    }
-
-    @Test
-    func parsesAnEmptyHeader() {
-        let source = """
-        ---
-        ---
-        """
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
-        #expect(metadata.title == nil)
-        #expect(metadata.entries.isEmpty)
-    }
-
-    @Test
-    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim() {
-        let source = "---\nservings: 6 \n---"
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
-        #expect(metadata.servings == 6)
-        #expect(metadata["servings"] == "6 ")
-    }
-
-    @Test
-    func dropsEmptyItemsFromAnInlineList() {
-        let source = """
-        ---
-        tags: [italian, , make-ahead,]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "make-ahead"])
+        let entries = SousParser().parseRecipe(source).value.metadata.entries
+        #expect(entries.map(\.key) == ["title", "title"])
     }
 }

@@ -63,6 +63,7 @@ struct MetadataProjectionTests {
     }
 
     @Test(arguments: [
+        (key: "title", first: "First", last: "Second"),
         (key: "language", first: "en", last: "nl"),
         (key: "version", first: "1.0", last: "1.1"),
         (key: "source", first: "Jane", last: "Jon")
