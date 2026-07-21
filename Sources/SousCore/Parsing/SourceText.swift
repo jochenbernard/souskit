@@ -53,4 +53,13 @@ enum SourceText {
     }
 
     private static let escapable: Set<Character> = ["@", "#", "~", ">", "{", "\\"]
+
+    /// Whether a backslash before the character produces that character literally inside an
+    /// inline list value. A list's structure is its brackets and its separating comma rather
+    /// than the body's sigils, so it escapes its own set.
+    static func isEscapableInList(_ character: Character) -> Bool {
+        listEscapable.contains(character)
+    }
+
+    private static let listEscapable: Set<Character> = [",", "[", "]", "\\"]
 }

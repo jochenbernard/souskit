@@ -14,6 +14,19 @@ struct SpanEdgeCaseTests {
     }
 
     @Test
+    func readsTheSpansOwnSigilInsideAnAmountFenceAsPartOfTheAmount() throws {
+        // Every sigil is inert between the braces, the span's own included, so the fence is
+        // read before the closing sigil is looked for.
+        let parsed = SousParser().parseRecipe("Add @{2 @ g} flour@ now.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "flour")
+        #expect(ingredient.amount?.kind.preciseQuantity?.value == 2.0)
+        #expect(ingredient.amount?.unit == "@ g")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
     func doesNotReadAnAmountFenceInACookwareSpan() throws {
         // Cookware carries a single value, so a brace is part of its name.
         let parsed = SousParser().parseRecipe("Use a #{200 g} pan#.")

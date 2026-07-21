@@ -148,9 +148,8 @@ enum StepParser {
     }
 
     /// Scans one annotation span that opens at `start`. A well-formed span becomes a named
-    /// annotation; an unclosed span, or an amount fence with no closing brace before the
-    /// closing sigil, degrades to literal text with a warning so the surrounding paragraph
-    /// still reads.
+    /// annotation; an unclosed span, or an amount fence with no closing brace, degrades to
+    /// literal text with a warning so the surrounding paragraph still reads.
     private static func scanSpan(
         _ characters: [Character],
         from start: Int,
@@ -160,10 +159,24 @@ enum StepParser {
     ) -> Span {
         let sigil = annotation.sigil
         let contentStart = start + 1
+        var nameStart = contentStart
+        var amount: Amount?
 
-        // The closing sigil bounds the span, so it is located before the amount fence: a
-        // fence brace past it belongs to a later span, not to this one.
-        guard let closingSigil = closingSigil(sigil, in: characters, from: contentStart) else {
+        // Every sigil is inert between the braces, the span's own included, so the fence is
+        // read first and the closing sigil is looked for after it.
+        if annotation.allowsAmount, characters[contentStart] == "{" {
+            guard let closingBrace = characters[(contentStart + 1)...].firstIndex(of: "}") else {
+                return degradedFence(characters, from: start, as: annotation, origin: origin, diagnostics: &diagnostics)
+            }
+
+            amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
+            nameStart = closingBrace + 1
+
+            // One space usually separates the fence from the name, but it is optional.
+            if nameStart < characters.count, characters[nameStart] == " " { nameStart += 1 }
+        }
+
+        guard let closingSigil = closingSigil(sigil, in: characters, from: nameStart) else {
             diagnostics.append(.warning(
                 .unclosedSpan,
                 "\(annotation.noun) span is missing a closing sigil.",
@@ -171,29 +184,6 @@ enum StepParser {
             ))
 
             return .literal(String(characters[start]), next: start + 1)
-        }
-
-        var nameStart = contentStart
-        var amount: Amount?
-
-        if annotation.allowsAmount, characters[contentStart] == "{" {
-            guard let closingBrace = characters[(contentStart + 1)..<closingSigil].firstIndex(of: "}") else {
-                // An amount fence with no closing brace before the closing sigil makes the
-                // whole span not well-formed.
-                diagnostics.append(.warning(
-                    .unclosedSpan,
-                    "Amount fence is missing a closing brace.",
-                    at: origin.range(offset: start, length: closingSigil - start + 1)
-                ))
-
-                return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
-            }
-
-            amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
-            nameStart = closingBrace + 1
-
-            // One space usually separates the fence from the name, but it is optional.
-            if nameStart < closingSigil, characters[nameStart] == " " { nameStart += 1 }
         }
 
         let name = unescaped(characters, from: nameStart, to: closingSigil)
@@ -204,6 +194,27 @@ enum StepParser {
         }
 
         return .named(name: name, amount: amount, next: closingSigil + 1)
+    }
+
+    /// Recovers from an amount fence that never closes, which makes the whole span not
+    /// well-formed. The span degrades to literal text, bounded by its closing sigil when it
+    /// has one and by the opening sigil alone when it has none.
+    private static func degradedFence(
+        _ characters: [Character],
+        from start: Int,
+        as annotation: Annotation,
+        origin: Origin,
+        diagnostics: inout [Diagnostic]
+    ) -> Span {
+        let end = closingSigil(annotation.sigil, in: characters, from: start + 1) ?? start
+
+        diagnostics.append(.warning(
+            .unclosedSpan,
+            "Amount fence is missing a closing brace.",
+            at: origin.range(offset: start, length: end - start + 1)
+        ))
+
+        return .literal(String(characters[start...end]), next: end + 1)
     }
 
     /// Resolves each escape in a range of characters to the literal character it produces,

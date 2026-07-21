@@ -35,9 +35,11 @@ extension Recipe {
         for entry in metadata.entries {
             switch entry.value {
             case let .scalar(value):
-                lines.append("\(entry.key): \(value)")
+                // An empty value ends the line at the separator, where a trailing space
+                // would be incidental layout.
+                lines.append(value.isEmpty ? "\(entry.key):" : "\(entry.key): \(value)")
             case let .list(items):
-                lines.append("\(entry.key): [\(items.joined(separator: ", "))]")
+                lines.append("\(entry.key): \(rendered(items))")
             case let .raw(line):
                 lines.append(line)
             }
@@ -46,6 +48,25 @@ extension Recipe {
         lines.append("---")
 
         return lines.joined(separator: "\n")
+    }
+
+    /// Renders a list value in the inline form, which every item survives because the
+    /// characters the list gives a meaning of its own are escaped inside it.
+    private static func rendered(_ items: [String]) -> String {
+        "[\(items.map(escapedItem).joined(separator: ", "))]"
+    }
+
+    /// Escapes each character an inline list reads as its own structure, so an item holding a
+    /// separator, a bracket, or a backslash reads back verbatim.
+    private static func escapedItem(_ item: String) -> String {
+        var result = ""
+
+        for character in item {
+            if SourceText.isEscapableInList(character) { result.append("\\") }
+            result.append(character)
+        }
+
+        return result
     }
 
     private static func rendered(_ step: Step) -> String {
@@ -109,29 +130,41 @@ extension Recipe {
 
     /// Escapes a prose character that would otherwise be read as something else: a sigil that
     /// would open a span, or a backslash that would escape the character after it.
+    ///
+    /// Whether a character needs an escape depends on whether the one after it gets one, so
+    /// the run is decided from its end backwards.
     private static func escapedProse(_ text: String, beforeAnnotation: Bool) -> String {
         let characters = Array(text)
+        var escapes = [Bool](repeating: false, count: characters.count)
+
+        for index in characters.indices.reversed() {
+            let hasFollowing = index + 1 < characters.count
+
+            escapes[index] = needsEscape(
+                characters[index],
+                followedBy: hasFollowing ? characters[index + 1] : nil,
+                escaped: hasFollowing && escapes[index + 1],
+                beforeAnnotation: beforeAnnotation
+            )
+        }
+
         var result = ""
-
         for index in characters.indices {
-            let character = characters[index]
-            let following = index + 1 < characters.count ? characters[index + 1] : nil
-
-            if needsEscape(character, followedBy: following, beforeAnnotation: beforeAnnotation) {
-                result.append("\\")
-            }
-            result.append(character)
+            if escapes[index] { result.append("\\") }
+            result.append(characters[index])
         }
 
         return result
     }
 
     /// Whether a prose character needs an escape, given the character that follows it in the
-    /// output. The last character of a run is followed by the annotation's opening sigil,
-    /// when one follows, and by nothing otherwise.
+    /// output and whether that character is itself escaped there. The last character of a run
+    /// is followed by the annotation's opening sigil, when one follows, and by nothing
+    /// otherwise.
     private static func needsEscape(
         _ character: Character,
         followedBy following: Character?,
+        escaped: Bool,
         beforeAnnotation: Bool
     ) -> Bool {
         switch character {
@@ -140,10 +173,12 @@ extension Recipe {
             // An annotation opens with a sigil, which is escapable.
             following.map(SourceText.isEscapable) ?? beforeAnnotation
         case "@", "#":
-            // A sigil opens a span when a non-whitespace character follows it. A pair of
-            // identical sigils is left alone, because it re-reads as the same ordinary text,
-            // unless the second one opens the annotation that follows.
-            following.map({ !$0.isWhitespace && $0 != character }) ?? beforeAnnotation
+            // A sigil opens a span when a non-whitespace character follows it. An adjacent
+            // pair of identical sigils is left alone, because the reader closes the span the
+            // first one opens on the second one at once and keeps both as text. That holds
+            // only while the second stays unescaped: escaping it lets the span reach past it
+            // and swallow the text beyond.
+            following.map({ !$0.isWhitespace && ($0 != character || escaped) }) ?? beforeAnnotation
         default:
             false
         }

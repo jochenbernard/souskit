@@ -117,19 +117,89 @@ enum HeaderParser {
     }
 
     /// Only a list-valued field reads `[...]` as a list; elsewhere the brackets are literal.
-    /// Items are trimmed of surrounding whitespace, and an empty item, such as one left by
-    /// a stray or trailing comma, is dropped.
-    private static func list(in value: String) -> [String] {
-        guard value.hasPrefix("["), value.hasSuffix("]") else {
-            return value.isEmpty ? [] : [value]
+    /// A value that is not a well-formed inline list is one literal item, so `tags: italian`
+    /// is the one-item list `italian`.
+    static func list(in value: String) -> [String] {
+        let trimmed = SourceText.trimmed(value)
+
+        guard isInlineList(trimmed) else {
+            return trimmed.isEmpty ? [] : [trimmed]
         }
 
-        let inner = value.dropFirst().dropLast()
-        guard !SourceText.trimmed(inner).isEmpty else { return [] }
+        return items(in: trimmed.dropFirst().dropLast())
+    }
 
-        return inner
-            .split(separator: ",", omittingEmptySubsequences: false)
-            .map(SourceText.trimmed)
-            .filter({ !$0.isEmpty })
+    /// A well-formed inline list opens with `[` and closes on the first `]` that an escape
+    /// does not produce, which must be the value's last character. Anything past that `]`
+    /// leaves the value unclosed, so it reads as one literal item instead.
+    private static func isInlineList(_ value: String) -> Bool {
+        guard value.hasPrefix("[") else { return false }
+
+        var escaping = false
+
+        for index in value.indices.dropFirst() {
+            if escaping {
+                escaping = false
+            } else if value[index] == "\\" {
+                escaping = true
+            } else if value[index] == "]" {
+                return value.index(after: index) == value.endIndex
+            }
+        }
+
+        return false
+    }
+
+    /// Splits the content between the brackets on its unescaped commas. Items are trimmed of
+    /// surrounding whitespace, and an empty item, such as one left by a stray or trailing
+    /// comma, is dropped.
+    private static func items(in content: Substring) -> [String] {
+        var items: [String] = []
+        var item = ""
+        var escaping = false
+
+        func endItem() {
+            let value = unescaped(SourceText.trimmed(item))
+            if !value.isEmpty { items.append(value) }
+            item = ""
+        }
+
+        for character in content {
+            if escaping {
+                escaping = false
+            } else if character == "\\" {
+                escaping = true
+            } else if character == "," {
+                endItem()
+                continue
+            }
+            item.append(character)
+        }
+
+        endItem()
+
+        return items
+    }
+
+    /// Resolves each escape in an inline-list item to the character it produces. A backslash
+    /// before anything else is ordinary text, exactly as in the body.
+    private static func unescaped(_ item: String) -> String {
+        var result = ""
+        var escaping = false
+
+        for character in item {
+            if escaping {
+                if !SourceText.isEscapableInList(character) { result.append("\\") }
+                escaping = false
+            } else if character == "\\" {
+                escaping = true
+                continue
+            }
+            result.append(character)
+        }
+
+        if escaping { result.append("\\") }
+
+        return result
     }
 }

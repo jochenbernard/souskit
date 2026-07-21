@@ -53,23 +53,26 @@ struct IngredientTests {
     }
 
     @Test
-    func doesNotLetAnUnclosedFenceConsumeALaterIngredient() throws {
-        let parsed = SousParser().parseRecipe("Add @{200 g pasta@ and @{100 g} sauce@.")
+    func readsALiteralSigilInsideAFenceAsPartOfTheAmount() throws {
+        let parsed = SousParser().parseRecipe("Add @{a@b} sauce@ now.")
 
-        let step = try #require(parsed.value.steps.first)
-        #expect(step.ingredients.count == 1)
-        let sauce = try #require(step.ingredients.first)
-        #expect(sauce.name == "sauce")
-        #expect(sauce.amount?.text == "100 g")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "sauce")
+        #expect(ingredient.amount?.kind.impreciseText == "a@b")
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
-    func treatsALiteralSigilInsideAFenceAsAMalformedSpan() throws {
-        let parsed = SousParser().parseRecipe("Add @{a@b} sauce@ now.")
+    func letsAnUnclosedFenceReachTheNextClosingBrace() throws {
+        // A sigil is inert between the braces, so the fence closes on the next "}" in the
+        // paragraph rather than on the sigil that comes before it.
+        let parsed = SousParser().parseRecipe("Add @{200 g pasta@ and @{100 g} sauce@.")
 
         let step = try #require(parsed.value.steps.first)
-        #expect(step.ingredients.isEmpty)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+        let ingredient = try #require(step.ingredients.first)
+        #expect(step.ingredients.count == 1)
+        #expect(ingredient.name == "sauce")
+        #expect(ingredient.amount?.text == "200 g pasta@ and @{100 g")
+        #expect(parsed.diagnostics.isEmpty)
     }
 }

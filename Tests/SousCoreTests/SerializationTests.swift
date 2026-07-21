@@ -35,10 +35,84 @@ struct SerializationTests {
         "---\n: Alice\n---",
         "---\ntitle:  Toast\n---",
         "---\ntitle: a: b\n---",
-        "---\nprep-time: 15 min\n---"
+        "---\nprep-time: 15 min\n---",
+        "---\ntitle:\n---",
+        "---\nnutrition:\n  calories: 640 kcal\n---",
+        "---\ntags: [comfort food\\, italian]\n---",
+        "---\ntags: [\\[sugar]\n---",
+        "---\nsource: C:\\photos\\x\n---"
     ])
     func reproducesTheSourceExactly(source: String) {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
+
+    // A pair of identical sigils reads as ordinary text only while both stay unescaped: the
+    // reader closes the span the first one opens on the second one at once, and keeps both.
+
+    @Test(arguments: [
+        "Use @@ here.",
+        "Use ## here.",
+        "## Sauce",
+        "Rate it @@ out of five."
+    ])
+    func leavesAnInertSigilPairUnescaped(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    }
+
+    @Test(arguments: [
+        "\\@\\@garlic\\@ here.",
+        "\\#\\#pan\\# here.",
+        "\\@\\@garlic\\@",
+        "Mix \\@\\@a\\@ into @flour@.",
+        "\\@\\@\\@a\\@"
+    ])
+    func keepsProseWithAnEscapedSigilPairOnRoundTrip(source: String) {
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+        let reRead = parser.parseRecipe(recipe.serialized()).value
+
+        #expect(reRead.steps.map(\.segments) == recipe.steps.map(\.segments))
+        #expect(reRead.ingredients == recipe.ingredients)
+    }
+
+    // The inline form is the only one a list is written in, because escaping lets any item
+    // survive it.
+
+    @Test
+    func escapesASeparatorInAListItem() {
+        let source = "---\ntags: comfort food, italian\n---"
+
+        #expect(SousParser().parseRecipe(source).value.serialized() == "---\ntags: [comfort food\\, italian]\n---")
+    }
+
+    @Test
+    func escapesABracketInAListItem() {
+        let source = "---\ntags: [italian\n---"
+
+        #expect(SousParser().parseRecipe(source).value.serialized() == "---\ntags: [\\[italian]\n---")
+    }
+
+    @Test(arguments: [
+        "---\ntags: comfort food, italian\n---",
+        "---\ntags: [italian\n---",
+        "---\ntags: a]b\n---",
+        "---\ntags: [a\\]\n---",
+        "---\ntags: C:\\x\n---",
+        "---\ntags: [a\\\\b, c]\n---",
+        "---\ntags: [a, b] \n---"
+    ])
+    func keepsEveryListItemOnRoundTrip(source: String) {
+        let parser = SousParser()
+        let recipe = parser.parseRecipe(source).value
+        let reRead = parser.parseRecipe(recipe.serialized()).value
+
+        #expect(reRead.metadata.tags == recipe.metadata.tags)
+        #expect(reRead.metadata.entries == recipe.metadata.entries)
+    }
+
+    @Test
+    func writesAnEmptyScalarValueWithoutATrailingSpace() {
+        #expect(SousParser().parseRecipe("---\ntitle:\n---").value.serialized() == "---\ntitle:\n---")
     }
 
     @Test
@@ -130,7 +204,9 @@ struct SerializationTests {
         "Toast the bread.\n   \nSpread with butter.",
         "--- \ntitle: Toast\n--- ",
         "Add @{200 g}@ now.",
-        "Toast the bread\u{2028}and butter it."
+        "Toast the bread\u{2028}and butter it.",
+        "---\ntags: [italian, quick] \n---",
+        "---\ntags:  [italian, quick]\n---"
     ])
     func normalizingLayoutKeepsTheContent(source: String) {
         let parser = SousParser()
