@@ -8,4 +8,7 @@ public enum Segment: Equatable, Hashable, Sendable {
 
     /// A cookware annotation.
     case cookware(Cookware)
+
+    /// A timer annotation.
+    case timer(Timer)
 }

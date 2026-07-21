@@ -18,6 +18,11 @@ extension Step {
                 result += Self.rendered(ingredient)
             case let .cookware(cookware):
                 result += Annotation.cookware.span(around: Self.escapedName(cookware.name, in: .cookware))
+            case let .timer(timer):
+                // The `~` sigil joins the shared annotation table when the version 0.2 parser
+                // reads it. Until then no timer segment is produced, and one renders its own
+                // source text back.
+                result += "~\(timer.text)~"
             }
         }
 

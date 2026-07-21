@@ -46,9 +46,14 @@ enum StepParser {
                     cursor = next
                 case let .named(name, amount, next):
                     flush(&prose, into: &segments)
+                    // Flag reading arrives with the version 0.2 parser, so an ingredient is
+                    // unflagged for now.
+                    let flags = Flags(isOptional: false, isStaple: false, isNonFood: false, unrecognized: [])
                     switch annotation {
-                    case .ingredient: segments.append(.ingredient(Ingredient(name: name, amount: amount)))
-                    case .cookware: segments.append(.cookware(Cookware(name: name)))
+                    case .ingredient:
+                        segments.append(.ingredient(Ingredient(name: name, amount: amount, flags: flags)))
+                    case .cookware:
+                        segments.append(.cookware(Cookware(name: name)))
                     }
                     cursor = next
                 }

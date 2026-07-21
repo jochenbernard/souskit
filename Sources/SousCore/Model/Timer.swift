@@ -1,0 +1,41 @@
+/// A timer annotated in a step with the `~...~` sigils.
+public struct Timer: Equatable, Hashable, Sendable {
+    /// The form a timer's duration takes.
+    public enum Kind: Equatable, Hashable, Sendable {
+        /// A single quantity and unit, as in `40 min`.
+        case precise
+
+        /// A low and a high quantity, as in `8-10 min`.
+        case range
+
+        /// Two or more quantity-and-unit parts, as in `1 h 30 min`.
+        case compound
+
+        /// Words carrying no numeric value, as in `overnight`.
+        case qualitative
+    }
+
+    /// The timer's numeric parts, in document order.
+    ///
+    /// A qualitative duration has none, a precise or range duration has one, and a compound duration has two or more.
+    public var components: [Amount]
+
+    /// The verbatim content of the timer span, without its sigils. It is the text a qualitative duration displays.
+    public var text: String
+
+    /// The form this duration takes, classified from the components.
+    public var kind: Kind {
+        switch components.count {
+        case 0:
+            .qualitative
+        case 1:
+            switch components[0].kind {
+            case .precise: .precise
+            case .range: .range
+            case .imprecise: .qualitative
+            }
+        default:
+            .compound
+        }
+    }
+}

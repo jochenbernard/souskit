@@ -18,6 +18,9 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// The unit, captured verbatim. It is `nil` for an imprecise amount and may be empty when a quantity has no unit.
     public var unit: String?
 
+    /// Whether an `=` before the quantity marks the amount as fixed, holding it constant when the recipe is scaled.
+    public var isFixed: Bool
+
     /// The verbatim content of the amount fence, without its braces.
     public var text: String
 }

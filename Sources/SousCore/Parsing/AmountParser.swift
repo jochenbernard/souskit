@@ -15,10 +15,12 @@ enum AmountParser {
     static func parse(_ fence: String) -> Amount {
         let characters = Array(fence)
 
+        // The `=` marker is read when version 0.2 is implemented, so no amount is fixed yet.
         guard let first = number(in: characters, from: 0) else {
             return Amount(
                 kind: .imprecise(fence),
                 unit: nil,
+                isFixed: false,
                 text: fence
             )
         }
@@ -43,6 +45,7 @@ enum AmountParser {
         return Amount(
             kind: kind,
             unit: String(characters[cursor...]),
+            isFixed: false,
             text: fence
         )
     }

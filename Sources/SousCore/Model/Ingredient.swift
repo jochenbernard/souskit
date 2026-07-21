@@ -5,4 +5,7 @@ public struct Ingredient: Equatable, Hashable, Sendable {
 
     /// The ingredient's amount, or `nil` when no amount fence is present.
     public var amount: Amount?
+
+    /// The flags attached after the ingredient's closing sigil.
+    public var flags: Flags
 }
