@@ -5,6 +5,10 @@
 // no leading digit is an imprecise amount, kept verbatim.
 
 enum AmountParser {
+    /// The character between the two ends of a range. Reading and writing share it, so a range
+    /// a reader recognizes is a range a writer produces.
+    static let rangeSeparator: Character = "-"
+
     /// The value of the leading numeric quantity in `text`, or `nil` when it has no leading
     /// number. Integers, decimals, fractions, and mixed numbers are all recognized, exactly
     /// as in an amount fence.
@@ -52,7 +56,7 @@ enum AmountParser {
         guard let first = number(in: characters, from: start) else { return nil }
 
         guard first.end < characters.count,
-              characters[first.end] == "-",
+              characters[first.end] == rangeSeparator,
               let second = number(in: characters, from: first.end + 1)
         else { return (.precise(first.quantity), first.end) }
 

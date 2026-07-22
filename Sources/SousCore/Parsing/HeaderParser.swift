@@ -1,14 +1,11 @@
 // Splits a recipe into its optional metadata header and its body, and reads the header
 // into typed accessors over an ordered raw store.
 //
-// Values are literal text with no type coercion. Unrecognized keys are preserved and
-// warned about, never dropped.
+// Values are literal text with no type coercion. Which keys are recognized, and which of them
+// read a list, comes from the shared field table. Everything else is preserved and warned
+// about, never dropped.
 
 enum HeaderParser {
-    /// The keys this reader recognizes. Everything else is preserved and reported as unknown.
-    private static let listKeys: Set<String> = ["tags"]
-    private static let scalarKeys: Set<String> = ["title", "language", "version", "servings", "source"]
-
     static func split(
         _ lines: [Substring],
         map: SourceMap,
@@ -65,7 +62,7 @@ enum HeaderParser {
             }
 
             let keyRange = map.range(from: line.startIndex, length: field.key.count)
-            let isList = listKeys.contains(field.key)
+            let isList = HeaderField.lists.contains(field.key)
 
             entries.append(Metadata.Entry(
                 key: field.key,
@@ -73,7 +70,7 @@ enum HeaderParser {
             ))
 
             // An unknown key is preserved and warned about, whether scalar or repeated.
-            if !isList, !scalarKeys.contains(field.key) {
+            if !isList, !HeaderField.scalars.contains(field.key) {
                 diagnostics.append(.warning(
                     .unknownHeaderKey,
                     "Unrecognized header key '\(field.key)'.",

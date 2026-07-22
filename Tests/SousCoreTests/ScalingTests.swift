@@ -130,6 +130,44 @@ struct ScalingTests {
         #expect(recipe.metadata["servings"] == "12 people")
     }
 
+    // Only the two fields stating how much the recipe makes move. A number anywhere else in
+    // the header states something scaling has no business multiplying.
+
+    @Test
+    func leavesEveryFieldButTheYieldAndTheServingsAlone() throws {
+        let source = "---\nversion: 1.0\ntitle: 3 Bean Stew\ncalories: 640\ntags: [4 star]\n---"
+
+        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        #expect(recipe.metadata.version == "1.0")
+        #expect(recipe.metadata.title == "3 Bean Stew")
+        #expect(recipe.metadata["calories"] == "640")
+        #expect(recipe.metadata.tags == ["4 star"])
+    }
+
+    // A value is written positionally whatever its magnitude, because the exponent notation
+    // Swift reaches for at the extremes is not a quantity any reader reads back.
+
+    @Test(arguments: [
+        (factor: 0.00001, text: "0.00001 g"),
+        (factor: 0.0000025, text: "0.0000025 g"),
+        (factor: 1e20, text: "100000000000000000000 g"),
+        (factor: 1.5e20, text: "150000000000000000000 g")
+    ])
+    func writesAScaledValuePositionallyAtEveryMagnitude(factor: Double, text: String) throws {
+        #expect(try amount(in: "Add @{1 g} water@.", scaledBy: factor).text == text)
+    }
+
+    @Test(arguments: [0.00001, 1e20])
+    func aRecipeScaledToAnExtremeStillRoundTrips(factor: Double) throws {
+        let parser = SousParser()
+
+        let scaled = try parser.parseRecipe("Add @{1 g} water@.").value.scaled(by: factor)
+        let reRead = parser.parseRecipe(scaled.serialized())
+
+        #expect(reRead.value.steps.map(\.segments) == scaled.steps.map(\.segments))
+        #expect(reRead.diagnostics.isEmpty)
+    }
+
     @Test
     func leavesAHeaderValueWithNoQuantityAlone() throws {
         let source = "---\nservings: six\nyield: plenty\ntitle: Stew\n---"

@@ -5,6 +5,6 @@ extension Recipe {
     ///
     /// - Returns: The diagnostics describing any problems found.
     public func validate() -> [Diagnostic] {
-        []
+        metadata.conflictingYields()
     }
 }
