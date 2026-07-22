@@ -3,6 +3,11 @@ public struct Metadata: Equatable, Hashable, Sendable {
     /// A single raw header entry.
     public struct Entry: Equatable, Hashable, Sendable {
         /// The value of a header entry: a scalar, a list, or a verbatim line.
+        ///
+        /// Which case a key takes is the field's, not the value's: a list field always reads a
+        /// list and every other key a scalar. Setting the other case leaves the typed accessor
+        /// reading nothing while the entry still writes what it holds, so the header no longer
+        /// reads back as itself.
         public enum Value: Equatable, Hashable, Sendable {
             /// A single literal value.
             case scalar(String)
@@ -29,36 +34,45 @@ public struct Metadata: Equatable, Hashable, Sendable {
 
     /// The `title` field, the recipe's name.
     public var title: String? {
-        entries.lastScalar("title")
+        entries.lastScalar(HeaderField.title)
     }
 
     /// The `language` field, a short content-language code.
     public var language: String? {
-        entries.lastScalar("language")
+        entries.lastScalar(HeaderField.language)
     }
 
     /// The `version` field, the language version the file targets.
     public var version: String? {
-        entries.lastScalar("version")
+        entries.lastScalar(HeaderField.version)
     }
 
     /// The `servings` field, the number of portions the recipe makes.
     ///
     /// It is read as the value's leading numeric quantity, or `nil` when the value has no leading number.
     public var servings: Double? {
-        entries.lastScalar("servings").flatMap({ AmountParser.leadingValue(in: SourceText.trimmed($0)) })
+        entries.lastScalar(HeaderField.servings)
+            .flatMap({ AmountParser.parse(unfenced: $0).kind.values.first })
+    }
+
+    /// The `yield` field, the amounts the recipe makes.
+    ///
+    /// Repeated `yield` entries combine, their amounts appended in document order. A `servings`
+    /// value states a portion yield through ``servings`` and is not listed here.
+    public var yields: [Amount] {
+        entries.mergedList(HeaderField.yield).map({ AmountParser.parse(unfenced: $0) })
     }
 
     /// The `tags` field, a list of free-form labels.
     ///
     /// Repeated `tags` entries combine, their items appended in document order.
     public var tags: [String] {
-        entries.mergedList("tags")
+        entries.mergedList(HeaderField.tags)
     }
 
     /// The `source` field, where the recipe came from.
     public var source: String? {
-        entries.lastScalar("source")
+        entries.lastScalar(HeaderField.source)
     }
 
     /// The last scalar value written for the given key, or `nil` when the key holds no scalar value.

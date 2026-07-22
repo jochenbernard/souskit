@@ -26,6 +26,7 @@ public struct Amount: Equatable, Hashable, Sendable {
     ///
     /// It is the only property writing an amount emits. ``kind``, ``unit``, and ``isFixed`` were
     /// read from it, so changing one of them states something the written amount does not.
+    /// Scaling changes them together, taking the amount from reading its regenerated text back.
     ///
     /// Writing wraps the text in the fence's braces, so text holding a closing brace closes
     /// that fence early, and text holding a blank line ends the paragraph the span needs.

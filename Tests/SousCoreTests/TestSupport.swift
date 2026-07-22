@@ -31,6 +31,22 @@ extension Amount.Kind {
     }
 }
 
+extension SousParser {
+    /// The amount the one annotated ingredient of a source states after scaling, which is what
+    /// a test naming a single fence is asking about.
+    func scaledAmount(in source: String, by factor: Double) throws -> Amount? {
+        try parseRecipe(source).value.scaled(by: factor).firstAmount
+    }
+}
+
+extension Recipe {
+    /// The amount of the first ingredient annotated anywhere in the recipe, which is the one
+    /// a test naming a single amount is asking about.
+    var firstAmount: Amount? {
+        ingredients.first?.amount
+    }
+}
+
 extension Segment {
     var proseText: String? {
         if case let .text(text) = self {

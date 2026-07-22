@@ -3,11 +3,24 @@ import Testing
 
 // The complete files the Sous documentation works through, read back here so the
 // outcomes it states stay the outcomes this reader produces. Each also round-trips byte
-// for byte, including the constructs later versions introduce, which a v0.2 reader
-// carries through as ordinary prose.
+// for byte, including the constructs later versions introduce, which a v0.3 reader
+// carries through as ordinary prose. The one exception is a `yield` line, whose key is a list
+// field from v0.3 and so comes back in the inline form every list value is written in.
 
 @Suite("Specification examples")
 struct SpecificationExampleTests {
+    /// The source with its `yield` line rewritten to the inline form, which is the only
+    /// difference between a documented example and what writing it back produces.
+    private func withYieldWritten(_ source: String) -> String {
+        let key = "yield: "
+
+        return source.split(separator: "\n", omittingEmptySubsequences: false)
+            .map({ line in
+                line.hasPrefix(key) ? "\(key)[\(line.dropFirst(key.count))]" : String(line)
+            })
+            .joined(separator: "\n")
+    }
+
     @Test
     func readsTheIntroductoryRecipe() {
         let source = """
@@ -170,15 +183,22 @@ struct SpecificationExampleTests {
         #expect(metadata.tags == ["comfort food", "italian", "make-ahead"])
         #expect(metadata.source == "https://example.com/veg-lasagna")
 
+        // The yield field is read from v0.3, as the list of amounts it is.
+        #expect(metadata.yields.map(\.text) == ["3.2 kg"])
+
         // A field a later version introduces is preserved as written, brackets included,
         // because only a list field of this version reads them as a list.
-        #expect(metadata["yield"] == "3.2 kg")
         #expect(metadata["diet"] == "[vegetarian]")
         #expect(metadata["prep-time"] == "40 min")
         #expect(metadata["nutrition"]?.isEmpty == true)
         #expect(metadata.entries.contains(where: { $0.value == .raw("  calories: 3840 kcal") }))
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
-        #expect(parsed.value.serialized() == source)
+
+        // Every line comes back as written but the yield, which a list field writes in the
+        // inline form whatever it was read from.
+        let written = parsed.value.serialized()
+        #expect(written == withYieldWritten(source))
+        #expect(SousParser().parseRecipe(written).value.serialized() == written)
     }
 
     @Test(arguments: [
@@ -232,10 +252,15 @@ struct SpecificationExampleTests {
         #expect(recipe.cookware.map(\.name) == ["bowl", "baking dish"])
         #expect(recipe.timers.map(\.text) == ["35-40 min", "10 min"])
         #expect(recipe.timers.map(\.kind) == [.range, .precise])
+        #expect(recipe.metadata.yields.map(\.text) == ["1 dish"])
 
-        // The four header keys later versions introduce are the only thing to report.
-        #expect(parsed.diagnostics.map(\.kind) == Array(repeating: .unknownHeaderKey, count: 4))
-        #expect(recipe.serialized() == source)
+        // Three header keys later versions introduce are left to report, the yield having
+        // become one this version reads.
+        #expect(parsed.diagnostics.map(\.kind) == Array(repeating: .unknownHeaderKey, count: 3))
+
+        // The body comes back untouched, group headings and references included; only the
+        // yield moves, into the inline form a list field writes.
+        #expect(recipe.serialized() == withYieldWritten(source))
     }
 
     @Test

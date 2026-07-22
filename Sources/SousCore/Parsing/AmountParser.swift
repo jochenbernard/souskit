@@ -5,32 +5,54 @@
 // no leading digit is an imprecise amount, kept verbatim.
 
 enum AmountParser {
-    /// The value of the leading numeric quantity in `text`, or `nil` when it has no leading
-    /// number. Integers, decimals, fractions, and mixed numbers are all recognized, exactly
-    /// as in an amount fence.
-    static func leadingValue(in text: String) -> Double? {
-        number(in: Array(text), from: 0)?.quantity.value
+    /// The character between the two ends of a range. Reading and writing share it, so a range
+    /// a reader recognizes is a range a writer produces.
+    static let rangeSeparator: Character = "-"
+
+    /// The one space that may separate a quantity from its unit, belonging to neither. Reading
+    /// and writing share it, so the unit a writer sets apart is the unit a reader reads.
+    static let unitSeparator: Character = " "
+
+    /// The character between a number's whole and fractional parts. Reading and writing share
+    /// it, so a decimal a writer produces is a decimal a reader recognizes, which is what keeps
+    /// a written quantity from running into a unit that opens a fraction.
+    static let decimalPoint: Character = "."
+
+    /// Parses the content of an amount fence, where a leading `=` marks the amount fixed.
+    static func parse(_ fence: String) -> Amount {
+        parse(fence, fenced: true)
     }
 
-    static func parse(_ fence: String) -> Amount {
-        let characters = Array(fence)
+    /// Parses a value stating an amount that no fence holds, such as a header field's or one
+    /// part of a timer.
+    ///
+    /// The fixed marker belongs to the fence, so a leading `=` is ordinary text here, which
+    /// leaves the amount imprecise as any other content with no leading number is. The
+    /// whitespace around such a value is layout rather than part of what it states, so it is
+    /// removed before reading, which a fence's own content never is.
+    static func parse(unfenced text: String) -> Amount {
+        parse(SourceText.trimmed(text), fenced: false)
+    }
+
+    private static func parse(_ text: String, fenced: Bool) -> Amount {
+        let characters = Array(text)
         // The marker fixes an amount only immediately before a numeric quantity. Anywhere
         // else it is ordinary text, and the amount it opens is imprecise like any other,
         // which is what the quantity scan failing below already reports.
-        let isMarked = characters.first == AmountFence.fixedMarker
+        let isMarked = fenced && characters.first == AmountFence.fixedMarker
 
         guard let quantity = quantity(in: characters, from: isMarked ? 1 : 0) else {
             return Amount(
-                kind: .imprecise(fence),
+                kind: .imprecise(text),
                 unit: nil,
                 isFixed: false,
-                text: fence
+                text: text
             )
         }
 
         // A single space separates the quantity from the unit; anything else belongs to the unit.
         var cursor = quantity.end
-        if cursor < characters.count, characters[cursor] == " " {
+        if cursor < characters.count, characters[cursor] == unitSeparator {
             cursor += 1
         }
 
@@ -38,7 +60,7 @@ enum AmountParser {
             kind: quantity.kind,
             unit: String(characters[cursor...]),
             isFixed: isMarked,
-            text: fence
+            text: text
         )
     }
 
@@ -52,7 +74,7 @@ enum AmountParser {
         guard let first = number(in: characters, from: start) else { return nil }
 
         guard first.end < characters.count,
-              characters[first.end] == "-",
+              characters[first.end] == rangeSeparator,
               let second = number(in: characters, from: first.end + 1)
         else { return (.precise(first.quantity), first.end) }
 
@@ -66,7 +88,7 @@ enum AmountParser {
         var end = leading.end
         var value = leading.value
         // The mixed form follows a whole number, so a decimal one never opens one.
-        let isWhole = !characters[start..<end].contains(".")
+        let isWhole = !characters[start..<end].contains(decimalPoint)
 
         if let bare = denominator(in: characters, from: end) {
             // A bare fraction, whose numerator is the number just scanned.
@@ -74,7 +96,7 @@ enum AmountParser {
             end = bare.end
         } else if isWhole,
                   end < characters.count,
-                  characters[end] == " ",
+                  characters[end] == unitSeparator,
                   let mixed = fraction(in: characters, from: end + 1) {
             // A mixed number: a whole number, a single space, then a fraction.
             value += mixed.value
@@ -113,7 +135,7 @@ enum AmountParser {
         guard let leading = digits(in: characters, from: start) else { return nil }
 
         guard leading.end + 1 < characters.count,
-              characters[leading.end] == ".",
+              characters[leading.end] == decimalPoint,
               let decimals = digits(in: characters, from: leading.end + 1)
         else { return leading }
 

@@ -261,6 +261,22 @@ struct AmountTests {
         #expect(amount.unit == nil)
     }
 
+    // A quantity is a leading run of numeric characters, and an exponent is not one of them,
+    // so the mark and everything after it is unit text. This is what a writer producing an
+    // amount has to stay inside.
+
+    @Test(arguments: [
+        (fence: "1e5 g", quantity: 1.0, unit: "e5 g"),
+        (fence: "1e-5 g", quantity: 1.0, unit: "e-5 g"),
+        (fence: "2.5e3", quantity: 2.5, unit: "e3")
+    ])
+    func readsNoExponentInAQuantity(fence: String, quantity: Double, unit: String) {
+        let amount = SousParser().parseAmount(fence)
+
+        #expect(amount.kind.preciseQuantity?.value == quantity)
+        #expect(amount.unit == unit)
+    }
+
     @Test
     func capturesTheVerbatimFenceContentAsText() throws {
         let parsed = SousParser().parseRecipe("Cook @{200 g} pasta@.")

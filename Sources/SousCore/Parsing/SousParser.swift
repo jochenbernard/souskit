@@ -24,6 +24,21 @@ public struct SousParser {
         )
     }
 
+    /// Parses the content of an amount fence into an amount.
+    ///
+    /// The text is what a fence holds without its braces, such as `200 g` or `18 pancakes`, and
+    /// it is read exactly as one, with nothing trimmed. So a target opening with whitespace is
+    /// imprecise, where the same header value would not be.
+    ///
+    /// Reading an amount reports nothing, because text with no leading number is an imprecise
+    /// amount rather than a defect, so the amount is returned on its own.
+    ///
+    /// - Parameter text: The fence content to parse.
+    /// - Returns: The parsed amount.
+    public func parseAmount(_ text: String) -> Amount {
+        AmountParser.parse(text)
+    }
+
     /// A step is one paragraph: a maximal run of consecutive non-blank lines.
     private static func steps(
         in lines: [Substring],

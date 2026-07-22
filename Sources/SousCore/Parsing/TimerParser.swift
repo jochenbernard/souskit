@@ -19,10 +19,10 @@ enum TimerParser {
 
         while start < characters.count, let quantity = AmountParser.quantity(in: characters, from: start) {
             let end = partEnd(in: characters, from: quantity.end)
-            components.append(AmountParser.parse(SourceText.trimmed(String(characters[start..<end]))))
+            components.append(AmountParser.parse(unfenced: String(characters[start..<end])))
             // A part ends at the one whitespace before the next part's number, so the next
             // part starts just past it. Any whitespace before that is the unit's own, which
-            // trimming the part removes.
+            // reading an unfenced value removes.
             start = end + 1
         }
 
