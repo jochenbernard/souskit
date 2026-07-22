@@ -1,9 +1,9 @@
 import SousCore
 import Testing
 
-// Version 0.1 defines no intra-file validation rules (the first arrives in v0.3), so
-// a well-formed recipe validates without any diagnostics. These tests document that
-// v0.1 contract; they hold against the current no-op and guard it against regressions.
+// Version 0.2 defines no intra-file validation rules (the first arrives in v0.3), so a
+// well-formed recipe validates without any diagnostics. These tests hold against the
+// current no-op and guard that contract against regressions.
 
 @Suite("Validation")
 struct ValidationTests {

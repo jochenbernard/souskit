@@ -44,6 +44,26 @@ struct IngredientTests {
         #expect(ingredient.name == "pasta")
     }
 
+    // A single space separates the fence from the name and belongs to neither. Nothing else
+    // is stripped, so any further whitespace is part of the name.
+
+    @Test
+    func keepsWhitespaceBeyondTheOneSeparatingSpaceInTheName() throws {
+        let parsed = SousParser().parseRecipe("Cook @{200 g}  pasta@.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == " pasta")
+        #expect(parsed.value.serialized() == "Cook @{200 g}  pasta@.")
+    }
+
+    @Test
+    func doesNotTakeAWhitespaceOtherThanASpaceAsTheSeparator() throws {
+        let parsed = SousParser().parseRecipe("Cook @{200 g}\tpasta@.")
+
+        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        #expect(ingredient.name == "\tpasta")
+    }
+
     @Test
     func extractsSeveralIngredientsFromOneStep() throws {
         let parsed = SousParser().parseRecipe("Fry @garlic@ and add @baby spinach@.")

@@ -14,37 +14,49 @@ enum AmountParser {
 
     static func parse(_ fence: String) -> Amount {
         let characters = Array(fence)
+        // The marker fixes an amount only immediately before a numeric quantity. Anywhere
+        // else it is ordinary text, and the amount it opens is imprecise like any other,
+        // which is what the quantity scan failing below already reports.
+        let isMarked = characters.first == AmountFence.fixedMarker
 
-        guard let first = number(in: characters, from: 0) else {
+        guard let quantity = quantity(in: characters, from: isMarked ? 1 : 0) else {
             return Amount(
                 kind: .imprecise(fence),
                 unit: nil,
+                isFixed: false,
                 text: fence
             )
         }
 
-        let kind: Amount.Kind
-        var cursor = first.end
-
-        if cursor < characters.count,
-           characters[cursor] == "-",
-           let second = number(in: characters, from: cursor + 1) {
-            kind = .range(first.quantity, second.quantity)
-            cursor = second.end
-        } else {
-            kind = .precise(first.quantity)
-        }
-
         // A single space separates the quantity from the unit; anything else belongs to the unit.
+        var cursor = quantity.end
         if cursor < characters.count, characters[cursor] == " " {
             cursor += 1
         }
 
         return Amount(
-            kind: kind,
+            kind: quantity.kind,
             unit: String(characters[cursor...]),
+            isFixed: isMarked,
             text: fence
         )
+    }
+
+    /// Scans the quantity at `start`: one number, or a range between two of them. Returns the
+    /// form it takes and the index just past it.
+    ///
+    /// The fixed marker is the fence's own rather than the quantity's, so it is not read here.
+    /// A caller that reads one scans from the index after it, and a caller with no fence, such
+    /// as a timer, never reads one at all.
+    static func quantity(in characters: [Character], from start: Int) -> (kind: Amount.Kind, end: Int)? {
+        guard let first = number(in: characters, from: start) else { return nil }
+
+        guard first.end < characters.count,
+              characters[first.end] == "-",
+              let second = number(in: characters, from: first.end + 1)
+        else { return (.precise(first.quantity), first.end) }
+
+        return (.range(first.quantity, second.quantity), second.end)
     }
 
     /// Scans one quantity: a number, a fraction, or a mixed number.

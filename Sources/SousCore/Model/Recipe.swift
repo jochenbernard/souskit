@@ -15,4 +15,9 @@ public struct Recipe: Equatable, Hashable, Sendable {
     public var cookware: [Cookware] {
         steps.flatMap(\.cookware)
     }
+
+    /// The timers annotated across every step, in document order.
+    public var timers: [Timer] {
+        steps.flatMap(\.timers)
+    }
 }

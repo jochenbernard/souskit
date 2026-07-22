@@ -17,4 +17,9 @@ public struct Step: Equatable, Hashable, Sendable {
     public var cookware: [Cookware] {
         segments.compactMap({ if case let .cookware(cookware) = $0 { cookware } else { nil } })
     }
+
+    /// The timers annotated in the step, in document order.
+    public var timers: [Timer] {
+        segments.compactMap({ if case let .timer(timer) = $0 { timer } else { nil } })
+    }
 }

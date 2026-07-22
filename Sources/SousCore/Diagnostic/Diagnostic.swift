@@ -28,6 +28,9 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
 
         /// The metadata header had a line that is not a top-level `key: value` entry.
         case malformedHeaderLine
+
+        /// An annotation carried a flag name that is not recognized.
+        case unknownFlag
     }
 
     /// The diagnostic's severity.

@@ -23,6 +23,14 @@ struct StepProjectionTests {
     }
 
     @Test
+    func derivesTheTimersFromTheSegments() {
+        var step = SousParser().parseRecipe("Simmer ~40 min~ and rest ~10 min~.").value.steps[0]
+        step.segments.removeLast(2)
+
+        #expect(step.timers.map(\.text) == ["40 min"])
+    }
+
+    @Test
     func derivesARecipeWideListFromTheSegments() {
         var recipe = SousParser().parseRecipe("Fry @garlic@ in a #pan#.\n\nAdd @salt@.").value
         recipe.steps[0].segments = []
@@ -56,12 +64,26 @@ struct StepProjectionTests {
     }
 
     @Test
+    func collectsTimersAcrossStepsInDocumentOrder() {
+        let source = """
+        Simmer ~40 min~ gently.
+
+        Rest ~overnight~ before slicing.
+        """
+
+        let timers = SousParser().parseRecipe(source).value.timers
+        #expect(timers.map(\.text) == ["40 min", "overnight"])
+    }
+
+    @Test
     func readsNoAnnotationsFromAProseOnlyStep() {
         let recipe = SousParser().parseRecipe("Toast the bread.").value
 
         #expect(recipe.ingredients.isEmpty)
         #expect(recipe.cookware.isEmpty)
+        #expect(recipe.timers.isEmpty)
         #expect(recipe.steps[0].ingredients.isEmpty)
         #expect(recipe.steps[0].cookware.isEmpty)
+        #expect(recipe.steps[0].timers.isEmpty)
     }
 }

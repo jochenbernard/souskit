@@ -44,6 +44,18 @@ enum SourceText {
         character.isASCII && character.isNumber
     }
 
+    /// The character at the given position, or `nil` when the text holds no such position.
+    ///
+    /// Every rule that looks at the character after another asks through this one lookup, so
+    /// no call site states its own bound and none can be off by one.
+    static func character(in characters: [Character], at index: Int) -> Character? {
+        characters.indices.contains(index) ? characters[index] : nil
+    }
+
+    /// The character a backslash escapes with. Reading and writing share it, so the character
+    /// a reader drops before a literal is the one a writer puts there.
+    static let escape: Character = "\\"
+
     /// Whether a backslash before the character produces that character literally. The
     /// backslash is itself escapable, so a literal one can sit directly before a sigil.
     ///
@@ -53,7 +65,13 @@ enum SourceText {
         escapable.contains(character)
     }
 
-    private static let escapable: Set<Character> = ["@", "#", "~", ">", "{", "\\"]
+    /// A reader escapes exactly the characters it gives a meaning to: the sigils it opens a
+    /// span on, the brace that opens an amount fence, the two that open a flag, and the
+    /// backslash itself. A sigil a later version introduces is none of them, so a backslash
+    /// before one is ordinary text and is kept, which is what carries the escape through to
+    /// the reader that does give that sigil a meaning.
+    private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
+        .union([Flag.separator, Flag.shorthand, AmountFence.opening, escape])
 
     /// Whether a backslash before the character produces that character literally inside an
     /// inline list value. A list's structure is its brackets and its separating comma rather
@@ -62,7 +80,7 @@ enum SourceText {
         listEscapable.contains(character)
     }
 
-    private static let listEscapable: Set<Character> = [",", "[", "]", "\\"]
+    private static let listEscapable: Set<Character> = [",", "[", "]", escape]
 
     /// Resolves each escape to the literal character it produces, dropping the backslash.
     /// A backslash before a character the context does not escape, or before nothing at
@@ -78,16 +96,16 @@ enum SourceText {
 
         for character in characters {
             if escaping {
-                if !isEscapable(character) { result.append("\\") }
+                if !isEscapable(character) { result.append(escape) }
                 escaping = false
-            } else if character == "\\" {
+            } else if character == escape {
                 escaping = true
                 continue
             }
             result.append(character)
         }
 
-        if escaping { result.append("\\") }
+        if escaping { result.append(escape) }
 
         return result
     }

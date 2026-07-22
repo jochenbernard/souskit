@@ -65,7 +65,7 @@ extension Recipe {
         var result = ""
 
         for character in item {
-            if SourceText.isEscapableInList(character) { result.append("\\") }
+            if SourceText.isEscapableInList(character) { result.append(SourceText.escape) }
             result.append(character)
         }
 

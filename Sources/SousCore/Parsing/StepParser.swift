@@ -7,18 +7,53 @@
 enum StepParser {
     /// The result of scanning a span: a well-formed annotation, or literal text recovered
     /// from a span that is not well-formed.
+    ///
+    /// Recovered text carries the warning the recovery earned rather than reporting it, so
+    /// every diagnostic a paragraph produces is recorded in the one place that reads them.
     private enum Span {
-        case literal(String, next: Int)
+        case literal(String, next: Int, warning: Diagnostic? = nil)
         case named(name: String, amount: Amount?, next: Int)
+    }
+
+    /// Finds the brace an amount fence closes on, remembering what it has already looked at.
+    ///
+    /// A fence closes on the first `}` in the paragraph, so a paragraph holding none would
+    /// have every fence in it walk to the end. Remembering the region already found to hold
+    /// no brace keeps each character looked at once, however many fences ask. A question
+    /// starting outside that region simply starts over, so an answer never depends on the
+    /// order the questions arrive in.
+    private struct FenceSearch {
+        /// The bounds of the region known to hold no closing brace.
+        private var searchedFrom = 0
+        private var searchedTo = 0
+
+        mutating func closingBrace(in characters: [Character], from start: Int) -> Int? {
+            var cursor = start
+
+            if start >= searchedFrom, start <= searchedTo {
+                cursor = searchedTo
+            } else {
+                searchedFrom = start
+            }
+
+            while cursor < characters.count, characters[cursor] != AmountFence.closing {
+                cursor += 1
+            }
+            searchedTo = cursor
+
+            return cursor < characters.count ? cursor : nil
+        }
     }
 
     /// Where a paragraph sits in the source, so offsets within it can be reported.
     struct Origin {
-        var index: String.Index
+        /// The paragraph's own offset from the start of the source. An offset within the
+        /// paragraph adds to it, because a line break is one character in both.
+        var start: Int
         var map: SourceMap
 
         func range(offset: Int, length: Int) -> SourceRange {
-            map.range(from: map.index(index, offsetBy: offset), length: length)
+            map.range(fromOffset: start + offset, length: length)
         }
     }
 
@@ -27,6 +62,9 @@ enum StepParser {
         var segments: [Segment] = []
         var prose = ""
         var cursor = 0
+        // One search serves the whole paragraph, which is the span a fence's brace is looked
+        // for in, so no two fences walk the same text.
+        var fences = FenceSearch()
 
         while cursor < characters.count {
             let character = characters[cursor]
@@ -40,17 +78,24 @@ enum StepParser {
             }
 
             if let annotation = Annotation(rawValue: character), opensSpan(characters, at: cursor) {
-                switch scanSpan(characters, from: cursor, as: annotation, origin: origin, diagnostics: &diagnostics) {
-                case let .literal(literal, next):
+                switch scanSpan(characters, from: cursor, as: annotation, fences: &fences, origin: origin) {
+                case let .literal(literal, next, warning):
+                    if let warning { diagnostics.append(warning) }
                     prose += literal
                     cursor = next
                 case let .named(name, amount, next):
                     flush(&prose, into: &segments)
-                    switch annotation {
-                    case .ingredient: segments.append(.ingredient(Ingredient(name: name, amount: amount)))
-                    case .cookware: segments.append(.cookware(Cookware(name: name)))
-                    }
                     cursor = next
+                    // An ingredient reads the flag chain that follows its closing sigil, so
+                    // the cursor moves on past that chain too.
+                    let flags = FlagParser.parse(
+                        after: annotation,
+                        in: characters,
+                        from: &cursor,
+                        origin: origin,
+                        diagnostics: &diagnostics
+                    )
+                    segments.append(annotated(annotation, name: name, amount: amount, flags: flags))
                 }
                 continue
             }
@@ -64,6 +109,21 @@ enum StepParser {
         return Step(segments: segments, text: text)
     }
 
+    /// The segment a well-formed span stands for. Only the annotations that carry an amount or
+    /// flags are given them; the others read their content alone.
+    private static func annotated(
+        _ annotation: Annotation,
+        name: String,
+        amount: Amount?,
+        flags: Flags
+    ) -> Segment {
+        switch annotation {
+        case .ingredient: .ingredient(Ingredient(name: name, amount: amount, flags: flags))
+        case .cookware: .cookware(Cookware(name: name))
+        case .timer: .timer(TimerParser.parse(name))
+        }
+    }
+
     private static func flush(_ prose: inout String, into segments: inout [Segment]) {
         guard !prose.isEmpty else { return }
         segments.append(.text(prose))
@@ -71,13 +131,15 @@ enum StepParser {
     }
 
     private static func opensSpan(_ characters: [Character], at index: Int) -> Bool {
-        Annotation.opensSpan(before: index + 1 < characters.count ? characters[index + 1] : nil)
+        Annotation.opensSpan(before: SourceText.character(in: characters, at: index + 1))
     }
 
     /// Whether an escape begins at the given index, within the given end. A trailing
     /// backslash escapes nothing, so it is ordinary text.
     private static func opensEscape(_ characters: [Character], at index: Int, end: Int) -> Bool {
-        characters[index] == "\\" && index + 1 < end && SourceText.isEscapable(characters[index + 1])
+        characters[index] == SourceText.escape
+            && index + 1 < end
+            && SourceText.isEscapable(characters[index + 1])
     }
 
     /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays
@@ -102,8 +164,8 @@ enum StepParser {
         _ characters: [Character],
         from start: Int,
         as annotation: Annotation,
-        origin: Origin,
-        diagnostics: inout [Diagnostic]
+        fences: inout FenceSearch,
+        origin: Origin
     ) -> Span {
         let sigil = annotation.sigil
         let contentStart = start + 1
@@ -112,9 +174,9 @@ enum StepParser {
 
         // Every sigil is inert between the braces, the span's own included, so the fence is
         // read first and the closing sigil is looked for after it.
-        if annotation.allowsAmount, characters[contentStart] == "{" {
-            guard let closingBrace = characters[(contentStart + 1)...].firstIndex(of: "}") else {
-                return degradedFence(characters, from: start, as: annotation, origin: origin, diagnostics: &diagnostics)
+        if annotation.allowsAmount, characters[contentStart] == AmountFence.opening {
+            guard let closingBrace = fences.closingBrace(in: characters, from: contentStart + 1) else {
+                return degradedFence(characters, from: start, as: annotation, origin: origin)
             }
 
             amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
@@ -125,13 +187,15 @@ enum StepParser {
         }
 
         guard let closingSigil = closingSigil(sigil, in: characters, from: nameStart) else {
-            diagnostics.append(.warning(
-                .unclosedSpan,
-                "\(annotation.noun) span is missing a closing sigil.",
-                at: origin.range(offset: start, length: 1)
-            ))
-
-            return .literal(String(characters[start]), next: start + 1)
+            return .literal(
+                String(characters[start]),
+                next: start + 1,
+                warning: .warning(
+                    .unclosedSpan,
+                    "\(annotation.noun) span is missing a closing sigil.",
+                    at: origin.range(offset: start, length: 1)
+                )
+            )
         }
 
         let name = SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
@@ -151,17 +215,18 @@ enum StepParser {
         _ characters: [Character],
         from start: Int,
         as annotation: Annotation,
-        origin: Origin,
-        diagnostics: inout [Diagnostic]
+        origin: Origin
     ) -> Span {
         let end = closingSigil(annotation.sigil, in: characters, from: start + 1) ?? start
 
-        diagnostics.append(.warning(
-            .unclosedSpan,
-            "Amount fence is missing a closing brace.",
-            at: origin.range(offset: start, length: end - start + 1)
-        ))
-
-        return .literal(String(characters[start...end]), next: end + 1)
+        return .literal(
+            String(characters[start...end]),
+            next: end + 1,
+            warning: .warning(
+                .unclosedSpan,
+                "Amount fence is missing a closing brace.",
+                at: origin.range(offset: start, length: end - start + 1)
+            )
+        )
     }
 }

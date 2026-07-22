@@ -79,7 +79,28 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyAmountFence() {
-        expectRoundTrips(["0", ".", "/", "-", " ", "g", "}"], upTo: 4, prefix: "Add @{", suffix: "} water@.")
+        expectRoundTrips(["0", ".", "/", "-", "=", " ", "g", "}"], upTo: 4, prefix: "Add @{", suffix: "} water@.")
+    }
+
+    @Test
+    func everyTimerContent() {
+        expectRoundTrips(["~", "\\", "4", "-", " ", "h"], upTo: 4, prefix: "Wait ~", suffix: "~ now.")
+    }
+
+    @Test
+    func everyFlagPunctuation() {
+        // A number ends a flag word without opening one, so it borders the chain from a side
+        // no other character does.
+        expectRoundTrips([":", "?", "-", "a", "2", " ", "\\"], upTo: 4, prefix: "Add @salt@")
+    }
+
+    @Test
+    func everyFlagChain() {
+        expectRoundTrips(
+            [":", "?", "staple", "non-food", "optional", "homemade", " x"],
+            upTo: 3,
+            prefix: "Add @salt@"
+        )
     }
 
     @Test
@@ -109,7 +130,10 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyFileOverWholeConstructs() {
-        let constructs = ["@{2 g} a@", "#p#", "\\@", "\n\n", "\n", "---\n", "@a@", "tags: [a, b]\n"]
+        let constructs = [
+            "@{2 g} a@", "#p#", "\\@", "\n\n", "\n", "---\n", "@a@", "tags: [a, b]\n",
+            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@"
+        ]
 
         expectRoundTrips(constructs, upTo: 3)
     }

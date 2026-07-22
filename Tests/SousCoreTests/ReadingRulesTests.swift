@@ -29,14 +29,53 @@ struct ReadingRulesTests {
         #expect(step.cookware.map(\.name) == ["large pot"])
     }
 
-    @Test(arguments: ["Add a \\@ symbol here.", "Use a \\# symbol here.", "Write a \\{ brace here."])
+    @Test(arguments: [
+        "Add a \\@ symbol here.",
+        "Use a \\# symbol here.",
+        "Write a \\{ brace here.",
+        "Wait \\~40 min and check."
+    ])
     func doesNotOpenASpanForAnEscapedSigil(source: String) throws {
         let parsed = SousParser().parseRecipe(source)
 
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.isEmpty)
         #expect(step.cookware.isEmpty)
+        #expect(step.timers.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func doesNotOpenATimerWhenTheSigilIsFollowedByWhitespace() throws {
+        let parsed = SousParser().parseRecipe("Bake ~ 40 min~ until done.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.timers.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func recoversFromAnUnclosedTimerSpan() throws {
+        let parsed = SousParser().parseRecipe("Simmer ~40 min gently.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.timers.isEmpty)
+        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+    }
+
+    @Test
+    func doesNotCloseATimerAcrossAParagraphBreak() {
+        let source = """
+        Simmer ~40
+
+        min~ gently.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        #expect(parsed.value.timers.isEmpty)
+        // The first sigil opens a span its own paragraph never closes, so it is warned about.
+        // The second is followed by a space, so it never opens one and has nothing to report.
+        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
 
     @Test
@@ -68,7 +107,7 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
-        // "## Name" is a v0.4 group heading, so a v0.1 reader leaves it as ordinary text.
+        // "## Name" is a v0.4 group heading, so a v0.2 reader leaves it as ordinary text.
         let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
 
         let step = try #require(parsed.value.steps.first)
@@ -79,20 +118,21 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotProduceAnAnnotationWithAnEmptyName() throws {
-        let parsed = SousParser().parseRecipe("Use ## here and @@ there.")
+        let parsed = SousParser().parseRecipe("Use ## here, @@ there, and ~~ throughout.")
 
         let step = try #require(parsed.value.steps.first)
         #expect(step.cookware.isEmpty)
         #expect(step.ingredients.isEmpty)
+        #expect(step.timers.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // Forward compatibility: constructs from later versions are not understood by a v0.1
+    // Forward compatibility: constructs from later versions are not understood by a v0.2
     // reader, so they stay ordinary text and survive unchanged.
     @Test(arguments: [
-        "Simmer ~40 min~ gently.",
         "Spread the >sauce> on top.",
-        "Season with @salt@:staple and stir in @{=1 tsp} soda@."
+        "Layer the >{300 g} bolognese> in a dish.",
+        "Serve with >chili-oil>? on the side."
     ])
     func preservesConstructsFromLaterVersions(source: String) {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
@@ -195,14 +235,15 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // A backslash produces the literal character for each of the six escapable characters,
-    // and for nothing else.
+    // A backslash produces the literal character for each character this version gives a
+    // meaning to, and for nothing else.
     @Test(arguments: [
         (source: "Use \\@ here.", prose: "Use @ here."),
         (source: "Use \\# here.", prose: "Use # here."),
         (source: "Use \\~ here.", prose: "Use ~ here."),
-        (source: "Use \\> here.", prose: "Use > here."),
         (source: "Use \\{ here.", prose: "Use { here."),
+        (source: "Use \\: here.", prose: "Use : here."),
+        (source: "Use \\? here.", prose: "Use ? here."),
         (source: "Use \\\\ here.", prose: "Use \\ here.")
     ])
     func unescapesAnEscapedCharacterInProse(source: String, prose: String) throws {
@@ -211,6 +252,29 @@ struct ReadingRulesTests {
         let step = try #require(parsed.value.steps.first)
         #expect(step.segments.first?.proseText == prose)
         #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // A reader resolves an escape only for the characters it gives a meaning to. A backslash
+    // before a sigil a later version introduces is ordinary text and is kept, so the escape
+    // survives for the reader that does give that sigil a meaning.
+
+    @Test
+    func keepsAnEscapeForASigilALaterVersionIntroduces() throws {
+        let parsed = SousParser().parseRecipe("Reduce by \\>half.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.segments.first?.proseText == "Reduce by \\>half.")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test(arguments: [
+        "Heat to \\>200C, then cool to \\>50C before adding @salt@.",
+        "Spread the \\>sauce\\> on top.",
+        "Layer the \\>{300 g} bolognese\\> in a dish.",
+        "Reduce by \\>half."
+    ])
+    func writesAnEscapeForALaterSigilBackUnchanged(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
 
     @Test

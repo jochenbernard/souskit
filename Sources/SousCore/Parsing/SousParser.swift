@@ -37,7 +37,7 @@ public struct SousParser {
 
             steps.append(StepParser.parse(
                 paragraph.joined(separator: "\n"),
-                origin: StepParser.Origin(index: first.startIndex, map: map),
+                origin: StepParser.Origin(start: map.offset(of: first.startIndex), map: map),
                 diagnostics: &diagnostics
             ))
         }

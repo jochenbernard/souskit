@@ -13,27 +13,68 @@ extension Step {
             case let .text(text):
                 // A run of prose is one segment, so whatever follows it opens with a sigil.
                 // Escaping ahead of anything else would be harmless, so the test stays simple.
-                result += Self.escapedProse(text, beforeAnnotation: index + 1 < segments.count)
+                result += Self.escapedProse(
+                    text,
+                    afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
+                    beforeAnnotation: index + 1 < segments.count
+                )
             case let .ingredient(ingredient):
-                result += Self.rendered(ingredient)
+                result += Self.rendered(
+                    ingredient.name,
+                    as: .ingredient,
+                    amount: ingredient.amount,
+                    flags: ingredient.flags
+                )
             case let .cookware(cookware):
-                result += Annotation.cookware.span(around: Self.escapedName(cookware.name, in: .cookware))
+                result += Self.rendered(cookware.name, as: .cookware)
+            case let .timer(timer):
+                result += Self.rendered(timer.text, as: .timer)
             }
         }
 
         return result
     }
 
-    private static func rendered(_ ingredient: Ingredient) -> String {
-        guard let amount = ingredient.amount else {
-            return Annotation.ingredient.span(around: escapedName(ingredient.name, in: .ingredient))
-        }
-
+    /// The span an annotation is written as: its fence, when it carries an amount, then its
+    /// escaped name, then the chain of flags attached to it.
+    ///
+    /// One composition serves every annotation, so what an annotation may carry is asked of
+    /// the shared table rather than stated again per kind. An annotation that carries neither
+    /// an amount nor a flag passes neither.
+    private static func rendered(
+        _ name: String,
+        as annotation: Annotation,
+        amount: Amount? = nil,
+        flags: Flags = .empty
+    ) -> String {
         // The fence and the name are separated by a space, so a leading brace in the name
         // cannot open a second fence and needs no escape.
-        let name = escapedName(ingredient.name, in: .ingredient, afterAmount: true)
+        var content = escapedName(name, in: annotation, afterAmount: amount != nil)
+        if let amount {
+            content = "\(AmountFence.around(amount.text)) \(content)"
+        }
 
-        return Annotation.ingredient.span(around: "{\(amount.text)} \(name)")
+        return annotation.span(around: content) + rendered(flags)
+    }
+
+    /// Writes the flag chain in one canonical order: the named flags, then the unrecognized
+    /// ones as they were written, and last of all the optional shorthand.
+    ///
+    /// The shorthand comes last because a flag word runs on through the letters after it, so
+    /// a named flag written directly before prose that starts with one would read back as a
+    /// single unrecognized flag. The shorthand is one character and cannot be run into.
+    private static func rendered(_ flags: Flags) -> String {
+        var result = ""
+
+        for flag in Flag.allCases where flag != .shorthanded && flags[keyPath: flag.property] {
+            result += Flag.written(flag.rawValue)
+        }
+        for word in flags.unrecognized {
+            result += Flag.written(word)
+        }
+        if flags[keyPath: Flag.shorthanded.property] { result.append(Flag.shorthand) }
+
+        return result
     }
 
     /// Escapes each occurrence of the span's own closing sigil in a name, a backslash that
@@ -48,12 +89,12 @@ extension Step {
             let character = characters[index]
             // The closing sigil follows the last character, and a sigil is escapable, so a
             // name ending in a backslash escapes it.
-            let following = index + 1 < characters.count ? characters[index + 1] : annotation.sigil
+            let following = SourceText.character(in: characters, at: index + 1) ?? annotation.sigil
             let escaped = character == annotation.sigil
-                || (character == "\\" && SourceText.isEscapable(following))
-                || (escapesLeadingBrace && index == 0 && character == "{")
+                || (character == SourceText.escape && SourceText.isEscapable(following))
+                || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
 
-            if escaped { result.append("\\") }
+            if escaped { result.append(SourceText.escape) }
             result.append(character)
         }
 
@@ -61,28 +102,34 @@ extension Step {
     }
 
     /// Escapes a prose character that would otherwise be read as something else: a sigil that
-    /// would open a span, or a backslash that would escape the character after it.
+    /// would open a span, a character that would open a flag where a chain may follow, or a
+    /// backslash that would escape the character after it.
     ///
     /// Whether a character needs an escape depends on whether the one after it gets one, so
     /// the run is decided from its end backwards.
-    private static func escapedProse(_ text: String, beforeAnnotation: Bool) -> String {
+    private static func escapedProse(_ text: String, afterFlags: Bool, beforeAnnotation: Bool) -> String {
         let characters = Array(text)
         var escapes = [Bool](repeating: false, count: characters.count)
 
         for index in characters.indices.reversed() {
-            let hasFollowing = index + 1 < characters.count
-
             escapes[index] = needsEscape(
                 characters[index],
-                followedBy: hasFollowing ? characters[index + 1] : nil,
-                escaped: hasFollowing && escapes[index + 1],
+                followedBy: SourceText.character(in: characters, at: index + 1),
+                escaped: index + 1 < characters.count && escapes[index + 1],
                 beforeAnnotation: beforeAnnotation
             )
         }
 
+        // A flag chain reads on from the closing sigil, so only the character right after one
+        // can open a flag, and only there does prose need the escape.
+        if afterFlags, let first = characters.first {
+            escapes[0] = escapes[0]
+                || Flag.opens(first, followedBy: SourceText.character(in: characters, at: 1))
+        }
+
         var result = ""
         for (character, escaped) in zip(characters, escapes) {
-            if escaped { result.append("\\") }
+            if escaped { result.append(SourceText.escape) }
             result.append(character)
         }
 
@@ -101,7 +148,7 @@ extension Step {
     ) -> Bool {
         // A backslash escapes whatever follows it, so a literal one is escaped in turn. An
         // annotation opens with a sigil, which is escapable.
-        if character == "\\" {
+        if character == SourceText.escape {
             return following.map(SourceText.isEscapable) ?? beforeAnnotation
         }
 

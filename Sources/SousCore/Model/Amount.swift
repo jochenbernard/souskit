@@ -18,6 +18,17 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// The unit, captured verbatim. It is `nil` for an imprecise amount and may be empty when a quantity has no unit.
     public var unit: String?
 
-    /// The verbatim content of the amount fence, without its braces.
+    /// Whether an `=` before the quantity marks the amount as fixed, holding it constant when the recipe is scaled.
+    public var isFixed: Bool
+
+    /// The verbatim text the amount was read from: the content of an amount fence, without its
+    /// braces, or the one part of a timer it states.
+    ///
+    /// It is the only property writing an amount emits. ``kind``, ``unit``, and ``isFixed`` were
+    /// read from it, so changing one of them states something the written amount does not.
+    ///
+    /// Writing wraps the text in the fence's braces, so text holding a closing brace closes
+    /// that fence early, and text holding a blank line ends the paragraph the span needs.
+    /// Reading produces neither.
     public var text: String
 }
