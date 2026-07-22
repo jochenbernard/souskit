@@ -22,7 +22,10 @@ extension Step {
                 result += Self.escapedProse(
                     text,
                     afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
-                    beforeAnnotation: index + 1 < segments.count
+                    beforeAnnotation: index + 1 < segments.count,
+                    // A step opens a line of its own, so only its first segment can hold the
+                    // start of that line.
+                    startingALine: index == 0
                 )
             case let .ingredient(ingredient):
                 result += Self.rendered(
@@ -36,9 +39,12 @@ extension Step {
             case let .timer(timer):
                 result += Self.rendered(timer.text, as: .timer)
             case let .reference(reference):
-                // Written inline until the reference sigil joins the shared table, which is
-                // what lets it be composed with its fence and its flags like every other span.
-                result += ">\(reference.target)>"
+                result += Self.rendered(
+                    reference.target,
+                    as: .reference,
+                    amount: reference.amount,
+                    flags: reference.flags
+                )
             }
         }
 
@@ -88,8 +94,9 @@ extension Step {
     }
 
     /// Escapes each occurrence of the span's own closing sigil in a name, a backslash that
-    /// would otherwise escape what follows it, and a leading brace where it could otherwise
-    /// open an amount fence, so the name re-reads verbatim.
+    /// would otherwise escape what follows it, a leading brace where it could otherwise open an
+    /// amount fence, and a line of the name that would otherwise open a heading, so the name
+    /// re-reads verbatim.
     private static func escapedName(_ name: String, in annotation: Annotation, afterAmount: Bool = false) -> String {
         let characters = Array(name)
         let escapesLeadingBrace = annotation.allowsAmount && !afterAmount
@@ -101,8 +108,10 @@ extension Step {
             // name ending in a backslash escapes it.
             let following = SourceText.character(in: characters, at: index + 1) ?? annotation.sigil
             let escaped = character == annotation.sigil
-                || (character == SourceText.escape && SourceText.isEscapable(following))
+                || SourceText.escapesFollowing(character, before: following)
                 || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
+                // A sigil opens the span, so the name never holds the start of the first line.
+                || opensHeading(characters, at: index, startingALine: false)
 
             if escaped { result.append(SourceText.escape) }
             result.append(character)
@@ -111,13 +120,32 @@ extension Step {
         return result
     }
 
+    /// Whether the content at this position would be read as a group heading rather than as the
+    /// text it stands for.
+    ///
+    /// A heading is decided by the shape of a whole line, so only content starting one can open
+    /// it, and what a line has to look like is asked of the shared table rather than restated
+    /// here. Escaping that first character is what keeps the line prose, and the escape reads
+    /// back as the character, so the content survives either way.
+    private static func opensHeading(_ characters: [Character], at index: Int, startingALine: Bool) -> Bool {
+        let startsLine = index == 0 ? startingALine : characters[index - 1].isNewline
+
+        return startsLine
+            && Heading.name(of: characters[index...].prefix(while: { !$0.isNewline })) != nil
+    }
+
     /// Escapes a prose character that would otherwise be read as something else: a sigil that
-    /// would open a span, a character that would open a flag where a chain may follow, or a
-    /// backslash that would escape the character after it.
+    /// would open a span, a character that would open a flag where a chain may follow, a
+    /// backslash that would escape the character after it, or a line that would open a heading.
     ///
     /// Whether a character needs an escape depends on whether the one after it gets one, so
     /// the run is decided from its end backwards.
-    private static func escapedProse(_ text: String, afterFlags: Bool, beforeAnnotation: Bool) -> String {
+    private static func escapedProse(
+        _ text: String,
+        afterFlags: Bool,
+        beforeAnnotation: Bool,
+        startingALine: Bool
+    ) -> String {
         let characters = Array(text)
         var escapes = [Bool](repeating: false, count: characters.count)
 
@@ -127,7 +155,7 @@ extension Step {
                 followedBy: SourceText.character(in: characters, at: index + 1),
                 escaped: index + 1 < characters.count && escapes[index + 1],
                 beforeAnnotation: beforeAnnotation
-            )
+            ) || opensHeading(characters, at: index, startingALine: startingALine)
         }
 
         // A flag chain reads on from the closing sigil, so only the character right after one

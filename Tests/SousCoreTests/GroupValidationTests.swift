@@ -222,6 +222,65 @@ struct GroupValidationTests {
         ])
     }
 
+    // Which groups a loop runs through is easy to state and easy to get subtly wrong, so every
+    // graph three groups can form is checked against a walk of the edges written separately
+    // from the one validation does.
+
+    @Test
+    func reportsTheSameLoopsAsAnIndependentWalkOfTheEdges() {
+        var failures: [String] = []
+
+        for encoded in 0..<512 {
+            let edges = (0..<3).map({ group in
+                (0..<3).filter({ target in encoded >> (group * 3 + target) & 1 == 1 })
+            })
+            let groups = (0..<3).map({ group in
+                "## g\(group)\n" + edges[group].map({ "Stir the >g\($0)>." }).joined(separator: " ")
+            })
+            let source = groups.joined(separator: "\n\n")
+
+            let reported = validate(source).filter({ $0.kind == .referenceCycle }).map(\.message)
+            let expected = Self.loops(in: edges)
+                .map({ "Group 'g\($0)' consumes an intermediate that depends on it." })
+
+            if reported != expected {
+                failures.append("\(edges) reported \(reported) rather than \(expected)")
+            }
+        }
+
+        let report = failures.isEmpty ? "" : "\(failures.count) failures, the first being that \(failures[0])"
+        #expect(report.isEmpty)
+    }
+
+    /// The first group of each loop the edges form, in document order, which is the group each
+    /// diagnostic is reported under.
+    private static func loops(in edges: [[Int]]) -> [Int] {
+        let reaches = edges.indices.map({ reached(from: $0, edges: edges) })
+        var loops: [Int] = []
+        var reported: Set<Int> = []
+
+        for group in edges.indices where reaches[group].contains(group) && !reported.contains(group) {
+            reported.formUnion(reaches[group].filter({ reaches[$0].contains(group) }))
+            loops.append(group)
+        }
+
+        return loops
+    }
+
+    /// Which groups a group reaches, found by walking the edges one at a time.
+    private static func reached(from start: Int, edges: [[Int]]) -> Set<Int> {
+        var seen: Set<Int> = []
+        var pending = edges[start]
+
+        while let next = pending.popLast() {
+            guard seen.insert(next).inserted else { continue }
+
+            pending += edges[next]
+        }
+
+        return seen
+    }
+
     @Test
     func validatesARecipeWithNoGroupProblemWithoutDiagnostics() {
         let source = """

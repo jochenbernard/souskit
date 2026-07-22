@@ -73,6 +73,13 @@ enum SourceText {
     private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
         .union([Flag.separator, Flag.shorthand, AmountFence.opening, escape])
 
+    /// Whether the character would escape the one after it, which is what makes a literal
+    /// backslash need an escape of its own. Every writer asks through this one rule, so none
+    /// of them states where a backslash is bare and where it is not.
+    static func escapesFollowing(_ character: Character, before following: Character?) -> Bool {
+        character == escape && (following.map(isEscapable) ?? false)
+    }
+
     /// Whether a backslash before the character produces that character literally inside an
     /// inline list value. A list's structure is its brackets and its separating comma rather
     /// than the body's sigils, so it escapes its own set.

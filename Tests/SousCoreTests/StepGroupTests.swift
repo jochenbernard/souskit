@@ -270,6 +270,29 @@ struct StepGroupTests {
         #expect(recipe("## Sauce \\\\@ Home").serialized() == "## Sauce \\\\@ Home")
     }
 
+    // A heading is decided by the shape of a whole line, so content written at the start of one
+    // is escaped wherever it would otherwise be read as a heading rather than as itself. The
+    // escape reads back as the character, so the content survives either way.
+
+    @Test(arguments: [
+        "Mix it,\n\\## then rest it.",
+        "Add @a\n\\## b@ now.",
+        "Use a #a\n\\## b# now.",
+        "Wait ~4\n\\## h~ now.",
+        "Spread the >a\n\\## b> now.",
+        "\\## Sauce",
+        "Mix it,\n\\##  rest it.",
+        "## Sauce\nMix it,\n\\## then rest it."
+    ])
+    func escapesContentThatWouldOtherwiseBeReadAsAHeading(source: String) {
+        let recipe = SousParser().parseRecipe(source).value
+        let reRead = SousParser().parseRecipe(recipe.serialized())
+
+        #expect(reRead.value.groups.map(\.name) == recipe.groups.map(\.name))
+        #expect(reRead.value.steps.map(\.segments) == recipe.steps.map(\.segments))
+        #expect(reRead.diagnostics.isEmpty)
+    }
+
     @Test
     func dropsAnEscapeANameDoesNotNeed() {
         // A heading name holds no annotation, so a sigil in one needs no escape to read back

@@ -86,8 +86,8 @@ enum StepParser {
                 case let .named(name, amount, next):
                     flush(&prose, into: &segments)
                     cursor = next
-                    // An ingredient reads the flag chain that follows its closing sigil, so
-                    // the cursor moves on past that chain too.
+                    // An annotation that takes flags reads the chain following its closing
+                    // sigil, so the cursor moves on past that chain too.
                     let flags = FlagParser.parse(
                         after: annotation,
                         in: characters,
@@ -121,6 +121,7 @@ enum StepParser {
         case .ingredient: .ingredient(Ingredient(name: name, amount: amount, flags: flags))
         case .cookware: .cookware(Cookware(name: name))
         case .timer: .timer(TimerParser.parse(name))
+        case .reference: .reference(Reference(target: name, amount: amount, flags: flags))
         }
     }
 

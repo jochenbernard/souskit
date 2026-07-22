@@ -65,6 +65,31 @@ struct GroupResolutionTests {
         #expect(value.group(named: "sauce")?.steps.map(\.text) == ["Brown the beef."])
     }
 
+    // Resolving a name and normalizing it are the same question asked twice, so they are held
+    // to the same answer over every name these parts spell.
+
+    @Test
+    func findsAGroupExactlyWhenTheTwoNamesNormalizeTheSame() {
+        let parts = ["of", "the", "a", " ", "x", "\u{E9}", "E\u{301}", "-"]
+        let names = parts.flatMap({ first in parts.map({ first + $0 }) }) + parts
+        let failures = names.flatMap({ heading in
+            names.compactMap({ target -> String? in
+                let value = recipe("## \(heading)\nMix it.")
+                // A line naming nothing is not a heading, so it forms no group to find.
+                guard value.groups.first?.name != nil else { return nil }
+
+                let found = value.group(named: target) != nil
+                let normalizesTheSame = Normalization.normalized(heading) == Normalization.normalized(target)
+                guard found != normalizesTheSame else { return nil }
+
+                return "\(heading.debugDescription) and \(target.debugDescription) disagree"
+            })
+        })
+
+        let report = failures.isEmpty ? "" : "\(failures.count) failures, the first being that \(failures[0])"
+        #expect(report.isEmpty)
+    }
+
     // Dependencies
 
     @Test

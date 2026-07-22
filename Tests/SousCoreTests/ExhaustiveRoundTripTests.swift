@@ -121,12 +121,19 @@ struct ExhaustiveRoundTripTests {
     // the two hashes, the one space after them, and whether a name follows.
 
     @Test(arguments: [
-        ["#", " ", "\n", "a"],
         ["#", " ", "\n", "\\", ">"],
         ["## a", "\n", "a", " ", "#"]
     ])
     func everyHeadingLine(alphabet: [String]) {
         expectRoundTrips(alphabet, upTo: 4)
+    }
+
+    // A heading needs five characters to be written out of content, an escaped one included, so
+    // this is the shortest sweep that reaches content a reader would take for a heading.
+
+    @Test(arguments: ["", "Add @", "Use a #", "Wait ~", "Spread the >"])
+    func everyContentThatCouldOpenAHeading(prefix: String) {
+        expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, prefix: prefix)
     }
 
     @Test

@@ -10,7 +10,7 @@ extension Recipe {
     /// - Parameter name: The name to match, such as a reference's target.
     /// - Returns: The group the name refers to, or `nil` when no group carries it.
     public func group(named name: String) -> StepGroup? {
-        nil
+        index(ofGroupNamed: name).map({ groups[$0] })
     }
 
     /// Returns the groups a group depends on.
@@ -26,6 +26,27 @@ extension Recipe {
     /// - Parameter group: The group whose dependencies are wanted.
     /// - Returns: The groups it depends on.
     public func dependencies(of group: StepGroup) -> [StepGroup] {
-        []
+        dependencyIndices(of: group).map({ groups[$0] })
+    }
+
+    /// The position of the group a name refers to. Resolving a name and reaching the group it
+    /// names are the same lookup, so the two can never disagree on which group that is.
+    func index(ofGroupNamed name: String) -> Int? {
+        let normalized = Normalization.normalized(name)
+
+        return groups.firstIndex(where: { $0.name.map(Normalization.normalized) == normalized })
+    }
+
+    /// The positions of the groups a group depends on, each listed once and in the order its
+    /// first reference appears.
+    func dependencyIndices(of group: StepGroup) -> [Int] {
+        var seen: Set<Int> = []
+
+        return group.references.compactMap({ reference in
+            guard let index = index(ofGroupNamed: reference.target), seen.insert(index).inserted
+            else { return nil }
+
+            return index
+        })
     }
 }
