@@ -160,6 +160,14 @@ struct MetadataListTests {
         #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
     }
 
+    // A list of nothing has no inline form, so it writes as the key alone whichever spelling
+    // it was read from.
+
+    @Test(arguments: ["---\ntags:\n---", "---\ntags: []\n---"])
+    func writesAListOfNoItemsAsTheKeyAlone(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == "---\ntags:\n---")
+    }
+
     @Test
     func readsAnEmptyInlineListAsNoItems() {
         let source = """

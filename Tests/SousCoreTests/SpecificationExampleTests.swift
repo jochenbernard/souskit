@@ -4,7 +4,7 @@ import Testing
 // The complete files the Sous documentation works through, read back here so the
 // outcomes it states stay the outcomes this reader produces. Each also round-trips byte
 // for byte, including the constructs later versions introduce, which a v0.3 reader
-// carries through as ordinary prose. The one exception is a `yield` line, which is a list
+// carries through as ordinary prose. The one exception is a `yield` line, whose key is a list
 // field from v0.3 and so comes back in the inline form every list value is written in.
 
 @Suite("Specification examples")
@@ -12,9 +12,11 @@ struct SpecificationExampleTests {
     /// The source with its `yield` line rewritten to the inline form, which is the only
     /// difference between a documented example and what writing it back produces.
     private func withYieldWritten(_ source: String) -> String {
-        source.split(separator: "\n", omittingEmptySubsequences: false)
+        let key = "yield: "
+
+        return source.split(separator: "\n", omittingEmptySubsequences: false)
             .map({ line in
-                line.hasPrefix("yield: ") ? "yield: [\(line.dropFirst("yield: ".count))]" : String(line)
+                line.hasPrefix(key) ? "\(key)[\(line.dropFirst(key.count))]" : String(line)
             })
             .joined(separator: "\n")
     }

@@ -54,9 +54,12 @@ struct ExhaustiveRoundTripTests {
         prefix: String = "",
         suffix: String = ""
     ) {
-        let failures = strings(over: alphabet, upTo: length)
-            .compactMap({ roundTripFailure(prefix + $0 + suffix) })
-        // Reported as one line, because a broken escape rule fails on hundreds of inputs at once.
+        expectNoFailures(strings(over: alphabet, upTo: length)
+            .compactMap({ roundTripFailure(prefix + $0 + suffix) }))
+    }
+
+    /// Reported as one line, because a broken escape rule fails on hundreds of inputs at once.
+    private func expectNoFailures(_ failures: [String]) {
         let report = failures.isEmpty ? "" : "\(failures.count) failures, the first being that \(failures[0])"
 
         #expect(report.isEmpty)
@@ -80,6 +83,29 @@ struct ExhaustiveRoundTripTests {
     @Test
     func everyAmountFence() {
         expectRoundTrips(["0", ".", "/", "-", "=", " ", "g", "}"], upTo: 4, prefix: "Add @{", suffix: "} water@.")
+    }
+
+    // Scaling writes amounts nobody wrote, so what it writes has to read back as what it
+    // states. The quantity and the unit decide that together: a whole quantity, one space,
+    // and a fraction is a mixed number, whichever side of the space each character came from.
+
+    // One digit reaches every shape a quantity takes, so a second only multiplies the sweep.
+    // Seven characters is the shortest fence that scales into a mixed number, `1/1 1/1`.
+
+    @Test(arguments: [0.5, 2.0, 4.0])
+    func everyScaledAmountFence(factor: Double) {
+        let parser = SousParser()
+
+        expectNoFailures(strings(over: ["1", ".", "/", " "], upTo: 7).compactMap({ fence -> String? in
+            let source = "Add @{\(fence)} water@."
+            guard let scaled = try? parser.parseRecipe(source).value.scaled(by: factor) else { return nil }
+
+            let written = scaled.serialized()
+            guard parser.parseRecipe(written).value.steps.map(\.segments) != scaled.steps.map(\.segments)
+            else { return nil }
+
+            return "\(source.debugDescription) scaled by \(factor) wrote \(written.debugDescription)"
+        }))
     }
 
     @Test

@@ -3,13 +3,15 @@ import Testing
 
 // Scaling by a factor, available since v0.3. Every amount either multiplies by the factor or
 // does not move at all, and the header states what the scaled recipe now makes.
+//
+// What a moved amount is written back as is `ScaledAmountTests`.
 
 @Suite("Scaling by a factor")
 struct ScalingTests {
     private func amount(in source: String, scaledBy factor: Double) throws -> Amount {
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: factor)
+        let scaled = try SousParser().scaledAmount(in: source, by: factor)
 
-        return try #require(recipe.ingredients.first?.amount)
+        return try #require(scaled)
     }
 
     @Test
@@ -17,9 +19,7 @@ struct ScalingTests {
         let amount = try amount(in: "Mix @{200 g} flour@.", scaledBy: 1.5)
 
         #expect(amount.kind.preciseQuantity?.value == 300.0)
-        #expect(amount.kind.preciseQuantity?.text == "300")
         #expect(amount.unit == "g")
-        #expect(amount.text == "300 g")
     }
 
     @Test
@@ -28,7 +28,6 @@ struct ScalingTests {
 
         #expect(amount.kind.rangeQuantities?.low.value == 2.0)
         #expect(amount.kind.rangeQuantities?.high.value == 4.0)
-        #expect(amount.text == "2-4 tbsp")
     }
 
     // A fixed, imprecise, or absent amount states nothing to multiply, so a scaled recipe is
@@ -55,7 +54,7 @@ struct ScalingTests {
     func leavesAnAbsentAmountAbsent() throws {
         let recipe = try SousParser().parseRecipe("Season with @salt@.").value.scaled(by: 2.0)
 
-        #expect(recipe.ingredients.first?.amount == nil)
+        #expect(recipe.firstAmount == nil)
     }
 
     @Test
@@ -65,42 +64,6 @@ struct ScalingTests {
         let timer = try #require(recipe.timers.first)
         #expect(timer.text == "40 min")
         #expect(timer.components.first?.kind.preciseQuantity?.value == 40.0)
-    }
-
-    // The regenerated text holds the exact value. An integral one carries no decimal point,
-    // and nothing is ever rounded.
-
-    @Test(arguments: [
-        (fence: "200 g", factor: 1.5, text: "300 g"),
-        (fence: "1/2 tsp", factor: 3.0, text: "1.5 tsp"),
-        (fence: "1 1/2 cups", factor: 2.0, text: "3 cups"),
-        (fence: "0.5 kg", factor: 4.0, text: "2 kg"),
-        (fence: "2", factor: 2.0, text: "4"),
-        (fence: "1-2 tbsp", factor: 2.0, text: "2-4 tbsp"),
-        (fence: "200 g", factor: 0.0, text: "0 g"),
-        (fence: "3 g", factor: 0.5, text: "1.5 g")
-    ])
-    func regeneratesTheTextOfAScaledAmount(fence: String, factor: Double, text: String) throws {
-        #expect(try amount(in: "Add @{\(fence)} water@.", scaledBy: factor).text == text)
-    }
-
-    @Test
-    func neverRoundsAScaledQuantity() throws {
-        let amount = try amount(in: "Add @{1/3 cup} water@.", scaledBy: 2.0)
-
-        #expect(amount.kind.preciseQuantity?.value == 2.0 / 3.0)
-        #expect(amount.text == "0.6666666666666666 cup")
-    }
-
-    // Regenerating writes one space between the quantity and the unit, and the unit itself is
-    // whatever followed that one space, so spacing beyond it survives.
-
-    @Test(arguments: [
-        (fence: "200g", text: "400 g"),
-        (fence: "200  g", text: "400  g")
-    ])
-    func regeneratesTheSeparatorButNotTheUnit(fence: String, text: String) throws {
-        #expect(try amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0).text == text)
     }
 
     // The declared yield and servings scale with the amounts, so the header still states what
@@ -130,6 +93,20 @@ struct ScalingTests {
         #expect(recipe.metadata["servings"] == "12 people")
     }
 
+    // Every entry of a repeated key states the same field, so scaling moves them all rather
+    // than only the one the accessor reads.
+
+    @Test
+    func scalesEveryEntryOfARepeatedField() throws {
+        let source = "---\nservings: 4\nservings: 6\nyield: 800 g\nyield: 12 muffins\n---"
+
+        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        #expect(recipe.metadata.servings == 12.0)
+        #expect(recipe.metadata.entries.map(\.value) == [
+            .scalar("8"), .scalar("12"), .list(["1600 g"]), .list(["24 muffins"])
+        ])
+    }
+
     // Only the two fields stating how much the recipe makes move. A number anywhere else in
     // the header states something scaling has no business multiplying.
 
@@ -142,30 +119,6 @@ struct ScalingTests {
         #expect(recipe.metadata.title == "3 Bean Stew")
         #expect(recipe.metadata["calories"] == "640")
         #expect(recipe.metadata.tags == ["4 star"])
-    }
-
-    // A value is written positionally whatever its magnitude, because the exponent notation
-    // Swift reaches for at the extremes is not a quantity any reader reads back.
-
-    @Test(arguments: [
-        (factor: 0.00001, text: "0.00001 g"),
-        (factor: 0.0000025, text: "0.0000025 g"),
-        (factor: 1e20, text: "100000000000000000000 g"),
-        (factor: 1.5e20, text: "150000000000000000000 g")
-    ])
-    func writesAScaledValuePositionallyAtEveryMagnitude(factor: Double, text: String) throws {
-        #expect(try amount(in: "Add @{1 g} water@.", scaledBy: factor).text == text)
-    }
-
-    @Test(arguments: [0.00001, 1e20])
-    func aRecipeScaledToAnExtremeStillRoundTrips(factor: Double) throws {
-        let parser = SousParser()
-
-        let scaled = try parser.parseRecipe("Add @{1 g} water@.").value.scaled(by: factor)
-        let reRead = parser.parseRecipe(scaled.serialized())
-
-        #expect(reRead.value.steps.map(\.segments) == scaled.steps.map(\.segments))
-        #expect(reRead.diagnostics.isEmpty)
     }
 
     @Test
@@ -197,6 +150,36 @@ struct ScalingTests {
         #expect(recipe.steps.first?.text == source)
     }
 
+    // Rewriting a step writes every segment of it again, so what the reader resolved has to be
+    // escaped back, the flags have to survive, and a step of several lines stays several lines.
+
+    @Test
+    func reEscapesTheProseOfARewrittenStep() throws {
+        let source = "Add @{200 g} water@ then wait \\~5\\~."
+
+        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        #expect(recipe.steps.first?.text == "Add @{400 g} water@ then wait \\~5\\~.")
+    }
+
+    @Test
+    func keepsTheFlagsOfARewrittenStep() throws {
+        let source = "Mix @{200 g} flour@:staple? into a #bowl#."
+
+        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        #expect(recipe.steps.first?.text == "Mix @{400 g} flour@:staple? into a #bowl#.")
+        let ingredient = try #require(recipe.ingredients.first)
+        #expect(ingredient.flags.isStaple)
+        #expect(ingredient.flags.isOptional)
+    }
+
+    @Test(arguments: [
+        (source: "Mix @{200 g} flour@\nand @{1 tsp} salt@.", text: "Mix @{400 g} flour@\nand @{2 tsp} salt@."),
+        (source: "## Sauce\nMix @{200 g} flour@.", text: "## Sauce\nMix @{400 g} flour@.")
+    ])
+    func rewritesEveryLineOfAStepItChanged(source: String, text: String) throws {
+        #expect(try SousParser().parseRecipe(source).value.scaled(by: 2.0).steps.first?.text == text)
+    }
+
     // A factor of one moves no value, so it rewrites nothing at all: the recipe that comes
     // back is the recipe that went in, incidental spacing included.
 
@@ -216,9 +199,10 @@ struct ScalingTests {
     }
 
     // A factor a scaled amount could not be written back from is refused, so scaling never
-    // produces a recipe that fails to read as itself.
+    // produces a recipe that fails to read as itself. Negative zero belongs among them: it
+    // compares equal to zero but writes the sign a negative factor does.
 
-    @Test(arguments: [-1.0, -0.5, Double.infinity, -Double.infinity, Double.nan])
+    @Test(arguments: [-1.0, -0.5, -0.0, Double.infinity, -Double.infinity, Double.nan])
     func refusesAFactorItCouldNotWriteBack(factor: Double) {
         let recipe = SousParser().parseRecipe("Mix @{200 g} flour@.").value
 
@@ -230,24 +214,5 @@ struct ScalingTests {
     @Test
     func scalingByZeroIsAllowed() throws {
         #expect(try amount(in: "Mix @{200 g} flour@.", scaledBy: 0.0).kind.preciseQuantity?.value == 0.0)
-    }
-
-    // Whatever scaling writes has to read back as what it states, over every amount form and
-    // every factor, or the round-trip guarantee holds only for recipes nobody scaled.
-
-    @Test(arguments: [
-        "200 g", "1-2 tbsp", "=1 tsp", "a pinch", "2", "1/2 tsp", "1 1/2 cups", "0.5 kg",
-        "200g", "200  g", "10-12"
-    ], [0.0, 0.5, 1.0, 2.0, 3.0])
-    func aScaledRecipeStillRoundTrips(fence: String, factor: Double) throws {
-        let parser = SousParser()
-        let source = "---\nservings: 4\nyield: [6 servings, 3.2 kg]\n---\n\nAdd @{\(fence)} water@."
-
-        let scaled = try parser.parseRecipe(source).value.scaled(by: factor)
-        let reRead = parser.parseRecipe(scaled.serialized())
-
-        #expect(reRead.value.metadata == scaled.metadata, "\(fence) scaled by \(factor)")
-        #expect(reRead.value.steps.map(\.segments) == scaled.steps.map(\.segments), "\(fence) scaled by \(factor)")
-        #expect(reRead.diagnostics.isEmpty, "\(fence) scaled by \(factor)")
     }
 }

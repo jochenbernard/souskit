@@ -6,6 +6,9 @@ public struct Step: Equatable, Hashable, Sendable {
     public var segments: [Segment]
 
     /// The step's source text, with any line endings within it normalized to line feeds.
+    ///
+    /// Scaling rewrites it from ``segments`` for a step whose amounts moved, and leaves it as
+    /// read for one whose amounts did not.
     public var text: String
 
     /// The ingredients annotated in the step, in document order.

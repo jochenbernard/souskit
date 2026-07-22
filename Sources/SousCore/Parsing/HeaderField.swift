@@ -8,8 +8,8 @@ enum HeaderField {
     static let language = "language"
     static let version = "version"
 
-    /// The number of portions the recipe makes. The key is also the unit of the portion yield
-    /// it is an alias for, which is what makes it one.
+    /// The number of portions the recipe makes. The key doubles as the unit of the portion
+    /// yield it aliases.
     static let servings = "servings"
 
     static let tags = "tags"
@@ -22,4 +22,13 @@ enum HeaderField {
 
     /// A scalar field reads its value as the one literal it states, the last occurrence winning.
     static let scalars: Set<String> = [title, language, version, servings, source]
+
+    /// A scaling field states how much the recipe makes, so its value moves with the factor.
+    static let scaling: Set<String> = [servings, yield]
+
+    /// Whether this version gives the key a meaning. Everything else is preserved and reported
+    /// as unknown.
+    static func isRecognized(_ key: String) -> Bool {
+        lists.contains(key) || scalars.contains(key)
+    }
 }

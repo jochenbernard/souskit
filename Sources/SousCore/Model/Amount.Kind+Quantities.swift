@@ -1,5 +1,6 @@
 // The quantities an amount states, read the same way wherever they are needed: scaling
-// multiplies them, validation compares them, and scaling to a target divides by one.
+// multiplies them, a unit stated more than once has to agree on them, and scaling to a
+// target divides by one.
 
 extension Amount.Kind {
     /// The quantities the kind states, in order. An imprecise amount states none.
@@ -17,7 +18,7 @@ extension Amount.Kind {
     /// The values those quantities state, which is what a factor moves and what two statements
     /// of one dimension have to agree on.
     var values: [Double] {
-        quantities.map(\.value)
+        quantities.values
     }
 
     /// The one value the kind states, or `nil` when it states none or more than one. A range
@@ -25,16 +26,12 @@ extension Amount.Kind {
     var soleValue: Double? {
         values.count == 1 ? values[0] : nil
     }
+}
 
-    /// The text the quantities are written back as, without the unit that follows them.
-    var text: String {
-        switch self {
-        case let .precise(quantity):
-            quantity.text
-        case let .range(low, high):
-            "\(low.text)\(AmountParser.rangeSeparator)\(high.text)"
-        case let .imprecise(text):
-            text
-        }
+extension [Quantity] {
+    /// The values the quantities state. A kind reads its own through here, and so does the
+    /// writer, so what a factor moves is one thing however it is reached.
+    var values: [Double] {
+        map(\.value)
     }
 }

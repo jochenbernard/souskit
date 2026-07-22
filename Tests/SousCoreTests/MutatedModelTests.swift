@@ -100,4 +100,25 @@ struct MutatedModelTests {
         #expect(written.amount?.text.isEmpty == true)
         #expect(written.name == "salt")
     }
+
+    // A quantity is a leading run of digits, so a negative value writes text that is not one.
+    // Reading produces no such value, but a mutation can, and scaling refuses it rather than
+    // writing an amount that no longer reads back.
+
+    @Test
+    func refusesToScaleAQuantityMutatedToANegativeValue() throws {
+        var value = recipe("Add @{200 g} flour@.")
+        var ingredient = try #require(value.ingredients.first)
+        var amount = try #require(ingredient.amount)
+        var quantity = try #require(amount.kind.preciseQuantity)
+
+        quantity.value = -200
+        amount.kind = .precise(quantity)
+        ingredient.amount = amount
+        value.steps[0].segments[1] = .ingredient(ingredient)
+
+        #expect(throws: ScalingError.unwritableQuantity) {
+            try value.scaled(by: 2.0)
+        }
+    }
 }

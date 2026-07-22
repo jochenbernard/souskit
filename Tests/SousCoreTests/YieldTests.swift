@@ -20,7 +20,6 @@ struct YieldTests {
     }
 
     @Test(arguments: [
-        (value: "800 g", quantity: 800.0, unit: "g"),
         (value: "1.5 L", quantity: 1.5, unit: "L"),
         (value: "12 muffins", quantity: 12.0, unit: "muffins"),
         (value: "6 servings", quantity: 6.0, unit: "servings"),
@@ -82,6 +81,39 @@ struct YieldTests {
         #expect(SousParser().parseRecipe("---\nyield:\n---").value.metadata.yields.isEmpty)
     }
 
+    // The fixed marker belongs to the amount fence, which no header value has, so a leading
+    // `=` is ordinary text here exactly as it is in a timer.
+
+    @Test
+    func readsAYieldOpeningWithTheFixedMarkerAsImprecise() throws {
+        let metadata = SousParser().parseRecipe("---\nyield: =800 g\n---").value.metadata
+
+        let yield = try #require(metadata.yields.first)
+        #expect(yield.kind.impreciseText == "=800 g")
+        #expect(yield.unit == nil)
+        #expect(!yield.isFixed)
+    }
+
+    @Test
+    func readsNoServingsFromAValueOpeningWithTheFixedMarker() {
+        #expect(SousParser().parseRecipe("---\nservings: =4\n---").value.metadata.servings == nil)
+    }
+
+    // A header value is read with the whitespace around it removed, so one that moves is
+    // rewritten from what it states rather than from how it was spaced.
+
+    @Test
+    func scalingAHeaderValueDropsTheWhitespaceAroundIt() throws {
+        let recipe = try SousParser().parseRecipe("---\nservings:  6 \n---").value.scaled(by: 2.0)
+
+        #expect(recipe.metadata["servings"] == "12")
+    }
+
+    @Test
+    func readsTheLeadingQuantityOfAServingsRange() {
+        #expect(SousParser().parseRecipe("---\nservings: 4-6\n---").value.metadata.servings == 4.0)
+    }
+
     // `servings` is an alias for a portion yield, but it stays its own accessor, because
     // reading it as one is what scaling does rather than what the store holds.
 
@@ -113,6 +145,14 @@ struct YieldTests {
         let recipe = SousParser().parseRecipe("---\nyield: 800 g\n---").value
 
         #expect(recipe.serialized() == "---\nyield: [800 g]\n---")
+    }
+
+    // A list of nothing has no inline form to write, so the key ends at the separator, which
+    // is what leaves the block form a later version introduces exactly as it was written.
+
+    @Test(arguments: ["---\nyield:\n---", "---\nyield:\n  - 800 g\n---"])
+    func writesAYieldOfNoItemsAsTheKeyAlone(source: String) {
+        #expect(SousParser().parseRecipe(source).value.serialized() == source)
     }
 
     @Test

@@ -1,28 +1,26 @@
 extension Metadata {
-    /// Reports each dimension the header states more than one value for.
+    /// Reports each unit the header states a yield in more than once, counting the `servings`
+    /// value and every `yield` entry together.
     ///
-    /// A recipe declares at most one yield per dimension, counting `servings` and every `yield`
-    /// entry together, so that scaling to a target of a dimension has a single value to divide
-    /// by. Stating one twice is fine while both state the same amount.
-    ///
-    /// A dimension reaches exactly as far as the unit written, because telling that `800 g` and
-    /// `1 kg` measure the same thing needs reference data. A value stating no quantity states
-    /// no dimension either, and so disagrees with nothing.
-    func conflictingYields() -> [Diagnostic] {
-        var units: [String] = []
-        var stated: [String: Set<[Double]>] = [:]
+    /// It reaches exactly as far as the unit written, because telling that `800 g` and `1 kg`
+    /// measure the same thing needs reference data. A value stating no quantity states no
+    /// dimension, so ``declaredYields`` leaves it out and it restates nothing. A repeated
+    /// `servings` key is the reader's report rather than this one: only its last value is read.
+    func repeatedYields() -> [Diagnostic] {
+        let declared = declaredYields
+        var stated: [String: Int] = [:]
+        var reported: Set<String> = []
 
-        for yield in declaredYields where !yield.kind.values.isEmpty {
-            if stated[yield.unit] == nil { units.append(yield.unit) }
-            stated[yield.unit, default: []].insert(yield.kind.values)
-        }
+        for yield in declared { stated[yield.unit, default: 0] += 1 }
 
-        return units
-            .filter({ stated[$0].map({ $0.count > 1 }) ?? false })
-            .map({ .error(.conflictingYields, Self.conflictMessage(in: $0)) })
+        return declared.compactMap({ yield in
+            guard stated[yield.unit] ?? 0 > 1, reported.insert(yield.unit).inserted else { return nil }
+
+            return .warning(.repeatedYield, Self.repeatedMessage(in: yield.unit), at: nil)
+        })
     }
 
-    private static func conflictMessage(in unit: String) -> String {
+    private static func repeatedMessage(in unit: String) -> String {
         unit.isEmpty
             ? "Header states more than one yield with no unit."
             : "Header states more than one yield in '\(unit)'."

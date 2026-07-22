@@ -70,7 +70,7 @@ enum HeaderParser {
             ))
 
             // An unknown key is preserved and warned about, whether scalar or repeated.
-            if !isList, !HeaderField.scalars.contains(field.key) {
+            if !HeaderField.isRecognized(field.key) {
                 diagnostics.append(.warning(
                     .unknownHeaderKey,
                     "Unrecognized header key '\(field.key)'.",

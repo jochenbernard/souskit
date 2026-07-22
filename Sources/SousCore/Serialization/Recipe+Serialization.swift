@@ -38,11 +38,11 @@ extension Recipe {
         for entry in metadata.entries {
             switch entry.value {
             case let .scalar(value):
-                // An empty value ends the line at the separator, where a trailing space
-                // would be incidental layout.
-                lines.append(value.isEmpty ? "\(entry.key):" : "\(entry.key): \(value)")
+                lines.append(line(entry.key, value))
             case let .list(items):
-                lines.append("\(entry.key): \(rendered(items))")
+                // A list of nothing has no inline form, so it writes as the key alone, which
+                // leaves a block list a later version introduces sitting under that key.
+                lines.append(line(entry.key, items.isEmpty ? "" : rendered(items)))
             case let .raw(line):
                 lines.append(line)
             }
@@ -51,6 +51,12 @@ extension Recipe {
         lines.append(SourceText.fence)
 
         return lines.joined(separator: "\n")
+    }
+
+    /// An entry as one line. An empty value ends the line at the separator, where a trailing
+    /// space would be incidental layout.
+    private static func line(_ key: String, _ value: String) -> String {
+        value.isEmpty ? "\(key):" : "\(key): \(value)"
     }
 
     /// Renders a list value in the inline form, which every item survives because the
