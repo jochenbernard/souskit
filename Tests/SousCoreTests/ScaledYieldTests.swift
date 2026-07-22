@@ -56,6 +56,45 @@ struct ScaledYieldTests {
         #expect(scaled.metadata.yields.map(\.text) == ["15 servings"])
     }
 
+    // Only the entry the alias is read from states the target. A repeated scalar key is read
+    // from its last occurrence, so an earlier one it shadows is left to the factor, exactly as
+    // scaling by that factor alone would leave it.
+
+    @Test
+    func statesOnlyTheEntryTheAliasIsReadFrom() throws {
+        let scaled = try scaled("servings: 4\nservings: 6", to: "12 servings")
+
+        #expect(scaled.metadata.entries.map(\.value) == [.scalar("8"), .scalar("12")])
+        #expect(scaled.metadata.servings == 12.0)
+    }
+
+    @Test(arguments: ["servings: 0\nservings: 1", "servings: 3\nservings: 8"])
+    func scalingToWhatAShadowedKeyAlreadyStatesChangesNothing(header: String) throws {
+        let parsed = SousParser().parseRecipe(recipe(header)).value
+        let target = "\(parsed.metadata.servings ?? 0) servings"
+
+        #expect(try scaled(header, to: target) == parsed)
+    }
+
+    // The alias is read from the last scalar entry, so a later one stating no quantity leaves
+    // the dimension to a yield, and the earlier entry is still only multiplied.
+
+    @Test
+    func statesNoTargetInAnEntryTheAliasDoesNotStandFor() throws {
+        let scaled = try scaled("servings: 4\nservings: six\nyield: [11 servings]", to: "15 servings")
+
+        #expect(scaled.metadata.entries.map(\.value) == [
+            .scalar("5.454545454545454"), .scalar("six"), .list(["15 servings"])
+        ])
+    }
+
+    @Test
+    func statesTheTargetInAServingsValueThatCarriesAUnit() throws {
+        let scaled = try scaled("servings: 4 people\nservings: 8", to: "16 servings")
+
+        #expect(scaled.metadata.entries.map(\.value) == [.scalar("8 people"), .scalar("16")])
+    }
+
     @Test
     func statesAServingsTargetExactly() throws {
         let parsed = SousParser().parseRecipe(recipe("servings: 11")).value

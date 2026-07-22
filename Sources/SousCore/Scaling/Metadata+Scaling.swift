@@ -39,10 +39,11 @@ extension Metadata {
     /// product the factor left. Every other yield is that product, because nothing else was
     /// asked for.
     func stating(_ target: Double, in unit: String) -> Metadata {
-        Metadata(entries: entries.map({ entry in
+        let alias = aliasIndex
+
+        return Metadata(entries: entries.enumerated().map({ index, entry in
             switch entry.value {
-            case let .scalar(value) where entry.key == HeaderField.servings
-                && unit == HeaderField.servings:
+            case let .scalar(value) where index == alias && unit == HeaderField.servings:
                 Entry(key: entry.key, value: .scalar(Self.stating(target, in: value)))
             case let .list(items) where entry.key == HeaderField.yield:
                 Entry(key: entry.key, value: .list(items.map({ item in

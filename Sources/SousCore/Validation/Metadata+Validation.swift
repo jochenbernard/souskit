@@ -12,9 +12,10 @@ extension Metadata {
         var reported: Set<String> = []
 
         for yield in declared { stated[yield.unit, default: 0] += 1 }
+        let repeated = Set(stated.filter({ $0.value > 1 }).keys)
 
         return declared.compactMap({ yield in
-            guard stated[yield.unit] ?? 0 > 1, reported.insert(yield.unit).inserted else { return nil }
+            guard repeated.contains(yield.unit), reported.insert(yield.unit).inserted else { return nil }
 
             return .warning(.repeatedYield, Self.repeatedMessage(in: yield.unit), at: nil)
         })

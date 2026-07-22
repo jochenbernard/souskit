@@ -55,7 +55,10 @@ extension Metadata {
 
     /// Where the `servings` alias stands: the entry its value is read from, which is the last
     /// scalar one, or `nil` when the header states none.
-    private var aliasIndex: Int? {
+    ///
+    /// Reading the alias and restating it share this, so the entry that states the portions is
+    /// the entry a target rewrites, and an earlier one it shadows is left to the factor.
+    var aliasIndex: Int? {
         entries.lastIndex(where: { entry in
             guard entry.key == HeaderField.servings, case .scalar = entry.value else { return false }
 
