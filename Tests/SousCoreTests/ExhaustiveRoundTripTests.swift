@@ -109,6 +109,13 @@ struct ExhaustiveRoundTripTests {
     }
 
     @Test
+    func everyYieldValue() {
+        // The yield key is a list key like tags, so the same escaping has to survive it, and
+        // each item is additionally read as an amount.
+        expectRoundTrips(["[", "]", ",", "\\", "2", " ", "g"], upTo: 4, prefix: "---\nyield: ", suffix: "\n---")
+    }
+
+    @Test
     func everyScalarValue() {
         expectRoundTrips(["[", "]", ",", "\\", ":", " ", "a"], upTo: 4, prefix: "---\ntitle: ", suffix: "\n---")
     }
