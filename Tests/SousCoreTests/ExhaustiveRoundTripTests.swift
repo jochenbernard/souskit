@@ -21,7 +21,11 @@ struct ExhaustiveRoundTripTests {
         if reRead.value.metadata != recipe.metadata {
             return "\(source.debugDescription) wrote \(written.debugDescription), losing header entries"
         }
-        if reRead.value.steps.map(\.segments) != recipe.steps.map(\.segments) {
+        if reRead.value.groups.map(\.name) != recipe.groups.map(\.name) {
+            return "\(source.debugDescription) wrote \(written.debugDescription), losing groups"
+        }
+        if reRead.value.groups.map({ $0.steps.map(\.segments) })
+            != recipe.groups.map({ $0.steps.map(\.segments) }) {
             return "\(source.debugDescription) wrote \(written.debugDescription), losing step segments"
         }
         if reRead.diagnostics.contains(where: { $0.kind == .unclosedSpan }) {
@@ -109,6 +113,23 @@ struct ExhaustiveRoundTripTests {
     }
 
     @Test
+    func everyReferenceContent() {
+        expectRoundTrips([">", "{", "}", "\\", "a", " "], upTo: 4, prefix: "Spread the >", suffix: "> now.")
+    }
+
+    // A heading is a line-level construct, so what decides it is the shape of the whole line:
+    // the two hashes, the one space after them, and whether a name follows.
+
+    @Test(arguments: [
+        ["#", " ", "\n", "a"],
+        ["#", " ", "\n", "\\", ">"],
+        ["## a", "\n", "a", " ", "#"]
+    ])
+    func everyHeadingLine(alphabet: [String]) {
+        expectRoundTrips(alphabet, upTo: 4)
+    }
+
+    @Test
     func everyTimerContent() {
         expectRoundTrips(["~", "\\", "4", "-", " ", "h"], upTo: 4, prefix: "Wait ~", suffix: "~ now.")
     }
@@ -165,7 +186,7 @@ struct ExhaustiveRoundTripTests {
     func everyFileOverWholeConstructs() {
         let constructs = [
             "@{2 g} a@", "#p#", "\\@", "\n\n", "\n", "---\n", "@a@", "tags: [a, b]\n",
-            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@"
+            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@", ">a>", ">{2 g} a>", ">a>?", "## a"
         ]
 
         expectRoundTrips(constructs, upTo: 3)

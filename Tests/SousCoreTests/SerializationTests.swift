@@ -85,6 +85,8 @@ struct SerializationTests {
         "Add @{} salt@.",
         "Season with salt @",
         "Season to taste \\",
+        "## Sauce\nBrown the beef.",
+        "Layer the >{300 g} bolognese> in a dish.",
         "Read the \\note here.",
         "Note the path C:\\Users, then add @garlic@.",
         "Use a #8\\ pan#.",
@@ -111,7 +113,7 @@ struct SerializationTests {
     @Test(arguments: [
         "Use @@ here.",
         "Use ## here.",
-        "## Sauce",
+        "Use >> here.",
         "Rate it @@ out of five."
     ])
     func leavesAnInertSigilPairUnescaped(source: String) {

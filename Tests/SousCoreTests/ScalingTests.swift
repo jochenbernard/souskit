@@ -174,9 +174,49 @@ struct ScalingTests {
 
     @Test(arguments: [
         (source: "Mix @{200 g} flour@\nand @{1 tsp} salt@.", text: "Mix @{400 g} flour@\nand @{2 tsp} salt@."),
-        (source: "## Sauce\nMix @{200 g} flour@.", text: "## Sauce\nMix @{400 g} flour@.")
+        (
+            source: "Mix @{200 g} flour@,\nthen rest it,\nthen bake.",
+            text: "Mix @{400 g} flour@,\nthen rest it,\nthen bake."
+        )
     ])
     func rewritesEveryLineOfAStepItChanged(source: String, text: String) throws {
+        #expect(try SousParser().parseRecipe(source).value.scaled(by: 2.0).steps.first?.text == text)
+    }
+
+    // A group states nothing of its own to multiply, so scaling it is scaling each of its
+    // steps, and its heading comes back as it was written.
+
+    @Test
+    func keepsTheGroupsOfAScaledRecipe() throws {
+        let source = """
+        ## Sauce
+        Mix @{200 g} flour@.
+
+        ## Topping
+        Grate @{50 g} parmesan@.
+        """
+
+        let scaled = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        #expect(scaled.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(scaled.serialized() == """
+        ## Sauce
+        Mix @{400 g} flour@.
+
+        ## Topping
+        Grate @{100 g} parmesan@.
+        """)
+    }
+
+    // A consumption fence is an amount, and scaling is defined over amounts, so it moves with
+    // the rest and the fixed marker holds it still.
+
+    @Test(arguments: [
+        (source: "Layer the >{300 g} sauce> in a dish.", text: "Layer the >{600 g} sauce> in a dish."),
+        (source: "Layer the >{=300 g} sauce> in a dish.", text: "Layer the >{=300 g} sauce> in a dish."),
+        (source: "Layer the >{half} sauce> in a dish.", text: "Layer the >{half} sauce> in a dish."),
+        (source: "Layer the >sauce> in a dish.", text: "Layer the >sauce> in a dish.")
+    ])
+    func scalesTheConsumptionFenceOfAReference(source: String, text: String) throws {
         #expect(try SousParser().parseRecipe(source).value.scaled(by: 2.0).steps.first?.text == text)
     }
 

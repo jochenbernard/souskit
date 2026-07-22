@@ -1,0 +1,282 @@
+import SousCore
+import Testing
+
+// Version 0.4 divides a body into groups. A line of "##", one space, and a name opens one,
+// every step up to the next heading belongs to it, and the steps written before any heading
+// form the unnamed default group.
+//
+// The heading is a line-level construct rather than an inline annotation, so it is read before
+// the body is divided into paragraphs and its name holds no annotation of its own. The name is
+// captured the way a fenced name is: one space separates it from the "##" and belongs to
+// neither, a second begins the name, and each escape reads as the single character.
+
+@Suite("Step groups")
+struct StepGroupTests {
+    private func recipe(_ source: String) -> Recipe {
+        SousParser().parseRecipe(source).value
+    }
+
+    // Reading a heading
+
+    @Test
+    func opensAGroupOnAHeading() throws {
+        let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
+
+        let group = try #require(parsed.value.groups.first)
+        #expect(parsed.value.groups.count == 1)
+        #expect(group.name == "Sauce")
+        #expect(group.steps.map(\.text) == ["Brown the beef."])
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func attributesEveryStepUpToTheNextHeadingToItsGroup() {
+        let source = """
+        ## Sauce
+        Brown the beef.
+
+        Simmer it down.
+
+        ## Topping
+        Grate the cheese.
+        """
+
+        let value = recipe(source)
+        #expect(value.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(value.groups.map({ $0.steps.map(\.text) }) == [
+            ["Brown the beef.", "Simmer it down."],
+            ["Grate the cheese."]
+        ])
+    }
+
+    @Test
+    func formsTheDefaultGroupFromTheStepsBeforeAnyHeading() {
+        let source = """
+        Warm the oven.
+
+        ## Sauce
+        Brown the beef.
+        """
+
+        let value = recipe(source)
+        #expect(value.groups.map(\.name) == [nil, "Sauce"])
+        #expect(value.groups.first?.steps.map(\.text) == ["Warm the oven."])
+    }
+
+    @Test
+    func holdsABodyWritingNoHeadingInOneUnnamedGroup() {
+        let value = recipe("Toast the bread.\n\nSpread with butter.")
+
+        #expect(value.groups.map(\.name) == [nil])
+        #expect(value.groups.first?.steps.count == 2)
+    }
+
+    // The default group is the steps before the first heading, so a body opening with one
+    // forms no default group, and a file with no body forms no group at all.
+
+    @Test(arguments: ["", "---\ntitle: Buttered Toast\n---", "   \n\n  "])
+    func holdsNoGroupWhenTheBodyIsEmpty(source: String) {
+        #expect(recipe(source).groups.isEmpty)
+    }
+
+    @Test
+    func endsTheParagraphBeforeAHeadingWithNoBlankLine() {
+        let source = """
+        Warm the oven.
+        ## Sauce
+        Brown the beef.
+        """
+
+        let value = recipe(source)
+        #expect(value.groups.map(\.name) == [nil, "Sauce"])
+        #expect(value.steps.map(\.text) == ["Warm the oven.", "Brown the beef."])
+    }
+
+    @Test
+    func keepsAHeadingThatOpensNoStep() {
+        let source = """
+        ## Sauce
+
+        ## Topping
+        Grate the cheese.
+        """
+
+        let value = recipe(source)
+        #expect(value.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(value.groups.first?.steps.isEmpty == true)
+    }
+
+    @Test
+    func readsAHeadingAfterAWindowsLineEnding() {
+        let value = recipe("## Sauce\r\nBrown the beef.")
+
+        #expect(value.groups.map(\.name) == ["Sauce"])
+        #expect(value.steps.map(\.text) == ["Brown the beef."])
+    }
+
+    // A heading line inside the header is a header line, because the body starts after the
+    // closing fence.
+
+    @Test
+    func readsNoHeadingInsideTheHeader() {
+        let value = recipe("---\n## Sauce\n---\n\nBrown the beef.")
+
+        #expect(value.groups.map(\.name) == [nil])
+        #expect(value.metadata.entries.count == 1)
+    }
+
+    // The name
+
+    @Test(arguments: [
+        (source: "## Sauce", name: "Sauce"),
+        (source: "## Rich Tomato Sauce", name: "Rich Tomato Sauce"),
+        // One space separates the name from the "##" and belongs to neither, exactly as the
+        // one space after an amount fence does; a second begins the name.
+        (source: "##  Sauce", name: " Sauce"),
+        (source: "## Sauce ", name: "Sauce "),
+        (source: "## 2", name: "2"),
+        // A name is a single-segment label, so a path separator in one is ordinary text.
+        (source: "## sauces/red", name: "sauces/red")
+    ])
+    func readsTheNameAfterOneSeparatingSpace(source: String, name: String) {
+        #expect(recipe(source).groups.map(\.name) == [name])
+    }
+
+    // A heading is a line of "##", one space, and a name. A line shaped any other way is
+    // ordinary prose, which the reader already keeps as text.
+
+    @Test(arguments: [
+        "##Sauce",
+        "## ",
+        "##",
+        " ## Sauce",
+        "### Sauce",
+        "#Sauce#",
+        "\t## Sauce"
+    ])
+    func opensNoGroupOnALineThatIsNotAHeading(source: String) {
+        let value = recipe(source)
+
+        #expect(value.groups.map(\.name) == [nil])
+        #expect(value.steps.map(\.text) == [source])
+    }
+
+    @Test(arguments: [
+        (source: "## Sauce \\@ Home", name: "Sauce @ Home"),
+        (source: "## Sauce \\\\ Home", name: "Sauce \\ Home"),
+        (source: "## a\\>b", name: "a>b"),
+        (source: "## a\\#b", name: "a#b"),
+        // A backslash before a character the language gives no meaning to is ordinary text.
+        (source: "## a\\zb", name: "a\\zb")
+    ])
+    func resolvesEachEscapeInAName(source: String, name: String) {
+        #expect(recipe(source).groups.map(\.name) == [name])
+    }
+
+    @Test
+    func readsNoAnnotationInsideAName() {
+        let parsed = SousParser().parseRecipe("## Sauce #pan# with @salt@ and ~5 min~")
+
+        #expect(parsed.value.groups.map(\.name) == ["Sauce #pan# with @salt@ and ~5 min~"])
+        #expect(parsed.value.cookware.isEmpty)
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.value.timers.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // Attribution
+
+    private var pastaBake: Recipe {
+        recipe("""
+        ## Sauce
+        Brown @{500 g} minced beef@ in a #pan# and simmer ~30 min~.
+
+        ## Topping
+        Mix @{200 g} ricotta@ with @{50 g} parmesan@.
+
+        ## Assemble
+        Layer the >sauce> in a #baking dish# and dot the >topping> over it.
+        """)
+    }
+
+    @Test
+    func attributesTheAnnotationsOfAStepToItsGroup() {
+        let groups = pastaBake.groups
+
+        #expect(groups.map({ $0.ingredients.map(\.name) }) == [
+            ["minced beef"], ["ricotta", "parmesan"], []
+        ])
+        #expect(groups.map({ $0.cookware.map(\.name) }) == [["pan"], [], ["baking dish"]])
+        #expect(groups.map({ $0.timers.map(\.text) }) == [["30 min"], [], []])
+        #expect(groups.map({ $0.references.map(\.target) }) == [[], [], ["sauce", "topping"]])
+    }
+
+    @Test
+    func readsEveryStepOfEveryGroupInDocumentOrder() {
+        let value = pastaBake
+
+        #expect(value.steps.map(\.text) == value.groups.flatMap({ $0.steps.map(\.text) }))
+        #expect(value.steps.count == 3)
+    }
+
+    @Test
+    func readsTheRecipeWideListsAcrossEveryGroup() {
+        let value = pastaBake
+
+        #expect(value.ingredients.map(\.name) == ["minced beef", "ricotta", "parmesan"])
+        #expect(value.cookware.map(\.name) == ["pan", "baking dish"])
+        #expect(value.timers.map(\.text) == ["30 min"])
+        #expect(value.references.map(\.target) == ["sauce", "topping"])
+    }
+
+    // Writing
+
+    @Test
+    func writesEachGroupUnderItsHeading() {
+        let source = """
+        ## Sauce
+        Brown the beef.
+
+        Simmer it down.
+
+        ## Topping
+        Grate the cheese.
+        """
+
+        #expect(recipe(source).serialized() == source)
+    }
+
+    @Test(arguments: [
+        "## Sauce\nBrown the beef.",
+        "Warm the oven.\n\n## Sauce\nBrown the beef.",
+        "## Sauce\n\n## Topping\nGrate the cheese.",
+        "## Sauce",
+        "---\ntitle: Pasta Bake\n---\n\n## Sauce\nBrown the beef."
+    ])
+    func writesAGroupBackAsItWasRead(source: String) {
+        #expect(recipe(source).serialized() == source)
+    }
+
+    @Test
+    func writesABlankLineBetweenAStepAndTheHeadingAfterIt() {
+        // A heading ends the paragraph before it, so it is read back the same either way, and
+        // the blank line every block is separated by is the layout the writer produces.
+        #expect(recipe("Warm the oven.\n## Sauce\nBrown.").serialized()
+            == "Warm the oven.\n\n## Sauce\nBrown.")
+    }
+
+    @Test
+    func escapesABackslashInANameThatWouldOtherwiseEscapeWhatFollowsIt() {
+        #expect(recipe("## Sauce \\\\@ Home").serialized() == "## Sauce \\\\@ Home")
+    }
+
+    @Test
+    func dropsAnEscapeANameDoesNotNeed() {
+        // A heading name holds no annotation, so a sigil in one needs no escape to read back
+        // as itself, and a writer may drop an escape the text does not need.
+        let written = recipe("## Sauce \\@ Home").serialized()
+
+        #expect(written == "## Sauce @ Home")
+        #expect(recipe(written).groups.map(\.name) == ["Sauce @ Home"])
+    }
+}

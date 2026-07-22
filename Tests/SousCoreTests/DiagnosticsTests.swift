@@ -42,12 +42,14 @@ struct DiagnosticsTests {
             "---\ntitle: Buttered Toast",
             "Fry @garlic and warm a #pan.",
             "Cook @{200 g pasta",
-            "Add @sauce@:homemade now."
+            "Add @sauce@:homemade now.",
+            "Spread the >sauce on top."
         ]
 
         let diagnostics = sources.flatMap({ SousParser().parseRecipe($0).diagnostics })
-        // Every kind v0.2 can report, each describing itself and pointing at its construct.
-        // Naming them rather than counting them says which one a failure is missing.
+        // Every kind the reader can report, each describing itself and pointing at its
+        // construct. Naming them rather than counting them says which one a failure is missing.
+        // The three kinds validation reports carry no range, so they are stated there instead.
         #expect(Set(diagnostics.map(\.kind)) == [
             .unclosedSpan,
             .unterminatedHeader,
@@ -150,6 +152,19 @@ struct DiagnosticsTests {
         #expect(range.start.column == 12)
         #expect(range.start.offset == 11)
         #expect(range.end.offset == 20)
+        #expect(diagnostic.severity == .warning)
+    }
+
+    @Test
+    func locatesAnUnclosedReferenceSpan() throws {
+        let parsed = SousParser().parseRecipe("Spread the >sauce on top.")
+
+        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
+        let range = try #require(diagnostic.range)
+        #expect(range.start.line == 1)
+        #expect(range.start.column == 12)
+        #expect(range.start.offset == 11)
+        #expect(range.end.offset == 12)
         #expect(diagnostic.severity == .warning)
     }
 

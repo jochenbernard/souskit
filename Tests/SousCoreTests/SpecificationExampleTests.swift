@@ -213,12 +213,11 @@ struct SpecificationExampleTests {
         #expect(parsed.value.serialized() == source)
     }
 
-    // A file written for a later version still opens here, degrading gracefully: the group
-    // headings and references it carries are ordinary prose, its unknown header keys are
-    // preserved and warned about, and everything this version does read is read in full.
+    // The groups example, whose parts this version divides the body into, and whose references
+    // consume the intermediates those parts produce.
 
     @Test
-    func readsTheGroupsExampleWrittenForALaterVersion() {
+    func readsTheGroupsExample() throws {
         let source = """
         ---
         title: Berry Crumble
@@ -254,6 +253,20 @@ struct SpecificationExampleTests {
         #expect(recipe.timers.map(\.kind) == [.range, .precise])
         #expect(recipe.metadata.yields.map(\.text) == ["1 dish"])
 
+        // Each of the three groups attributes its own ingredients, and the last consumes what
+        // the first two produced, which is the dependency that puts it after both.
+        #expect(recipe.groups.map(\.name) == ["Filling", "Crumble", "Assemble"])
+        #expect(recipe.groups.map({ $0.ingredients.map(\.name) }) == [
+            ["mixed berries", "sugar", "cornflour"],
+            ["butter", "flour", "sugar", "rolled oats"],
+            []
+        ])
+
+        let assemble = try #require(recipe.groups.last)
+        #expect(assemble.references.map(\.target) == ["filling", "crumble"])
+        #expect(recipe.dependencies(of: assemble).map(\.name) == ["Filling", "Crumble"])
+        #expect(recipe.validate().isEmpty)
+
         // Three header keys later versions introduce are left to report, the yield having
         // become one this version reads.
         #expect(parsed.diagnostics.map(\.kind) == Array(repeating: .unknownHeaderKey, count: 3))
@@ -264,7 +277,7 @@ struct SpecificationExampleTests {
     }
 
     @Test
-    func readsTheReferenceExampleWrittenForALaterVersion() {
+    func readsTheReferenceExampleWrittenForALaterVersion() throws {
         let source = """
         ---
         title: Baked Ziti
@@ -283,11 +296,19 @@ struct SpecificationExampleTests {
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        // The reference and its consumption fence are prose, so neither is read as an
-        // ingredient and neither is altered on the way out.
+        // The reference and its consumption fence are read, and consuming an intermediate
+        // introduces no ingredient of its own.
         #expect(recipe.ingredients.map(\.name) == ["ziti", "mozzarella"])
         #expect(recipe.cookware.map(\.name) == ["large pot", "baking dish"])
         #expect(recipe.timers.map(\.kind) == [.range, .range])
+
+        let reference = try #require(recipe.references.first)
+        #expect(reference.target == "ragu")
+        #expect(reference.amount?.text == "600 g")
+
+        // Resolving a bare name to a file of that name arrives in v0.5, so here the reference
+        // matches no group and the file is well-formed but not valid.
+        #expect(recipe.validate().map(\.kind) == [.unresolvedReference])
         #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey }))
         #expect(recipe.serialized() == source)
     }

@@ -101,6 +101,39 @@ struct MutatedModelTests {
         #expect(written.name == "salt")
     }
 
+    // A group's name is written after the "##" and the one space of a heading line, so it stops
+    // opening a group when nothing bounds it: an empty name leaves the line naming nothing, and
+    // a line break ends the heading and leaves the rest a step. Reading produces neither.
+
+    @Test(arguments: ["", "Sauce\nMore"])
+    func writesAGroupNameThatNoLongerReadsBackAsOne(name: String) {
+        var value = recipe("## Sauce\nBrown the beef.")
+        value.groups[0].name = name
+
+        #expect(reRead(value).groups.map(\.name) != [name])
+    }
+
+    // Whitespace around a name costs it nothing, because the one space after the "##" belongs
+    // to neither side and a second begins the name.
+
+    @Test(arguments: [" Sauce", "\tSauce", "Sauce ", " ", "Rich Sauce", "sauces/red", "@salt@"])
+    func writesAGroupNameThatStillReadsBack(name: String) {
+        var value = recipe("## Sauce\nBrown the beef.")
+        value.groups[0].name = name
+
+        #expect(reRead(value).groups.map(\.name) == [name])
+    }
+
+    // An unnamed group states no heading, so one holding no step states nothing at all.
+
+    @Test
+    func writesAnEmptyDefaultGroupAsNothing() {
+        var value = recipe("Warm the oven.\n\n## Sauce\nBrown the beef.")
+        value.groups[0].steps = []
+
+        #expect(value.serialized() == "## Sauce\nBrown the beef.")
+    }
+
     // A quantity is a leading run of digits, so a negative value writes text that is not one.
     // Reading produces no such value, but a mutation can, and scaling refuses it rather than
     // writing an amount that no longer reads back.

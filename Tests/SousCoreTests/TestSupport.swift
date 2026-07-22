@@ -71,4 +71,12 @@ extension Segment {
             nil
         }
     }
+
+    var referenceValue: Reference? {
+        if case let .reference(reference) = self {
+            reference
+        } else {
+            nil
+        }
+    }
 }
