@@ -31,6 +31,10 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
 
         /// An annotation carried a flag name that is not recognized.
         case unknownFlag
+
+        /// The metadata header stated two different amounts for one dimension, counting a
+        /// `servings` value as a yield in portions.
+        case conflictingYields
     }
 
     /// The diagnostic's severity.

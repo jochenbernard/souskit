@@ -49,6 +49,14 @@ public struct Metadata: Equatable, Hashable, Sendable {
         entries.lastScalar("servings").flatMap({ AmountParser.leadingValue(in: SourceText.trimmed($0)) })
     }
 
+    /// The `yield` field, the amounts the recipe makes.
+    ///
+    /// Repeated `yield` entries combine, their amounts appended in document order. A `servings`
+    /// value states a portion yield through ``servings`` and is not listed here.
+    public var yields: [Amount] {
+        []
+    }
+
     /// The `tags` field, a list of free-form labels.
     ///
     /// Repeated `tags` entries combine, their items appended in document order.
