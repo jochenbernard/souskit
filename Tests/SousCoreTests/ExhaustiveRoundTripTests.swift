@@ -89,7 +89,9 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyFlagPunctuation() {
-        expectRoundTrips([":", "?", "-", "a", " ", "\\"], upTo: 4, prefix: "Add @salt@")
+        // A number ends a flag word without opening one, so it borders the chain from a side
+        // no other character does.
+        expectRoundTrips([":", "?", "-", "a", "2", " ", "\\"], upTo: 4, prefix: "Add @salt@")
     }
 
     @Test

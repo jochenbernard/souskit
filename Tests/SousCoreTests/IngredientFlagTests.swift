@@ -95,8 +95,8 @@ struct IngredientFlagTests {
         #expect(ingredients.map(\.flags.isOptional) == [false, true])
     }
 
-    // A flag word runs from its colon through the following run of letters, digits, and
-    // hyphens, and ends at the first character outside that set.
+    // A flag word runs from its colon through the following run of letters and hyphens, and
+    // ends at the first character outside that set.
 
     @Test
     func endsAFlagWordAtTheFirstCharacterOutsideItsSet() throws {
@@ -108,11 +108,33 @@ struct IngredientFlagTests {
     }
 
     @Test
-    func readsDigitsAndHyphensAsPartOfAFlagWord() throws {
-        let parsed = SousParser().parseRecipe("Add @sauce@:batch-2 now.")
+    func readsAHyphenAsPartOfAFlagWord() throws {
+        let parsed = SousParser().parseRecipe("Add @sauce@:home-made now.")
 
         let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
-        #expect(ingredient.flags.unrecognized == ["batch-2"])
+        #expect(ingredient.flags.unrecognized == ["home-made"])
+    }
+
+    // No flag this language defines carries a number, so a number is prose like any other
+    // character outside the set. It ends a flag word and opens none of its own.
+
+    @Test
+    func endsAFlagWordAtANumber() throws {
+        let parsed = SousParser().parseRecipe("Add @sauce@:batch-2 now.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.first?.flags.unrecognized == ["batch-"])
+        #expect(step.segments.last?.proseText == "2 now.")
+    }
+
+    @Test(arguments: ["2", "\u{00BD}"])
+    func doesNotOpenAFlagOnANumber(number: String) throws {
+        let parsed = SousParser().parseRecipe("Add @salt@:\(number) spoons now.")
+
+        let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.first?.flags.unrecognized.isEmpty == true)
+        #expect(step.segments.last?.proseText == ":\(number) spoons now.")
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

@@ -42,10 +42,14 @@ enum Flag: String, CaseIterable {
         return character == separator && (following.map(continuesWord) ?? false)
     }
 
-    /// Whether the character may appear in a flag word, which is a run of letters, digits,
-    /// and hyphens. A flag word ends at the first character outside that set, so punctuation
-    /// after a flag stays in the prose.
+    /// Whether the character may appear in a flag word, which is a run of letters and
+    /// hyphens. A flag word ends at the first character outside that set, so punctuation and
+    /// numbers after a flag stay in the prose.
+    ///
+    /// No flag this language defines carries a number, and the set is narrowed here rather
+    /// than after the syntax freezes, because widening one costs a version and narrowing one
+    /// costs compatibility.
     static func continuesWord(_ character: Character) -> Bool {
-        character.isLetter || character.isNumber || character == "-"
+        character.isLetter || character == "-"
     }
 }
