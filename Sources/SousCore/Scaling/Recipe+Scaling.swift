@@ -8,11 +8,13 @@ extension Recipe {
     /// it makes. Timers are never scaled.
     ///
     /// A scaled amount holds the exact multiplied value and text regenerated from it; scaling
-    /// never rounds.
+    /// never rounds. A step holding one is rewritten to the text it now states, while a step
+    /// scaling did not touch keeps the text it was read from.
     ///
-    /// - Parameter factor: The factor to multiply by. Any factor works, so this never fails.
+    /// - Parameter factor: The factor to multiply by. It must be a finite number of zero or more.
     /// - Returns: The scaled recipe.
-    public func scaled(by factor: Double) -> Recipe {
+    /// - Throws: ``ScalingError/unusableFactor`` when the factor is negative or not finite.
+    public func scaled(by factor: Double) throws -> Recipe {
         self
     }
 
@@ -23,8 +25,9 @@ extension Recipe {
     ///
     /// - Parameter servings: The number of portions the scaled recipe is to make.
     /// - Returns: The scaled recipe.
-    /// - Throws: ``ScalingError/noMatchingYield`` when the recipe declares no portions, and
-    ///   ``ScalingError/zeroYield`` when it declares zero of them.
+    /// - Throws: ``ScalingError/noMatchingYield`` when the recipe declares no portions,
+    ///   ``ScalingError/zeroYield`` when it declares zero of them, and
+    ///   ``ScalingError/unusableFactor`` when the factor they derive is negative or not finite.
     public func scaled(toServings servings: Double) throws -> Recipe {
         self
     }
@@ -35,14 +38,16 @@ extension Recipe {
     /// stating the target's unit, so a target of `18 pancakes` against `yield: 12 pancakes`
     /// scales by 1.5. A `servings` value counts as a yield of that many servings.
     ///
-    /// Units are matched as written, so a target and a yield spelled in different units of one
-    /// dimension, such as `1 kg` against `yield: 800 g`, do not match. Converting between them
-    /// needs reference data, which the semantic layer adds.
+    /// Units are compared with the whitespace around them ignored and nothing else, so a
+    /// target and a yield spelled in different units of one dimension, such as `1 kg` against
+    /// `yield: 800 g`, do not match. Converting between them needs reference data, which the
+    /// semantic layer adds.
     ///
     /// - Parameter target: The amount the scaled recipe is to make.
     /// - Returns: The scaled recipe.
     /// - Throws: ``ScalingError/noMatchingYield`` when the recipe declares no yield the target
-    ///   can be divided by, and ``ScalingError/zeroYield`` when that yield is zero.
+    ///   can be divided by, ``ScalingError/zeroYield`` when that yield is zero, and
+    ///   ``ScalingError/unusableFactor`` when the factor they derive is negative or not finite.
     public func scaled(to target: Amount) throws -> Recipe {
         self
     }
