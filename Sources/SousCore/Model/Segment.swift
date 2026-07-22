@@ -11,4 +11,7 @@ public enum Segment: Equatable, Hashable, Sendable {
 
     /// A timer annotation.
     case timer(Timer)
+
+    /// A reference annotation.
+    case reference(Reference)
 }

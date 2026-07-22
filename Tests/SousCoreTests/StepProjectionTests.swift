@@ -33,7 +33,7 @@ struct StepProjectionTests {
     @Test
     func derivesARecipeWideListFromTheSegments() {
         var recipe = SousParser().parseRecipe("Fry @garlic@ in a #pan#.\n\nAdd @salt@.").value
-        recipe.steps[0].segments = []
+        recipe.groups[0].steps[0].segments = []
 
         #expect(recipe.ingredients.map(\.name) == ["salt"])
         #expect(recipe.cookware.isEmpty)

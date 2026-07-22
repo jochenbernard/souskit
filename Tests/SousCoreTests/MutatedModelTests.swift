@@ -25,7 +25,7 @@ struct MutatedModelTests {
         var value = recipe("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.name = name
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(reRead(value).ingredients.isEmpty)
     }
@@ -35,7 +35,7 @@ struct MutatedModelTests {
         var value = recipe("Use a #pan# now.")
         var cookware = try #require(value.cookware.first)
         cookware.name = name
-        value.steps[0].segments[1] = .cookware(cookware)
+        value.groups[0].steps[0].segments[1] = .cookware(cookware)
 
         #expect(reRead(value).cookware.isEmpty)
     }
@@ -45,7 +45,7 @@ struct MutatedModelTests {
         var value = recipe("Wait ~40 min~ now.")
         var timer = try #require(value.timers.first)
         timer.text = text
-        value.steps[0].segments[1] = .timer(timer)
+        value.groups[0].steps[0].segments[1] = .timer(timer)
 
         #expect(reRead(value).timers.isEmpty)
     }
@@ -59,7 +59,7 @@ struct MutatedModelTests {
         var value = recipe("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.name = name
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(reRead(value).ingredients.map(\.name) == [name])
     }
@@ -72,7 +72,7 @@ struct MutatedModelTests {
         var value = recipe("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.amount?.text = "a}b"
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         let written = try #require(reRead(value).ingredients.first)
         #expect(written.amount?.text == "a")
@@ -84,7 +84,7 @@ struct MutatedModelTests {
         var value = recipe("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.amount?.text = "a\n\nb"
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(reRead(value).ingredients.isEmpty)
     }
@@ -94,7 +94,7 @@ struct MutatedModelTests {
         var value = recipe("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.amount?.text = ""
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         let written = try #require(reRead(value).ingredients.first)
         #expect(written.amount?.text.isEmpty == true)
@@ -115,7 +115,7 @@ struct MutatedModelTests {
         quantity.value = -200
         amount.kind = .precise(quantity)
         ingredient.amount = amount
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try value.scaled(by: 2.0)

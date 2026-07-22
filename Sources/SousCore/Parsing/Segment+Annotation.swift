@@ -9,6 +9,9 @@ extension Segment {
         case .ingredient: .ingredient
         case .cookware: .cookware
         case .timer: .timer
+        // The reference sigil joins the shared table with the reading rules that give it a
+        // meaning, so until then no segment names it.
+        case .reference: nil
         }
     }
 }

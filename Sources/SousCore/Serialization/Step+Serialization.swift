@@ -35,6 +35,10 @@ extension Step {
                 result += Self.rendered(cookware.name, as: .cookware)
             case let .timer(timer):
                 result += Self.rendered(timer.text, as: .timer)
+            case let .reference(reference):
+                // Written inline until the reference sigil joins the shared table, which is
+                // what lets it be composed with its fence and its flags like every other span.
+                result += ">\(reference.target)>"
             }
         }
 

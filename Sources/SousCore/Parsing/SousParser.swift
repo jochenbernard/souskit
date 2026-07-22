@@ -19,7 +19,7 @@ public struct SousParser {
         let steps = Self.steps(in: split.body, map: map, diagnostics: &diagnostics)
 
         return Parsed(
-            value: Recipe(metadata: metadata, steps: steps),
+            value: Recipe(metadata: metadata, groups: Self.groups(of: steps)),
             diagnostics: diagnostics
         )
     }
@@ -37,6 +37,12 @@ public struct SousParser {
     /// - Returns: The parsed amount.
     public func parseAmount(_ text: String) -> Amount {
         AmountParser.parse(text)
+    }
+
+    /// The groups the body's steps belong to. Reading a heading is this version's own work, so
+    /// until it lands every step belongs to the one unnamed group.
+    private static func groups(of steps: [Step]) -> [StepGroup] {
+        steps.isEmpty ? [] : [StepGroup(name: nil, steps: steps)]
     }
 
     /// A step is one paragraph: a maximal run of consecutive non-blank lines.
