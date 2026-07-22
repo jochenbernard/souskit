@@ -12,6 +12,8 @@ struct FixedAmountTests {
         #expect(amount.kind.preciseQuantity?.value == 1.0)
         #expect(amount.kind.preciseQuantity?.text == "1")
         #expect(amount.unit == "tsp")
+        // The marker stays in the amount's text, which is what writes it back.
+        #expect(amount.text == "=1 tsp")
         #expect(parsed.diagnostics.isEmpty)
     }
 
@@ -48,14 +50,6 @@ struct FixedAmountTests {
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == 2.0)
         #expect(amount.unit?.isEmpty == true)
-    }
-
-    @Test
-    func keepsTheMarkerInTheAmountText() throws {
-        let parsed = SousParser().parseRecipe("Stir in @{=1 tsp} baking soda@.")
-
-        let amount = try #require(parsed.value.ingredients.first?.amount)
-        #expect(amount.text == "=1 tsp")
     }
 
     @Test

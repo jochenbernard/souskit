@@ -19,7 +19,12 @@ extension Step {
                     beforeAnnotation: index + 1 < segments.count
                 )
             case let .ingredient(ingredient):
-                result += Self.rendered(ingredient)
+                result += Self.rendered(
+                    ingredient.name,
+                    as: .ingredient,
+                    amount: ingredient.amount,
+                    flags: ingredient.flags
+                )
             case let .cookware(cookware):
                 result += Self.rendered(cookware.name, as: .cookware)
             case let .timer(timer):
@@ -30,24 +35,26 @@ extension Step {
         return result
     }
 
-    /// The span an annotation that carries its content alone is written as.
-    private static func rendered(_ content: String, as annotation: Annotation) -> String {
-        annotation.span(around: escapedName(content, in: annotation))
-    }
-
-    private static func rendered(_ ingredient: Ingredient) -> String {
-        let content: String
-
-        if let amount = ingredient.amount {
-            // The fence and the name are separated by a space, so a leading brace in the name
-            // cannot open a second fence and needs no escape.
-            let name = escapedName(ingredient.name, in: .ingredient, afterAmount: true)
-            content = "\(AmountFence.around(amount.text)) \(name)"
-        } else {
-            content = escapedName(ingredient.name, in: .ingredient)
+    /// The span an annotation is written as: its fence, when it carries an amount, then its
+    /// escaped name, then the chain of flags attached to it.
+    ///
+    /// One composition serves every annotation, so what an annotation may carry is asked of
+    /// the shared table rather than stated again per kind. An annotation that carries neither
+    /// an amount nor a flag passes neither.
+    private static func rendered(
+        _ name: String,
+        as annotation: Annotation,
+        amount: Amount? = nil,
+        flags: Flags = .empty
+    ) -> String {
+        // The fence and the name are separated by a space, so a leading brace in the name
+        // cannot open a second fence and needs no escape.
+        var content = escapedName(name, in: annotation, afterAmount: amount != nil)
+        if let amount {
+            content = "\(AmountFence.around(amount.text)) \(content)"
         }
 
-        return Annotation.ingredient.span(around: content) + rendered(ingredient.flags)
+        return annotation.span(around: content) + rendered(flags)
     }
 
     /// Writes the flag chain in one canonical order: the named flags, then the unrecognized
@@ -59,15 +66,13 @@ extension Step {
     private static func rendered(_ flags: Flags) -> String {
         var result = ""
 
-        // The shorthand stands for `:optional`, so that one flag is left to the end rather
-        // than written as its word here.
-        for flag in Flag.allCases where flag != .optional && flags[keyPath: flag.property] {
-            result += flag.written
+        for flag in Flag.allCases where flag != .shorthanded && flags[keyPath: flag.property] {
+            result += Flag.written(flag.rawValue)
         }
         for word in flags.unrecognized {
             result += Flag.written(word)
         }
-        if flags.isOptional { result.append(Flag.shorthand) }
+        if flags[keyPath: Flag.shorthanded.property] { result.append(Flag.shorthand) }
 
         return result
     }
@@ -84,12 +89,12 @@ extension Step {
             let character = characters[index]
             // The closing sigil follows the last character, and a sigil is escapable, so a
             // name ending in a backslash escapes it.
-            let following = index + 1 < characters.count ? characters[index + 1] : annotation.sigil
+            let following = SourceText.character(in: characters, at: index + 1) ?? annotation.sigil
             let escaped = character == annotation.sigil
-                || (character == "\\" && SourceText.isEscapable(following))
+                || (character == SourceText.escape && SourceText.isEscapable(following))
                 || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
 
-            if escaped { result.append("\\") }
+            if escaped { result.append(SourceText.escape) }
             result.append(character)
         }
 
@@ -107,12 +112,10 @@ extension Step {
         var escapes = [Bool](repeating: false, count: characters.count)
 
         for index in characters.indices.reversed() {
-            let hasFollowing = index + 1 < characters.count
-
             escapes[index] = needsEscape(
                 characters[index],
-                followedBy: hasFollowing ? characters[index + 1] : nil,
-                escaped: hasFollowing && escapes[index + 1],
+                followedBy: SourceText.character(in: characters, at: index + 1),
+                escaped: index + 1 < characters.count && escapes[index + 1],
                 beforeAnnotation: beforeAnnotation
             )
         }
@@ -121,12 +124,12 @@ extension Step {
         // can open a flag, and only there does prose need the escape.
         if afterFlags, let first = characters.first {
             escapes[0] = escapes[0]
-                || Flag.opens(first, followedBy: characters.count > 1 ? characters[1] : nil)
+                || Flag.opens(first, followedBy: SourceText.character(in: characters, at: 1))
         }
 
         var result = ""
         for (character, escaped) in zip(characters, escapes) {
-            if escaped { result.append("\\") }
+            if escaped { result.append(SourceText.escape) }
             result.append(character)
         }
 
@@ -145,7 +148,7 @@ extension Step {
     ) -> Bool {
         // A backslash escapes whatever follows it, so a literal one is escaped in turn. An
         // annotation opens with a sigil, which is escapable.
-        if character == "\\" {
+        if character == SourceText.escape {
             return following.map(SourceText.isEscapable) ?? beforeAnnotation
         }
 

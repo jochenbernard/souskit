@@ -19,9 +19,9 @@ enum FlagParser {
         guard annotation.allowsFlags else { return flags }
 
         while cursor < characters.count,
-              Flag.opens(characters[cursor], followedBy: following(characters, after: cursor)) {
+              Flag.opens(characters[cursor], followedBy: SourceText.character(in: characters, at: cursor + 1)) {
             if characters[cursor] == Flag.shorthand {
-                flags.isOptional = true
+                flags[keyPath: Flag.shorthanded.property] = true
                 cursor += 1
                 continue
             }
@@ -54,9 +54,5 @@ enum FlagParser {
         while cursor < characters.count, Flag.continuesWord(characters[cursor]) { cursor += 1 }
 
         return cursor
-    }
-
-    private static func following(_ characters: [Character], after index: Int) -> Character? {
-        index + 1 < characters.count ? characters[index + 1] : nil
     }
 }

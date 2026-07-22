@@ -5,9 +5,6 @@
 // no leading digit is an imprecise amount, kept verbatim.
 
 enum AmountParser {
-    /// The marker that fixes an amount, holding it constant when the recipe is scaled.
-    private static let fixedMarker: Character = "="
-
     /// The value of the leading numeric quantity in `text`, or `nil` when it has no leading
     /// number. Integers, decimals, fractions, and mixed numbers are all recognized, exactly
     /// as in an amount fence.
@@ -20,7 +17,7 @@ enum AmountParser {
         // The marker fixes an amount only immediately before a numeric quantity. Anywhere
         // else it is ordinary text, and the amount it opens is imprecise like any other,
         // which is what the quantity scan failing below already reports.
-        let isMarked = characters.first == fixedMarker
+        let isMarked = characters.first == AmountFence.fixedMarker
 
         guard let quantity = quantity(in: characters, from: isMarked ? 1 : 0) else {
             return Amount(
@@ -47,6 +44,10 @@ enum AmountParser {
 
     /// Scans the quantity at `start`: one number, or a range between two of them. Returns the
     /// form it takes and the index just past it.
+    ///
+    /// The fixed marker is the fence's own rather than the quantity's, so it is not read here.
+    /// A caller that reads one scans from the index after it, and a caller with no fence, such
+    /// as a timer, never reads one at all.
     static func quantity(in characters: [Character], from start: Int) -> (kind: Amount.Kind, end: Int)? {
         guard let first = number(in: characters, from: start) else { return nil }
 

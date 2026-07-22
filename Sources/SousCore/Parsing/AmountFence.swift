@@ -13,6 +13,10 @@ enum AmountFence {
     /// amount, so this one needs no escape and never gets one.
     static let closing: Character = "}"
 
+    /// The marker that fixes an amount, holding it constant when the recipe is scaled. It
+    /// belongs to the fence rather than to a quantity, which is why a timer never reads one.
+    static let fixedMarker: Character = "="
+
     /// The fence this writes around the given content.
     static func around(_ content: String) -> String {
         "\(opening)\(content)\(closing)"

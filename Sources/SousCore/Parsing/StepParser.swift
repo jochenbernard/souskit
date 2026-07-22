@@ -14,11 +14,13 @@ enum StepParser {
 
     /// Where a paragraph sits in the source, so offsets within it can be reported.
     struct Origin {
-        var index: String.Index
+        /// The paragraph's own offset from the start of the source. An offset within the
+        /// paragraph adds to it, because a line break is one character in both.
+        var start: Int
         var map: SourceMap
 
         func range(offset: Int, length: Int) -> SourceRange {
-            map.range(from: map.index(index, offsetBy: offset), length: length)
+            map.range(fromOffset: start + offset, length: length)
         }
     }
 
@@ -92,13 +94,15 @@ enum StepParser {
     }
 
     private static func opensSpan(_ characters: [Character], at index: Int) -> Bool {
-        Annotation.opensSpan(before: index + 1 < characters.count ? characters[index + 1] : nil)
+        Annotation.opensSpan(before: SourceText.character(in: characters, at: index + 1))
     }
 
     /// Whether an escape begins at the given index, within the given end. A trailing
     /// backslash escapes nothing, so it is ordinary text.
     private static func opensEscape(_ characters: [Character], at index: Int, end: Int) -> Bool {
-        characters[index] == "\\" && index + 1 < end && SourceText.isEscapable(characters[index + 1])
+        characters[index] == SourceText.escape
+            && index + 1 < end
+            && SourceText.isEscapable(characters[index + 1])
     }
 
     /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays

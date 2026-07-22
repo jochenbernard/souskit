@@ -86,8 +86,8 @@ struct SpanEdgeCaseTests {
 
     @Test
     func keepsAnOrdinaryBackslashInProse() throws {
-        // Only a sigil is escapable, so a backslash anywhere else is ordinary text and
-        // needs no doubling.
+        // Only a character this version gives a meaning to is escapable, so a backslash
+        // anywhere else is ordinary text and needs no doubling.
         let parsed = SousParser().parseRecipe("Note the path C:\\Users, then add @garlic@.")
 
         let step = try #require(parsed.value.steps.first)

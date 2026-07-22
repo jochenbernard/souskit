@@ -192,4 +192,78 @@ struct SpecificationExampleTests {
         #expect(parsed.diagnostics.isEmpty)
         #expect(parsed.value.serialized() == source)
     }
+
+    // A file written for a later version still opens here, degrading gracefully: the group
+    // headings and references it carries are ordinary prose, its unknown header keys are
+    // preserved and warned about, and everything this version does read is read in full.
+
+    @Test
+    func readsTheGroupsExampleWrittenForALaterVersion() {
+        let source = """
+        ---
+        title: Berry Crumble
+        servings: 6
+        yield: 1 dish
+        prep-time: 20 min
+        cook-time: 35 min
+        tags: [dessert, baking]
+        allergens: [gluten, dairy]
+        ---
+
+        ## Filling
+        Toss @{600 g} mixed berries@ with @{50 g} sugar@ and @{1 tbsp} cornflour@ in a #bowl#.
+
+        ## Crumble
+        Rub cold @{100 g} butter@ into @{150 g} flour@ until sandy, then stir through
+        @{75 g} sugar@ and @{50 g} rolled oats@.
+
+        ## Assemble
+        Spread the >filling> into a #baking dish#, scatter the >crumble> over the top, and
+        bake at 190C for ~35-40 min~ until golden. Rest ~10 min~ before serving.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        let recipe = parsed.value
+        #expect(recipe.metadata.title == "Berry Crumble")
+        #expect(recipe.metadata.servings == 6)
+        #expect(recipe.ingredients.map(\.name) == [
+            "mixed berries", "sugar", "cornflour", "butter", "flour", "sugar", "rolled oats"
+        ])
+        #expect(recipe.cookware.map(\.name) == ["bowl", "baking dish"])
+        #expect(recipe.timers.map(\.text) == ["35-40 min", "10 min"])
+        #expect(recipe.timers.map(\.kind) == [.range, .precise])
+
+        // The four header keys later versions introduce are the only thing to report.
+        #expect(parsed.diagnostics.map(\.kind) == Array(repeating: .unknownHeaderKey, count: 4))
+        #expect(recipe.serialized() == source)
+    }
+
+    @Test
+    func readsTheReferenceExampleWrittenForALaterVersion() {
+        let source = """
+        ---
+        title: Baked Ziti
+        servings: 6
+        prep-time: 25 min
+        cook-time: 30 min
+        tags: [italian, pasta, comfort food]
+        allergens: [gluten, dairy]
+        ---
+
+        Cook @{500 g} ziti@ in a #large pot# of salted water for ~9-11 min~, then drain.
+
+        Grate @{250 g} mozzarella@ and stir the pasta through >{600 g} ragu> with half of it.
+        Tip into a #baking dish#, scatter over the rest, and bake at 200C for ~25-30 min~.
+        """
+
+        let parsed = SousParser().parseRecipe(source)
+        let recipe = parsed.value
+        // The reference and its consumption fence are prose, so neither is read as an
+        // ingredient and neither is altered on the way out.
+        #expect(recipe.ingredients.map(\.name) == ["ziti", "mozzarella"])
+        #expect(recipe.cookware.map(\.name) == ["large pot", "baking dish"])
+        #expect(recipe.timers.map(\.kind) == [.range, .range])
+        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey }))
+        #expect(recipe.serialized() == source)
+    }
 }

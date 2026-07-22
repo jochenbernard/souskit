@@ -1,9 +1,12 @@
 // Reads a timer span's content into the numeric parts it states.
 //
-// A part is a quantity and the unit after it, read exactly as an amount fence is. A new
-// part starts only at a whitespace-separated word that begins with a digit, so a digit
-// inside a unit stays with that unit. Content with no leading number states no numeric
-// value at all: the duration is qualitative and only its text is kept.
+// A part is a quantity and the unit after it, read exactly as an amount fence is. Content
+// with no leading number states no numeric value at all: the duration is qualitative and
+// only its text is kept.
+//
+// A part therefore opens at a number, so the fixed marker an amount fence may carry is
+// never read here. A timer is not scaled, and content that opens with the marker has no
+// leading number and reads as qualitative like any other.
 
 enum TimerParser {
     static func parse(_ content: String) -> Timer {

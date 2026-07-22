@@ -11,8 +11,12 @@ enum Flag: String, CaseIterable {
     /// The character a named flag opens with.
     static let separator: Character = ":"
 
-    /// The shorthand for `:optional`, a single character needing no flag word.
+    /// The shorthand, a single character needing no flag word.
     static let shorthand: Character = "?"
+
+    /// The flag the shorthand stands for. Reading sets this flag's property and writing tests
+    /// it, so the two never disagree on which flag the character is short for.
+    static let shorthanded: Flag = .optional
 
     /// The property the flag states on a set of flags. Reading sets it and writing reads it,
     /// so the two never disagree on which property a flag word stands for.
@@ -22,11 +26,6 @@ enum Flag: String, CaseIterable {
         case .staple: \.isStaple
         case .nonFood: \.isNonFood
         }
-    }
-
-    /// The span this flag is written as.
-    var written: String {
-        Self.written(rawValue)
     }
 
     /// The span a flag word is written as, recognized or not.

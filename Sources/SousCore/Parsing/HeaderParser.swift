@@ -5,7 +5,7 @@
 // warned about, never dropped.
 
 enum HeaderParser {
-    /// The keys v0.2 recognizes. Everything else is preserved and reported as unknown.
+    /// The keys this reader recognizes. Everything else is preserved and reported as unknown.
     private static let listKeys: Set<String> = ["tags"]
     private static let scalarKeys: Set<String> = ["title", "language", "version", "servings", "source"]
 
@@ -133,7 +133,7 @@ enum HeaderParser {
         for index in value.indices.dropFirst() {
             if escaping {
                 escaping = false
-            } else if value[index] == "\\" {
+            } else if value[index] == SourceText.escape {
                 escaping = true
             } else if value[index] == "]" {
                 return value.index(after: index) == value.endIndex
@@ -160,7 +160,7 @@ enum HeaderParser {
         for character in content {
             if escaping {
                 escaping = false
-            } else if character == "\\" {
+            } else if character == SourceText.escape {
                 escaping = true
             } else if character == "," {
                 endItem()
