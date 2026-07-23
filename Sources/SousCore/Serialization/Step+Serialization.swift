@@ -5,6 +5,8 @@
 // never restates a rule the reader owns.
 
 extension Step {
+    /// The step as source text: its segments written in order, each escaped so the step
+    /// re-reads as itself.
     var rendered: String {
         Self.rendered(segments)
     }
@@ -17,29 +19,20 @@ extension Step {
         for index in segments.indices {
             switch segments[index] {
             case let .text(text):
-                // A run of prose is one segment, so whatever follows it opens with a sigil.
-                // Escaping ahead of anything else would be harmless, so the test stays simple.
-                result += Self.escapedProse(
-                    text,
-                    afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
-                    beforeAnnotation: index + 1 < segments.count,
-                    // A heading is decided by the whole line, and what an earlier segment wrote
-                    // stands on it, so the run is judged against the line it continues.
-                    lineSoFar: Self.lineSoFar(in: result)
-                )
+                result += Self.renderedProse(text, at: index, in: segments, lineSoFar: Self.lineSoFar(in: result))
             case let .ingredient(ingredient):
-                result += Self.rendered(
+                result += Self.renderedSpan(
                     ingredient.name,
                     as: .ingredient,
                     amount: ingredient.amount,
                     flags: ingredient.flags
                 )
             case let .cookware(cookware):
-                result += Self.rendered(cookware.name, as: .cookware)
+                result += Self.renderedSpan(cookware.name, as: .cookware)
             case let .timer(timer):
-                result += Self.rendered(timer.text, as: .timer)
+                result += Self.renderedSpan(timer.text, as: .timer)
             case let .reference(reference):
-                result += Self.rendered(
+                result += Self.renderedSpan(
                     reference.target,
                     as: .reference,
                     amount: reference.amount,
@@ -51,13 +44,32 @@ extension Step {
         return result
     }
 
+    /// Renders a run of prose, escaping whatever in it would otherwise be read as something
+    /// else given where the run sits: what an annotation before it wrote, whether one follows,
+    /// and the line the run continues.
+    private static func renderedProse(
+        _ text: String,
+        at index: Int,
+        in segments: [Segment],
+        lineSoFar: [Character]
+    ) -> String {
+        // A run of prose is one segment, so whatever follows it opens with a sigil. Escaping
+        // ahead of anything else would be harmless, so the test stays simple.
+        escapedProse(
+            text,
+            afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
+            beforeAnnotation: index + 1 < segments.count,
+            lineSoFar: lineSoFar
+        )
+    }
+
     /// The span an annotation is written as: its fence, when it carries an amount, then its
     /// escaped name, then the chain of flags attached to it.
     ///
     /// One composition serves every annotation, so what an annotation may carry is asked of
     /// the shared table rather than stated again per kind. An annotation that carries neither
     /// an amount nor a flag passes neither.
-    private static func rendered(
+    private static func renderedSpan(
         _ name: String,
         as annotation: Annotation,
         amount: Amount? = nil,
@@ -70,7 +82,7 @@ extension Step {
             content = "\(AmountFence.around(amount.text)) \(content)"
         }
 
-        return annotation.span(around: content) + rendered(flags)
+        return annotation.span(around: content) + renderedFlags(flags)
     }
 
     /// Writes the flag chain in one canonical order: the named flags, then the unrecognized
@@ -79,7 +91,7 @@ extension Step {
     /// The shorthand comes last because a flag word runs on through the letters after it, so
     /// a named flag written directly before prose that starts with one would read back as a
     /// single unrecognized flag. The shorthand is one character and cannot be run into.
-    private static func rendered(_ flags: Flags) -> String {
+    private static func renderedFlags(_ flags: Flags) -> String {
         var result = ""
 
         for flag in Flag.allCases where flag != .shorthanded && flags[keyPath: flag.property] {
@@ -97,7 +109,7 @@ extension Step {
     /// would otherwise escape what follows it, a leading brace where it could otherwise open an
     /// amount fence, and a line of the name that would otherwise open a heading, so the name
     /// re-reads verbatim.
-    private static func escapedName(_ name: String, in annotation: Annotation, afterAmount: Bool = false) -> String {
+    private static func escapedName(_ name: String, in annotation: Annotation, afterAmount: Bool) -> String {
         let characters = Array(name)
         let escapesLeadingBrace = annotation.allowsAmount && !afterAmount
         var result = ""
