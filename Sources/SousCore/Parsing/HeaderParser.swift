@@ -125,19 +125,12 @@ enum HeaderParser {
     private static func isInlineList(_ value: String) -> Bool {
         guard value.hasPrefix("[") else { return false }
 
-        var escaping = false
-
-        for index in value.indices.dropFirst() {
-            if escaping {
-                escaping = false
-            } else if value[index] == SourceText.escape {
-                escaping = true
-            } else if value[index] == "]" {
-                return value.index(after: index) == value.endIndex
-            }
+        let scanned = SourceText.escapeScanned(value)
+        guard let closing = scanned.firstIndex(where: { $0.character == "]" && !$0.isEscaped }) else {
+            return false
         }
 
-        return false
+        return closing == scanned.count - 1
     }
 
     /// Splits the content between the brackets on its unescaped commas. Items are trimmed of
@@ -146,7 +139,6 @@ enum HeaderParser {
     private static func items(in content: Substring) -> [String] {
         var items: [String] = []
         var item = ""
-        var escaping = false
 
         func endItem() {
             let value = SourceText.unescaped(SourceText.trimmed(item), escaping: SourceText.isEscapableInList)
@@ -154,16 +146,12 @@ enum HeaderParser {
             item = ""
         }
 
-        for character in content {
-            if escaping {
-                escaping = false
-            } else if character == SourceText.escape {
-                escaping = true
-            } else if character == "," {
+        for (character, isEscaped) in SourceText.escapeScanned(content) {
+            if character == "," && !isEscaped {
                 endItem()
-                continue
+            } else {
+                item.append(character)
             }
-            item.append(character)
         }
 
         endItem()

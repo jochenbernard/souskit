@@ -144,10 +144,9 @@ enum AmountParser {
 
     /// Scans a run of ASCII digits, returning its value and the index just past it.
     private static func digits(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
-        var cursor = start
-        while cursor < characters.count, SourceText.isDigit(characters[cursor]) { cursor += 1 }
-        guard cursor > start else { return nil }
+        let end = SourceText.run(in: characters, from: start, while: SourceText.isDigit)
+        guard end > start else { return nil }
 
-        return (Double(String(characters[start..<cursor])) ?? 0.0, cursor)
+        return (Double(String(characters[start..<end])) ?? 0.0, end)
     }
 }

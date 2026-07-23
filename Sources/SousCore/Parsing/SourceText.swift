@@ -52,6 +52,21 @@ enum SourceText {
         characters.indices.contains(index) ? characters[index] : nil
     }
 
+    /// The index just past the run of characters from `start` that satisfy the predicate.
+    ///
+    /// The run may be empty, so the returned index equals `start` when the character at it
+    /// does not satisfy the predicate, or when `start` is already past the end.
+    static func run(
+        in characters: [Character],
+        from start: Int,
+        while predicate: (Character) -> Bool
+    ) -> Int {
+        var cursor = start
+        while cursor < characters.count, predicate(characters[cursor]) { cursor += 1 }
+
+        return cursor
+    }
+
     /// The character a backslash escapes with. Reading and writing share it, so the character
     /// a reader drops before a literal is the one a writer puts there.
     static let escape: Character = "\\"
@@ -115,5 +130,25 @@ enum SourceText {
         if escaping { result.append(escape) }
 
         return result
+    }
+
+    /// Each character paired with whether an unescaped backslash escapes it.
+    ///
+    /// A backslash that escapes the character after it is paired like any other, so no
+    /// character is dropped; its effect is that the following character is paired with `true`.
+    /// A caller tells a separator or a bracket an escape produces apart from one that stands
+    /// for itself by reading this flag rather than tracking the escapes itself.
+    static func escapeScanned(
+        _ characters: some Sequence<Character>
+    ) -> [(character: Character, isEscaped: Bool)] {
+        var scanned: [(character: Character, isEscaped: Bool)] = []
+        var escaping = false
+
+        for character in characters {
+            scanned.append((character, escaping))
+            escaping = !escaping && character == escape
+        }
+
+        return scanned
     }
 }

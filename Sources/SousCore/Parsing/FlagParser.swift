@@ -50,9 +50,6 @@ enum FlagParser {
     /// The index just past the flag word starting at `start`, which the chain only opens on
     /// when at least one character belongs to that word.
     private static func wordEnd(in characters: [Character], from start: Int) -> Int {
-        var cursor = start
-        while cursor < characters.count, Flag.continuesWord(characters[cursor]) { cursor += 1 }
-
-        return cursor
+        SourceText.run(in: characters, from: start, while: Flag.continuesWord)
     }
 }
