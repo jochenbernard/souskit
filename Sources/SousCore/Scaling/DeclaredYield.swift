@@ -30,20 +30,20 @@ extension Metadata {
     var declaredYields: [DeclaredYield] {
         var declared: [DeclaredYield] = []
 
-        for (index, entry) in entries.enumerated() {
-            switch entry.value {
-            case let .scalar(value) where index == aliasIndex:
+        for role in yieldRoles() {
+            switch role {
+            case let .servings(value):
                 declared.append(DeclaredYield(
                     unit: HeaderField.servings,
                     kind: AmountParser.parse(unfenced: value).kind
                 ))
-            case let .list(items) where entry.key == HeaderField.yield:
+            case let .yieldList(items):
                 declared += items.map({ item in
                     let yield = AmountParser.parse(unfenced: item)
 
                     return DeclaredYield(unit: DeclaredYield.matching(yield.unit), kind: yield.kind)
                 })
-            default:
+            case .other:
                 break
             }
         }
@@ -63,6 +63,37 @@ extension Metadata {
             guard entry.key == HeaderField.servings, case .scalar = entry.value else { return false }
 
             return true
+        })
+    }
+
+    /// How scaling reads a header entry that may state a yield.
+    enum YieldRole {
+        /// The `servings` alias, carrying the scalar value the portion yield is read from.
+        case servings(String)
+
+        /// A `yield` entry, carrying the list of amounts it states.
+        case yieldList([String])
+
+        /// An entry that states no yield.
+        case other
+    }
+
+    /// Each entry classified by the yield it states, in document order alongside ``entries``.
+    ///
+    /// Reading the yields and restating them to a target share this one recognition, so the two
+    /// can never disagree on which entry states a yield.
+    func yieldRoles() -> [YieldRole] {
+        let alias = aliasIndex
+
+        return entries.enumerated().map({ index, entry in
+            switch entry.value {
+            case let .scalar(value) where index == alias:
+                .servings(value)
+            case let .list(items) where entry.key == HeaderField.yield:
+                .yieldList(items)
+            default:
+                .other
+            }
         })
     }
 }

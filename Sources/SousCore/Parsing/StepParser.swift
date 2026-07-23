@@ -49,8 +49,8 @@ enum StepParser {
     struct Origin {
         /// The paragraph's own offset from the start of the source. An offset within the
         /// paragraph adds to it, because a line break is one character in both.
-        var start: Int
-        var map: SourceMap
+        let start: Int
+        let map: SourceMap
 
         func range(offset: Int, length: Int) -> SourceRange {
             map.range(fromOffset: start + offset, length: length)

@@ -8,7 +8,7 @@ extension Diagnostic {
     static func warning(
         _ kind: Kind,
         _ message: String,
-        at range: SourceRange?
+        at range: SourceRange? = nil
     ) -> Diagnostic {
         Diagnostic(
             severity: .warning,

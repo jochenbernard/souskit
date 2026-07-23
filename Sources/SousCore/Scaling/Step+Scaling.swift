@@ -23,17 +23,21 @@ extension Step {
     private static func scaled(_ segment: Segment, by factor: Double) throws -> Segment {
         switch segment {
         case .ingredient(var ingredient):
-            guard let amount = try ingredient.amount?.scaled(by: factor) else { return segment }
-            ingredient.amount = amount
+            ingredient.amount = try scaled(ingredient.amount, by: factor)
 
             return .ingredient(ingredient)
         case .reference(var reference):
-            guard let amount = try reference.amount?.scaled(by: factor) else { return segment }
-            reference.amount = amount
+            reference.amount = try scaled(reference.amount, by: factor)
 
             return .reference(reference)
         case .text, .cookware, .timer:
             return segment
         }
+    }
+
+    /// The amount multiplied by the factor, or the amount itself when it states none or the
+    /// factor leaves it where it is, so a segment that did not move comes back unchanged.
+    private static func scaled(_ amount: Amount?, by factor: Double) throws -> Amount? {
+        try amount?.scaled(by: factor) ?? amount
     }
 }

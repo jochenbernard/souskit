@@ -8,7 +8,7 @@ extension Metadata {
     /// `servings` key is the reader's report rather than this one: only its last value is read.
     func repeatedYields() -> [Diagnostic] {
         Repetition.firstOfEachRepeated(in: declaredYields, by: { $0.unit })
-            .map({ .warning(.repeatedYield, Self.repeatedMessage(in: $0.unit), at: nil) })
+            .map({ .warning(.repeatedYield, Self.repeatedMessage(in: $0.unit)) })
     }
 
     private static func repeatedMessage(in unit: String) -> String {

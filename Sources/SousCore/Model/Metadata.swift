@@ -85,6 +85,8 @@ public struct Metadata: Equatable, Hashable, Sendable {
 // raw store is written twice.
 
 extension [Metadata.Entry] {
+    /// The last scalar value written for the given key, or `nil` when the key holds no scalar
+    /// value.
     func lastScalar(_ key: String) -> String? {
         for entry in reversed() where entry.key == key {
             if case let .scalar(value) = entry.value { return value }

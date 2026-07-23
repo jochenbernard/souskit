@@ -44,57 +44,75 @@ enum HeaderParser {
         var seenKeys: Set<String> = []
 
         for line in lines {
-            // A blank line is insignificant layout, so it is dropped rather than preserved.
-            if SourceText.isBlank(line) { continue }
+            guard let read = entry(from: line, map: map, seenKeys: &seenKeys) else { continue }
 
-            // A top-level entry has no leading whitespace and a `key: value` separator.
-            // Anything else, including an indented nesting or block-list line from a later
-            // version, is preserved verbatim and warned about rather than reshaped or dropped.
-            let isIndented = line.first?.isWhitespace ?? false
-            guard !isIndented, let field = self.entry(in: line) else {
-                entries.append(Metadata.Entry(key: "", value: .raw(String(line))))
-                diagnostics.append(.warning(
-                    .malformedHeaderLine,
-                    "Header line is not a top-level 'key: value' entry.",
-                    at: map.range(from: line.startIndex, length: line.count)
-                ))
-                continue
-            }
-
-            let keyRange = map.range(from: line.startIndex, length: field.key.count)
-            let isList = HeaderField.lists.contains(field.key)
-
-            entries.append(Metadata.Entry(
-                key: field.key,
-                value: isList ? .list(list(in: field.value)) : .scalar(field.value)
-            ))
-
-            // An unknown key is preserved and warned about, whether scalar or repeated.
-            if !HeaderField.isRecognized(field.key) {
-                diagnostics.append(.warning(
-                    .unknownHeaderKey,
-                    "Unrecognized header key '\(field.key)'.",
-                    at: keyRange
-                ))
-            }
-
-            // A repeated key keeps every occurrence; the last-wins accessors interpret the
-            // latest. A list key repeat is distinguished so consumers can switch on it.
-            if !seenKeys.insert(field.key).inserted {
-                diagnostics.append(.warning(
-                    isList ? .repeatedListKey : .repeatedScalarKey,
-                    "Repeated header key '\(field.key)'.",
-                    at: keyRange
-                ))
-            }
+            entries.append(read.entry)
+            diagnostics.append(contentsOf: read.diagnostics)
         }
 
         return entries
     }
 
+    /// One header line read into its entry and the diagnostics it earns, or `nil` for a blank
+    /// line, which is insignificant layout and dropped rather than preserved.
+    ///
+    /// A top-level entry has no leading whitespace and a `key: value` separator. Anything else,
+    /// including an indented nesting or block-list line from a later version, is preserved
+    /// verbatim and warned about rather than reshaped or dropped.
+    private static func entry(
+        from line: Substring,
+        map: SourceMap,
+        seenKeys: inout Set<String>
+    ) -> (entry: Metadata.Entry, diagnostics: [Diagnostic])? {
+        if SourceText.isBlank(line) { return nil }
+
+        let isIndented = line.first?.isWhitespace ?? false
+        guard !isIndented, let field = field(in: line) else {
+            return (
+                Metadata.Entry(key: "", value: .raw(String(line))),
+                [.warning(
+                    .malformedHeaderLine,
+                    "Header line is not a top-level 'key: value' entry.",
+                    at: map.range(from: line.startIndex, length: line.count)
+                )]
+            )
+        }
+
+        let keyRange = map.range(from: line.startIndex, length: field.key.count)
+        let isList = HeaderField.lists.contains(field.key)
+        var diagnostics: [Diagnostic] = []
+
+        // An unknown key is preserved and warned about, whether scalar or repeated.
+        if !HeaderField.isRecognized(field.key) {
+            diagnostics.append(.warning(
+                .unknownHeaderKey,
+                "Unrecognized header key '\(field.key)'.",
+                at: keyRange
+            ))
+        }
+
+        // A repeated key keeps every occurrence; the last-wins accessors interpret the
+        // latest. A list key repeat is distinguished so consumers can switch on it.
+        if !seenKeys.insert(field.key).inserted {
+            diagnostics.append(.warning(
+                isList ? .repeatedListKey : .repeatedScalarKey,
+                "Repeated header key '\(field.key)'.",
+                at: keyRange
+            ))
+        }
+
+        return (
+            Metadata.Entry(
+                key: field.key,
+                value: isList ? .list(list(in: field.value)) : .scalar(field.value)
+            ),
+            diagnostics
+        )
+    }
+
     /// A key ends at the first colon followed by a space or the end of the line, so a
     /// colon inside a value such as a URL does not split it.
-    private static func entry(in line: Substring) -> (key: String, value: String)? {
+    private static func field(in line: Substring) -> (key: String, value: String)? {
         for colon in line.indices where line[colon] == ":" {
             let afterColon = line.index(after: colon)
             let key = String(line[..<colon])
