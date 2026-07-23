@@ -23,9 +23,7 @@ struct ReadingRulesTests {
 
     @Test
     func opensACookwareSpanAtTheStartOfALine() throws {
-        let parsed = SousParser().parseRecipe("#large pot# of salted water.")
-
-        let step = try #require(parsed.value.steps.first)
+        let step = try #require(Recipe.read("#large pot# of salted water.").firstStep)
         #expect(step.cookware.map(\.name) == ["large pot"])
     }
 
@@ -138,7 +136,7 @@ struct ReadingRulesTests {
         "---\ntags:\n  - italian\n---"
     ])
     func preservesConstructsFromLaterVersions(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test
@@ -278,7 +276,7 @@ struct ReadingRulesTests {
         "Reduce by \\>half."
     ])
     func writesAProseReferenceSigilBackEscaped(source: String) {
-        let recipe = SousParser().parseRecipe(source).value
+        let recipe = Recipe.read(source)
         let written = recipe.serialized()
         let reRead = SousParser().parseRecipe(written)
 
@@ -290,7 +288,7 @@ struct ReadingRulesTests {
     func dropsAnEscapeTheProseDoesNotNeed() {
         // A sigil no non-whitespace character follows opens no span, so it needs no escape,
         // and a writer may drop one the text does not need.
-        let written = SousParser().parseRecipe("Spread the \\>sauce\\> on top.").value.serialized()
+        let written = Recipe.read("Spread the \\>sauce\\> on top.").serialized()
 
         #expect(written == "Spread the \\>sauce> on top.")
     }

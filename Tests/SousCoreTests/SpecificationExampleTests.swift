@@ -198,7 +198,7 @@ struct SpecificationExampleTests {
         // inline form whatever it was read from.
         let written = parsed.value.serialized()
         #expect(written == withYieldWritten(source))
-        #expect(SousParser().parseRecipe(written).value.serialized() == written)
+        #expect(Recipe.read(written).serialized() == written)
     }
 
     @Test(arguments: [

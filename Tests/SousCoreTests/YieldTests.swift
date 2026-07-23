@@ -28,7 +28,7 @@ struct YieldTests {
         (value: "12", quantity: 12.0, unit: "")
     ])
     func readsEveryQuantityFormOfAYield(value: String, quantity: Double, unit: String) throws {
-        let metadata = SousParser().parseRecipe("---\nyield: \(value)\n---").value.metadata
+        let metadata = Metadata.read("yield: \(value)")
 
         let yield = try #require(metadata.yields.first)
         #expect(yield.kind.preciseQuantity?.value == quantity)
@@ -58,7 +58,7 @@ struct YieldTests {
 
     @Test
     func readsAYieldWithNoLeadingNumberAsImprecise() throws {
-        let metadata = SousParser().parseRecipe("---\nyield: plenty\n---").value.metadata
+        let metadata = Metadata.read("yield: plenty")
 
         let yield = try #require(metadata.yields.first)
         #expect(yield.kind.impreciseText == "plenty")
@@ -67,7 +67,7 @@ struct YieldTests {
 
     @Test
     func readsAYieldRangeAsARange() throws {
-        let metadata = SousParser().parseRecipe("---\nyield: 10-12 muffins\n---").value.metadata
+        let metadata = Metadata.read("yield: 10-12 muffins")
 
         let yield = try #require(metadata.yields.first)
         #expect(yield.kind.rangeQuantities?.low.value == 10.0)
@@ -77,8 +77,8 @@ struct YieldTests {
 
     @Test
     func statesNoYieldsWhenTheKeyIsAbsentOrEmpty() {
-        #expect(SousParser().parseRecipe("---\ntitle: Pancakes\n---").value.metadata.yields.isEmpty)
-        #expect(SousParser().parseRecipe("---\nyield:\n---").value.metadata.yields.isEmpty)
+        #expect(Metadata.read("title: Pancakes").yields.isEmpty)
+        #expect(Metadata.read("yield:").yields.isEmpty)
     }
 
     // The fixed marker belongs to the amount fence, which no header value has, so a leading
@@ -86,7 +86,7 @@ struct YieldTests {
 
     @Test
     func readsAYieldOpeningWithTheFixedMarkerAsImprecise() throws {
-        let metadata = SousParser().parseRecipe("---\nyield: =800 g\n---").value.metadata
+        let metadata = Metadata.read("yield: =800 g")
 
         let yield = try #require(metadata.yields.first)
         #expect(yield.kind.impreciseText == "=800 g")
@@ -96,7 +96,7 @@ struct YieldTests {
 
     @Test
     func readsNoServingsFromAValueOpeningWithTheFixedMarker() {
-        #expect(SousParser().parseRecipe("---\nservings: =4\n---").value.metadata.servings == nil)
+        #expect(Metadata.read("servings: =4").servings == nil)
     }
 
     // A header value is read with the whitespace around it removed, so one that moves is
@@ -111,7 +111,7 @@ struct YieldTests {
 
     @Test
     func readsTheLeadingQuantityOfAServingsRange() {
-        #expect(SousParser().parseRecipe("---\nservings: 4-6\n---").value.metadata.servings == 4.0)
+        #expect(Metadata.read("servings: 4-6").servings == 4.0)
     }
 
     // `servings` is an alias for a portion yield, but it stays its own accessor, because
@@ -119,7 +119,7 @@ struct YieldTests {
 
     @Test
     func servingsIsNotListedAmongTheYields() {
-        let metadata = SousParser().parseRecipe("---\nservings: 4\n---").value.metadata
+        let metadata = Metadata.read("servings: 4")
 
         #expect(metadata.servings == 4)
         #expect(metadata.yields.isEmpty)
@@ -135,7 +135,7 @@ struct YieldTests {
         (value: "[1 handful\\, or two]", items: ["1 handful, or two"])
     ])
     func readsAYieldValueUnderTheInlineListRules(value: String, items: [String]) {
-        let metadata = SousParser().parseRecipe("---\nyield: \(value)\n---").value.metadata
+        let metadata = Metadata.read("yield: \(value)")
 
         #expect(metadata.yields.map(\.text) == items)
     }
@@ -179,7 +179,7 @@ struct YieldTests {
 
     @Test
     func theRawSubscriptReadsNoListValue() {
-        let metadata = SousParser().parseRecipe("---\nyield: 800 g\n---").value.metadata
+        let metadata = Metadata.read("yield: 800 g")
 
         #expect(metadata["yield"] == nil)
         #expect(metadata.entries.map(\.value) == [.list(["800 g"])])

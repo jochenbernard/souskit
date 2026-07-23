@@ -10,17 +10,13 @@ import Testing
 struct MetadataTests {
     @Test
     func parsesTheRecognizedScalarFields() {
-        let source = """
-        ---
+        let metadata = Metadata.read("""
         title: Herb Omelette
         language: en
         version: 1.0
         servings: 4
         source: https://example.com/omelette
-        ---
-        """
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
+        """)
         #expect(metadata.title == "Herb Omelette")
         #expect(metadata.language == "en")
         #expect(metadata.version == "1.0")
@@ -38,18 +34,12 @@ struct MetadataTests {
         (value: "1 1/2", servings: 1.5)
     ])
     func parsesEveryQuantityFormOfTheServingsValue(value: String, servings: Double) {
-        #expect(SousParser().parseRecipe("---\nservings: \(value)\n---").value.metadata.servings == servings)
+        #expect(Metadata.read("servings: \(value)").servings == servings)
     }
 
     @Test
     func leavesNonNumericServingsUnsetButPreserved() {
-        let source = """
-        ---
-        servings: six
-        ---
-        """
-
-        let metadata = SousParser().parseRecipe(source).value.metadata
+        let metadata = Metadata.read("servings: six")
         #expect(metadata.servings == nil)
         #expect(metadata["servings"] == "six")
     }
@@ -124,14 +114,7 @@ struct MetadataTests {
 
     @Test
     func preservesEveryEntryIncludingRepeats() {
-        let source = """
-        ---
-        title: First
-        title: Second
-        ---
-        """
-
-        let entries = SousParser().parseRecipe(source).value.metadata.entries
+        let entries = Metadata.read("title: First\ntitle: Second").entries
         #expect(entries.map(\.key) == ["title", "title"])
     }
 }

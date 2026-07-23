@@ -5,42 +5,32 @@ import Testing
 struct IngredientTests {
     @Test
     func parsesASingleWordName() throws {
-        let parsed = SousParser().parseRecipe("Fry @garlic@ until fragrant.")
-
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(Recipe.read("Fry @garlic@ until fragrant.").firstIngredient)
         #expect(ingredient.name == "garlic")
         #expect(ingredient.amount == nil)
     }
 
     @Test
     func parsesAMultiWordName() throws {
-        let parsed = SousParser().parseRecipe("Add @baby spinach@.")
-
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(Recipe.read("Add @baby spinach@.").firstIngredient)
         #expect(ingredient.name == "baby spinach")
     }
 
     @Test
     func capturesTheNameVerbatimIncludingLeadingConnectives() throws {
-        let parsed = SousParser().parseRecipe("Grate @{1 kg} of parmesan@ over the top.")
-
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(Recipe.read("Grate @{1 kg} of parmesan@ over the top.").firstIngredient)
         #expect(ingredient.name == "of parmesan")
     }
 
     @Test
     func anIngredientWithoutAFenceHasNoAmount() throws {
-        let parsed = SousParser().parseRecipe("Season with @salt@.")
-
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(Recipe.read("Season with @salt@.").firstIngredient)
         #expect(ingredient.amount == nil)
     }
 
     @Test
     func allowsNoSpaceBetweenTheAmountFenceAndTheName() throws {
-        let parsed = SousParser().parseRecipe("Cook @{200 g}pasta@.")
-
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(Recipe.read("Cook @{200 g}pasta@.").firstIngredient)
         #expect(ingredient.name == "pasta")
     }
 
@@ -58,17 +48,13 @@ struct IngredientTests {
 
     @Test
     func doesNotTakeAWhitespaceOtherThanASpaceAsTheSeparator() throws {
-        let parsed = SousParser().parseRecipe("Cook @{200 g}\tpasta@.")
-
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(Recipe.read("Cook @{200 g}\tpasta@.").firstIngredient)
         #expect(ingredient.name == "\tpasta")
     }
 
     @Test
     func extractsSeveralIngredientsFromOneStep() throws {
-        let parsed = SousParser().parseRecipe("Fry @garlic@ and add @baby spinach@.")
-
-        let step = try #require(parsed.value.steps.first)
+        let step = try #require(Recipe.read("Fry @garlic@ and add @baby spinach@.").firstStep)
         #expect(step.ingredients.map(\.name) == ["garlic", "baby spinach"])
     }
 

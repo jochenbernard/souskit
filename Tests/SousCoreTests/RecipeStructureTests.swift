@@ -59,7 +59,7 @@ struct RecipeStructureTests {
         and spread it with butter.
         """
 
-        #expect(SousParser().parseRecipe(source).value.steps.count == 1)
+        #expect(Recipe.read(source).steps.count == 1)
     }
 
     @Test
@@ -75,26 +75,20 @@ struct RecipeStructureTests {
 
     @Test
     func normalizesLineEndingsWithinAMultiLineStep() throws {
-        let parsed = SousParser().parseRecipe("Add @baby\r\nspinach@ to the pan.")
-
-        let step = try #require(parsed.value.steps.first)
+        let step = try #require(Recipe.read("Add @baby\r\nspinach@ to the pan.").firstStep)
         #expect(step.text == "Add @baby\nspinach@ to the pan.")
     }
 
     @Test
     func doesNotTreatUnmarkedProseAsAnnotations() throws {
-        let parsed = SousParser().parseRecipe("Add salt and pepper to taste.")
-
-        let step = try #require(parsed.value.steps.first)
+        let step = try #require(Recipe.read("Add salt and pepper to taste.").firstStep)
         #expect(step.ingredients.isEmpty)
         #expect(step.cookware.isEmpty)
     }
 
     @Test
     func keepsIngredientsInDocumentOrder() throws {
-        let parsed = SousParser().parseRecipe("Fry @garlic@, add @baby spinach@, then @chili flakes@.")
-
-        let step = try #require(parsed.value.steps.first)
+        let step = try #require(Recipe.read("Fry @garlic@, add @baby spinach@, then @chili flakes@.").firstStep)
         #expect(step.ingredients.map(\.name) == ["garlic", "baby spinach", "chili flakes"])
     }
 

@@ -11,10 +11,6 @@ import Testing
 
 @Suite("References")
 struct ReferenceTests {
-    private func reference(in source: String) throws -> Reference {
-        try #require(Recipe.read(source).references.first)
-    }
-
     // Reading
 
     @Test
@@ -96,7 +92,7 @@ struct ReferenceTests {
 
     @Test
     func readsATargetHoldingAPathSeparator() throws {
-        #expect(try reference(in: "Spread the >sauces/red> on top.").target == "sauces/red")
+        #expect(try #require(Recipe.read("Spread the >sauces/red> on top.").firstReference).target == "sauces/red")
     }
 
     @Test
@@ -111,7 +107,7 @@ struct ReferenceTests {
 
     @Test
     func readsTheConsumptionFence() throws {
-        let reference = try reference(in: "Layer the >{300 g} sauce> in a dish.")
+        let reference = try #require(Recipe.read("Layer the >{300 g} sauce> in a dish.").firstReference)
 
         #expect(reference.target == "sauce")
         #expect(reference.amount?.text == "300 g")
@@ -121,7 +117,7 @@ struct ReferenceTests {
 
     @Test
     func readsAFenceWithNoSeparatingSpace() throws {
-        #expect(try reference(in: "Layer the >{300 g}sauce> in a dish.").target == "sauce")
+        #expect(try #require(Recipe.read("Layer the >{300 g}sauce> in a dish.").firstReference).target == "sauce")
     }
 
     // Only the one space after the fence separates it from the target, so a second begins the
@@ -131,13 +127,13 @@ struct ReferenceTests {
     func keepsWhitespaceBeyondTheOneSeparatingSpaceInTheTarget() throws {
         let source = "Layer the >{300 g}  sauce> in a dish."
 
-        #expect(try reference(in: source).target == " sauce")
+        #expect(try #require(Recipe.read(source).firstReference).target == " sauce")
         #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test
     func readsAFenceStatingNoQuantityAsImprecise() throws {
-        let reference = try reference(in: "Spread the >{half} sauce> over it.")
+        let reference = try #require(Recipe.read("Spread the >{half} sauce> over it.").firstReference)
 
         #expect(reference.target == "sauce")
         #expect(reference.amount?.kind.impreciseText == "half")
@@ -145,13 +141,13 @@ struct ReferenceTests {
 
     @Test
     func readsTheFixedMarkerInAFence() throws {
-        #expect(try reference(in: "Spread the >{=300 g} sauce> over it.").amount?.isFixed == true)
+        #expect(try #require(Recipe.read("Spread the >{=300 g} sauce> over it.").firstReference).amount?.isFixed == true)
     }
 
     @Test
     func readsEverySigilInsideAFenceAsText() throws {
         // Sigils are inert between the braces, the span's own included.
-        let reference = try reference(in: "Spread the >{>300 g} sauce> over it.")
+        let reference = try #require(Recipe.read("Spread the >{>300 g} sauce> over it.").firstReference)
 
         #expect(reference.target == "sauce")
         #expect(reference.amount?.kind.impreciseText == ">300 g")
@@ -169,7 +165,7 @@ struct ReferenceTests {
 
     @Test
     func readsTheShorthandFlagAfterAReference() throws {
-        let reference = try reference(in: "Serve with >chili-oil>? on the side.")
+        let reference = try #require(Recipe.read("Serve with >chili-oil>? on the side.").firstReference)
 
         #expect(reference.target == "chili-oil")
         #expect(reference.flags.isOptional)
@@ -177,7 +173,7 @@ struct ReferenceTests {
 
     @Test
     func readsAChainOfNamedFlagsAfterAReference() throws {
-        let reference = try reference(in: "Serve with >chili-oil>:optional:staple now.")
+        let reference = try #require(Recipe.read("Serve with >chili-oil>:optional:staple now.").firstReference)
 
         #expect(reference.flags.isOptional)
         #expect(reference.flags.isStaple)

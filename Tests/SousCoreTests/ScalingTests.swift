@@ -52,14 +52,14 @@ struct ScalingTests {
 
     @Test
     func leavesAnAbsentAmountAbsent() throws {
-        let recipe = try SousParser().parseRecipe("Season with @salt@.").value.scaled(by: 2.0)
+        let recipe = try Recipe.read("Season with @salt@.").scaled(by: 2.0)
 
         #expect(recipe.firstAmount == nil)
     }
 
     @Test
     func neverScalesATimer() throws {
-        let recipe = try SousParser().parseRecipe("Bake for ~40 min~.").value.scaled(by: 2.0)
+        let recipe = try Recipe.read("Bake for ~40 min~.").scaled(by: 2.0)
 
         let timer = try #require(recipe.timers.first)
         #expect(timer.text == "40 min")
@@ -73,7 +73,7 @@ struct ScalingTests {
     func scalesTheDeclaredServings() throws {
         let source = "---\nservings: 4\n---\n\nMix @{200 g} flour@."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 1.5)
+        let recipe = try Recipe.read(source).scaled(by: 1.5)
         #expect(recipe.metadata.servings == 6.0)
         #expect(recipe.metadata["servings"] == "6")
     }
@@ -82,13 +82,13 @@ struct ScalingTests {
     func scalesEveryDeclaredYield() throws {
         let source = "---\nyield: [6 servings, 3.2 kg]\n---\n\nMix @{200 g} flour@."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.yields.map(\.text) == ["12 servings", "6.4 kg"])
     }
 
     @Test
     func scalesAServingsValueThatCarriesAUnit() throws {
-        let recipe = try SousParser().parseRecipe("---\nservings: 6 people\n---").value.scaled(by: 2.0)
+        let recipe = try Recipe.read("---\nservings: 6 people\n---").scaled(by: 2.0)
 
         #expect(recipe.metadata["servings"] == "12 people")
     }
@@ -100,7 +100,7 @@ struct ScalingTests {
     func scalesEveryEntryOfARepeatedField() throws {
         let source = "---\nservings: 4\nservings: 6\nyield: 800 g\nyield: 12 muffins\n---"
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.servings == 12.0)
         #expect(recipe.metadata.entries.map(\.value) == [
             .scalar("8"), .scalar("12"), .list(["1600 g"]), .list(["24 muffins"])
@@ -114,7 +114,7 @@ struct ScalingTests {
     func leavesEveryFieldButTheYieldAndTheServingsAlone() throws {
         let source = "---\nversion: 1.0\ntitle: 3 Bean Stew\ncalories: 640\ntags: [4 star]\n---"
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.version == "1.0")
         #expect(recipe.metadata.title == "3 Bean Stew")
         #expect(recipe.metadata["calories"] == "640")
@@ -125,7 +125,7 @@ struct ScalingTests {
     func leavesAHeaderValueWithNoQuantityAlone() throws {
         let source = "---\nservings: six\nyield: plenty\ntitle: Stew\n---"
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata["servings"] == "six")
         #expect(recipe.metadata.yields.map(\.text) == ["plenty"])
         #expect(recipe.metadata.title == "Stew")
@@ -138,7 +138,7 @@ struct ScalingTests {
     func rewritesTheTextOfAStepItChanged() throws {
         let source = "Mix @{200 g} flour@ and @{a pinch} salt@."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == "Mix @{400 g} flour@ and @{a pinch} salt@.")
     }
 
@@ -146,7 +146,7 @@ struct ScalingTests {
     func keepsTheTextOfAStepItDidNotChange() throws {
         let source = "Toast the @bread@  slowly with @{=1 tsp} butter@."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == source)
     }
 
@@ -157,7 +157,7 @@ struct ScalingTests {
     func reEscapesTheProseOfARewrittenStep() throws {
         let source = "Add @{200 g} water@ then wait \\~5\\~."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == "Add @{400 g} water@ then wait \\~5\\~.")
     }
 
@@ -165,7 +165,7 @@ struct ScalingTests {
     func keepsTheFlagsOfARewrittenStep() throws {
         let source = "Mix @{200 g} flour@:staple? into a #bowl#."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == "Mix @{400 g} flour@:staple? into a #bowl#.")
         let ingredient = try #require(recipe.ingredients.first)
         #expect(ingredient.flags.isStaple)
@@ -180,7 +180,7 @@ struct ScalingTests {
         )
     ])
     func rewritesEveryLineOfAStepItChanged(source: String, text: String) throws {
-        #expect(try SousParser().parseRecipe(source).value.scaled(by: 2.0).steps.first?.text == text)
+        #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == text)
     }
 
     // A group states nothing of its own to multiply, so scaling it is scaling each of its
@@ -196,7 +196,7 @@ struct ScalingTests {
         Grate @{50 g} parmesan@.
         """
 
-        let scaled = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let scaled = try Recipe.read(source).scaled(by: 2.0)
         #expect(scaled.groups.map(\.name) == ["Sauce", "Topping"])
         #expect(scaled.serialized() == """
         ## Sauce
@@ -217,7 +217,7 @@ struct ScalingTests {
         (source: "Layer the >sauce> in a dish.", text: "Layer the >sauce> in a dish.")
     ])
     func scalesTheConsumptionFenceOfAReference(source: String, text: String) throws {
-        #expect(try SousParser().parseRecipe(source).value.scaled(by: 2.0).steps.first?.text == text)
+        #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == text)
     }
 
     // A factor of one moves no value, so it rewrites nothing at all: the recipe that comes
@@ -234,7 +234,7 @@ struct ScalingTests {
         Mix @{200g} flour@, @{1-2 tbsp} oil@, and @{=1 tsp} salt@ for ~40 min~.
         """
 
-        let recipe = SousParser().parseRecipe(source).value
+        let recipe = Recipe.read(source)
         #expect(try recipe.scaled(by: 1.0) == recipe)
     }
 
@@ -244,7 +244,7 @@ struct ScalingTests {
 
     @Test(arguments: [-1.0, -0.5, -0.0, Double.infinity, -Double.infinity, Double.nan])
     func refusesAFactorItCouldNotWriteBack(factor: Double) {
-        let recipe = SousParser().parseRecipe("Mix @{200 g} flour@.").value
+        let recipe = Recipe.read("Mix @{200 g} flour@.")
 
         #expect(throws: ScalingError.unusableFactor) {
             try recipe.scaled(by: factor)

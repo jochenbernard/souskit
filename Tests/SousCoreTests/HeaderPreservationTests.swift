@@ -14,17 +14,13 @@ struct HeaderPreservationTests {
 
     @Test
     func preservesABlockListItemLineAsARawEntry() {
-        let source = "---\ntags:\n  - italian\n---"
-
-        let entries = SousParser().parseRecipe(source).value.metadata.entries
+        let entries = Metadata.read("tags:\n  - italian").entries
         #expect(entries.contains(where: { $0.value == .raw("  - italian") }))
     }
 
     @Test
     func preservesANestedBlockLineAsARawEntryRatherThanAnIndentedKey() {
-        let source = "---\nnutrition:\n  calories: 640 kcal\n---"
-
-        let entries = SousParser().parseRecipe(source).value.metadata.entries
+        let entries = Metadata.read("nutrition:\n  calories: 640 kcal").entries
         #expect(entries.contains(where: { $0.value == .raw("  calories: 640 kcal") }))
         #expect(entries.allSatisfy({ $0.key != "  calories" }))
     }

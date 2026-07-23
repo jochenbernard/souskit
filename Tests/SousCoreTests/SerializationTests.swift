@@ -6,10 +6,9 @@ struct SerializationTests {
     /// The recipe a source reads as, and the recipe its serialized output re-reads as, which
     /// is the pair a round-trip expectation is stated over.
     private func roundTrip(_ source: String) -> (recipe: Recipe, reRead: Recipe) {
-        let parser = SousParser()
-        let recipe = parser.parseRecipe(source).value
+        let recipe = Recipe.read(source)
 
-        return (recipe, parser.parseRecipe(recipe.serialized()).value)
+        return (recipe, recipe.reRead())
     }
 
     /// Expects a source to survive being written back and read again as the same recipe, which
@@ -104,7 +103,7 @@ struct SerializationTests {
         "---\nsource: C:\\photos\\x\n---"
     ])
     func reproducesTheSourceExactly(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     // A pair of identical sigils reads as ordinary text only while both stay unescaped: the
@@ -117,7 +116,7 @@ struct SerializationTests {
         "Rate it @@ out of five."
     ])
     func leavesAnInertSigilPairUnescaped(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test(arguments: [
@@ -147,7 +146,7 @@ struct SerializationTests {
         (source: "Add @sauce@:homemade:staple now.", written: "Add @sauce@:staple:homemade now.")
     ])
     func writesAFlagChainInItsCanonicalOrder(source: String, written: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == written)
+        #expect(Recipe.read(source).serialized() == written)
     }
 
     // The inline form is the only one a list is written in, because escaping lets any item
@@ -157,14 +156,14 @@ struct SerializationTests {
     func escapesASeparatorInAListItem() {
         let source = "---\ntags: comfort food, italian\n---"
 
-        #expect(SousParser().parseRecipe(source).value.serialized() == "---\ntags: [comfort food\\, italian]\n---")
+        #expect(Recipe.read(source).serialized() == "---\ntags: [comfort food\\, italian]\n---")
     }
 
     @Test
     func escapesABracketInAListItem() {
         let source = "---\ntags: [italian\n---"
 
-        #expect(SousParser().parseRecipe(source).value.serialized() == "---\ntags: [\\[italian]\n---")
+        #expect(Recipe.read(source).serialized() == "---\ntags: [\\[italian]\n---")
     }
 
     @Test(arguments: [
@@ -185,7 +184,7 @@ struct SerializationTests {
 
     @Test
     func writesAnEmptyScalarValueWithoutATrailingSpace() {
-        #expect(SousParser().parseRecipe("---\ntitle:\n---").value.serialized() == "---\ntitle:\n---")
+        #expect(Recipe.read("---\ntitle:\n---").serialized() == "---\ntitle:\n---")
     }
 
     @Test
@@ -197,7 +196,7 @@ struct SerializationTests {
         ---
         """
 
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test
@@ -216,14 +215,14 @@ struct SerializationTests {
         "Weigh a \\#5 sieve here."
     ])
     func reEscapesParsedEscapesForByteExactRoundTrip(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test
     func reEscapesAProseSigilAdjacentToAnAnnotation() {
         let source = "\\@@garlic@ now."
 
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     // An escape that was not needed, such as a sigil already followed by whitespace, loses
@@ -293,7 +292,7 @@ struct SerializationTests {
     func doesNotSeparateABodyFenceLineFromAHeaderThatPrecedesIt() {
         let source = "---\ntitle: Toast\n---\n\n---\nBring the water to a boil."
 
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test

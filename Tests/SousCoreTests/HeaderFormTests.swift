@@ -14,7 +14,7 @@ struct HeaderFormTests {
         ---
         """
 
-        let metadata = SousParser().parseRecipe(source).value.metadata
+        let metadata = Recipe.read(source).metadata
         #expect(metadata.title == nil)
         #expect(metadata.entries.isEmpty)
     }
@@ -28,7 +28,7 @@ struct HeaderFormTests {
         ---
         """
 
-        #expect(SousParser().parseRecipe(source).value.metadata.title == nil)
+        #expect(Recipe.read(source).metadata.title == nil)
     }
 
     @Test
@@ -45,7 +45,7 @@ struct HeaderFormTests {
         // The mark is not content, so a header still counts as starting the file.
         let source = "\u{FEFF}---\ntitle: Buttered Toast\n---"
 
-        #expect(SousParser().parseRecipe(source).value.metadata.title == "Buttered Toast")
+        #expect(Recipe.read(source).metadata.title == "Buttered Toast")
     }
 
     @Test
@@ -81,7 +81,7 @@ struct HeaderFormTests {
 
     @Test
     func splitsOnlyAtTheFirstSeparator() {
-        #expect(SousParser().parseRecipe("---\ntitle: a: b\n---").value.metadata.title == "a: b")
+        #expect(Recipe.read("---\ntitle: a: b\n---").metadata.title == "a: b")
     }
 
     @Test
@@ -101,7 +101,7 @@ struct HeaderFormTests {
         ---
         """
 
-        #expect(SousParser().parseRecipe(source).value.metadata.source == "https://example.com/recipes/1")
+        #expect(Recipe.read(source).metadata.source == "https://example.com/recipes/1")
     }
 
     @Test
@@ -112,13 +112,13 @@ struct HeaderFormTests {
         ---
         """
 
-        let title = try #require(SousParser().parseRecipe(source).value.metadata.title)
+        let title = try #require(Recipe.read(source).metadata.title)
         #expect(title.isEmpty)
     }
 
     @Test
     func removesExactlyOneSpaceAfterTheSeparator() {
-        #expect(SousParser().parseRecipe("---\ntitle:  Toast\n---").value.metadata.title == " Toast")
+        #expect(Recipe.read("---\ntitle:  Toast\n---").metadata.title == " Toast")
     }
 
     @Test

@@ -8,47 +8,23 @@ import Testing
 struct MetadataListTests {
     @Test
     func parsesAnInlineTagList() {
-        let source = """
-        ---
-        tags: [italian, make-ahead]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "make-ahead"])
+        #expect(Metadata.read("tags: [italian, make-ahead]").tags == ["italian", "make-ahead"])
     }
 
     @Test
     func trimsWhitespaceAroundInlineListItems() {
-        let source = """
-        ---
-        tags: [comfort food, italian, make-ahead]
-        ---
-        """
-
-        let tags = SousParser().parseRecipe(source).value.metadata.tags
+        let tags = Metadata.read("tags: [comfort food, italian, make-ahead]").tags
         #expect(tags == ["comfort food", "italian", "make-ahead"])
     }
 
     @Test
     func readsBracketsAsLiteralTextForANonListField() {
-        let source = """
-        ---
-        note: [see the sidebar]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata["note"] == "[see the sidebar]")
+        #expect(Metadata.read("note: [see the sidebar]")["note"] == "[see the sidebar]")
     }
 
     @Test
     func readsAnUnbracketedListValueAsASingleItem() {
-        let source = """
-        ---
-        tags: italian
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian"])
+        #expect(Metadata.read("tags: italian").tags == ["italian"])
     }
 
     @Test(arguments: [
@@ -62,7 +38,7 @@ struct MetadataListTests {
 
     @Test
     func trimsWhitespaceAroundASingleLiteralItem() {
-        #expect(SousParser().parseRecipe("---\ntags: italian \n---").value.metadata.tags == ["italian"])
+        #expect(Metadata.read("tags: italian ").tags == ["italian"])
     }
 
     // Inside the brackets a backslash escapes the characters the list gives a meaning of its
@@ -70,36 +46,30 @@ struct MetadataListTests {
 
     @Test
     func readsAnEscapedSeparatorAsPartOfAnItem() {
-        let source = """
-        ---
-        tags: [comfort food\\, italian]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["comfort food, italian"])
+        #expect(Metadata.read("tags: [comfort food\\, italian]").tags == ["comfort food, italian"])
     }
 
     @Test
     func readsAnEscapedBracketAsPartOfAnItem() {
-        #expect(SousParser().parseRecipe("---\ntags: [\\[sugar]\n---").value.metadata.tags == ["[sugar"])
-        #expect(SousParser().parseRecipe("---\ntags: [a\\]b, c]\n---").value.metadata.tags == ["a]b", "c"])
+        #expect(Metadata.read("tags: [\\[sugar]").tags == ["[sugar"])
+        #expect(Metadata.read("tags: [a\\]b, c]").tags == ["a]b", "c"])
     }
 
     @Test
     func readsAnEscapedBackslashAsOneBackslash() {
-        #expect(SousParser().parseRecipe("---\ntags: [a\\\\b]\n---").value.metadata.tags == ["a\\b"])
+        #expect(Metadata.read("tags: [a\\\\b]").tags == ["a\\b"])
     }
 
     @Test
     func keepsABackslashBeforeACharacterThatIsNotEscapableInAList() {
-        #expect(SousParser().parseRecipe("---\ntags: [C:\\x]\n---").value.metadata.tags == ["C:\\x"])
+        #expect(Metadata.read("tags: [C:\\x]").tags == ["C:\\x"])
     }
 
     @Test
     func doesNotCloseAnInlineListOnAnEscapedBracket() {
         // The list never closes, so the value is not a well-formed inline list and reads as
         // one literal item, escapes and all.
-        #expect(SousParser().parseRecipe("---\ntags: [a\\]\n---").value.metadata.tags == ["[a\\]"])
+        #expect(Metadata.read("tags: [a\\]").tags == ["[a\\]"])
     }
 
     @Test(arguments: [
@@ -119,45 +89,27 @@ struct MetadataListTests {
     @Test
     func doesNotEscapeInsideABareListValue() {
         // Escaping belongs to the inline form; a bare value is literal to the end of the line.
-        #expect(SousParser().parseRecipe("---\ntags: a\\, b\n---").value.metadata.tags == ["a\\, b"])
+        #expect(Metadata.read("tags: a\\, b").tags == ["a\\, b"])
     }
 
     @Test
     func doesNotEscapeInsideAScalarValue() {
-        #expect(SousParser().parseRecipe("---\nsource: C:\\photos\\x\n---").value.metadata.source == "C:\\photos\\x")
+        #expect(Metadata.read("source: C:\\photos\\x").source == "C:\\photos\\x")
     }
 
     @Test
     func readsAnUnbracketedListValueHoldingACommaAsOneItem() {
-        let source = """
-        ---
-        tags: comfort food, italian
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["comfort food, italian"])
+        #expect(Metadata.read("tags: comfort food, italian").tags == ["comfort food, italian"])
     }
 
     @Test
     func readsAnUnterminatedBracketAsLiteralText() {
-        let source = """
-        ---
-        tags: [italian
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["[italian"])
+        #expect(Metadata.read("tags: [italian").tags == ["[italian"])
     }
 
     @Test
     func readsAListKeyWithNoValueAsNoItems() {
-        let source = """
-        ---
-        tags:
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
+        #expect(Metadata.read("tags:").tags.isEmpty)
     }
 
     // A list of nothing has no inline form, so it writes as the key alone whichever spelling
@@ -170,13 +122,7 @@ struct MetadataListTests {
 
     @Test
     func readsAnEmptyInlineListAsNoItems() {
-        let source = """
-        ---
-        tags: []
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
+        #expect(Metadata.read("tags: []").tags.isEmpty)
     }
 
     @Test(arguments: [
@@ -190,13 +136,7 @@ struct MetadataListTests {
 
     @Test
     func dropsEmptyItemsFromAnInlineList() {
-        let source = """
-        ---
-        tags: [italian, , make-ahead,]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "make-ahead"])
+        #expect(Metadata.read("tags: [italian, , make-ahead,]").tags == ["italian", "make-ahead"])
     }
 
     // A repeated list key combines its occurrences, rather than the last one overwriting
@@ -218,27 +158,13 @@ struct MetadataListTests {
 
     @Test
     func mergesItemsAcrossRepeatedListKeysWrittenInDifferentForms() {
-        let source = """
-        ---
-        tags: italian
-        tags: [quick, make-ahead]
-        ---
-        """
-
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "quick", "make-ahead"])
+        #expect(Metadata.read("tags: italian\ntags: [quick, make-ahead]").tags == ["italian", "quick", "make-ahead"])
     }
 
     @Test
     func mergesItemsAcrossRepeatedListKeysInDocumentOrder() {
-        let source = """
-        ---
-        tags: [comfort food, italian]
-        tags: [make-ahead]
-        ---
-        """
-
         #expect(
-            SousParser().parseRecipe(source).value.metadata.tags
+            Metadata.read("tags: [comfort food, italian]\ntags: [make-ahead]").tags
                 == ["comfort food", "italian", "make-ahead"]
         )
     }

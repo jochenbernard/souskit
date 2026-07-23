@@ -8,7 +8,7 @@ import Testing
 struct MetadataProjectionTests {
     @Test
     func derivesAScalarAccessorFromTheEntries() {
-        var metadata = SousParser().parseRecipe("---\ntitle: First\ntitle: Second\n---").value.metadata
+        var metadata = Metadata.read("title: First\ntitle: Second")
         metadata.entries.removeLast()
 
         #expect(metadata.title == "First")
@@ -17,7 +17,7 @@ struct MetadataProjectionTests {
 
     @Test
     func derivesTheTagsFromTheEntries() {
-        var metadata = SousParser().parseRecipe("---\ntags: [italian]\ntags: [quick]\n---").value.metadata
+        var metadata = Metadata.read("tags: [italian]\ntags: [quick]")
         metadata.entries.removeLast()
 
         #expect(metadata.tags == ["italian"])
@@ -25,7 +25,7 @@ struct MetadataProjectionTests {
 
     @Test
     func derivesTheServingsFromTheEntries() {
-        var metadata = SousParser().parseRecipe("---\nservings: 2\nservings: 4\n---").value.metadata
+        var metadata = Metadata.read("servings: 2\nservings: 4")
         metadata.entries.removeLast()
 
         #expect(metadata.servings == 2)
@@ -33,7 +33,7 @@ struct MetadataProjectionTests {
 
     @Test
     func rendersTheEditedEntriesOnSerialization() {
-        var recipe = SousParser().parseRecipe("---\ntitle: First\ntitle: Second\n---\n\nToast.").value
+        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nToast.")
         recipe.metadata.entries.removeLast()
 
         #expect(recipe.metadata.title == "First")
@@ -42,13 +42,13 @@ struct MetadataProjectionTests {
 
     @Test
     func returnsNilFromTheSubscriptForAnAbsentKey() {
-        #expect(SousParser().parseRecipe("---\ntitle: Toast\n---").value.metadata["chef"] == nil)
+        #expect(Metadata.read("title: Toast")["chef"] == nil)
     }
 
     @Test
     func returnsNilFromTheSubscriptForAListKey() {
         // The subscript reports the last scalar value, and a list key holds no scalar.
-        let metadata = SousParser().parseRecipe("---\ntags: [italian]\n---").value.metadata
+        let metadata = Metadata.read("tags: [italian]")
         #expect(metadata["tags"] == nil)
         #expect(metadata.tags == ["italian"])
     }
@@ -56,7 +56,7 @@ struct MetadataProjectionTests {
     @Test
     func returnsNilFromTheSubscriptForARawEntry() {
         // A preserved line that is not a `key: value` entry holds no value to look up.
-        let metadata = SousParser().parseRecipe("---\nstray line\n---").value.metadata
+        let metadata = Metadata.read("stray line")
 
         #expect(metadata.entries.count == 1)
         #expect(metadata[""] == nil)
@@ -69,33 +69,29 @@ struct MetadataProjectionTests {
         (key: "source", first: "Jane", last: "Jon")
     ])
     func keepsTheLastValueOfEveryRepeatedScalarKey(key: String, first: String, last: String) {
-        let source = "---\n\(key): \(first)\n\(key): \(last)\n---"
-
-        #expect(SousParser().parseRecipe(source).value.metadata[key] == last)
+        #expect(Metadata.read("\(key): \(first)\n\(key): \(last)")[key] == last)
     }
 
     @Test
     func keepsTheLastServingsValueOfARepeatedKey() {
-        let source = "---\nservings: 2\nservings: 4\n---"
-
-        #expect(SousParser().parseRecipe(source).value.metadata.servings == 4)
+        #expect(Metadata.read("servings: 2\nservings: 4").servings == 4)
     }
 
     @Test
     func readsAZeroServingsValue() {
-        #expect(SousParser().parseRecipe("---\nservings: 0\n---").value.metadata.servings == 0)
+        #expect(Metadata.read("servings: 0").servings == 0)
     }
 
     @Test
     func leavesServingsUnsetForALeadingHyphen() {
         // A leading "-" is not a number, exactly as in an amount fence.
-        let metadata = SousParser().parseRecipe("---\nservings: -2\n---").value.metadata
+        let metadata = Metadata.read("servings: -2")
         #expect(metadata.servings == nil)
         #expect(metadata["servings"] == "-2")
     }
 
     @Test
     func doesNotDivideAServingsValueByAZeroDenominator() {
-        #expect(SousParser().parseRecipe("---\nservings: 1/0\n---").value.metadata.servings == 1)
+        #expect(Metadata.read("servings: 1/0").servings == 1)
     }
 }

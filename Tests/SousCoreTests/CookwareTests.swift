@@ -5,25 +5,19 @@ import Testing
 struct CookwareTests {
     @Test
     func parsesASingleWordName() throws {
-        let parsed = SousParser().parseRecipe("Warm a #pan#.")
-
-        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        let cookware = try #require(Recipe.read("Warm a #pan#.").firstCookware)
         #expect(cookware.name == "pan")
     }
 
     @Test
     func parsesAMultiWordName() throws {
-        let parsed = SousParser().parseRecipe("Bring a #large pot# of water to a boil.")
-
-        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        let cookware = try #require(Recipe.read("Bring a #large pot# of water to a boil.").firstCookware)
         #expect(cookware.name == "large pot")
     }
 
     @Test
     func extractsIngredientsAndCookwareFromTheSameStep() throws {
-        let parsed = SousParser().parseRecipe("Melt @{30 g} butter@ in a #pan#.")
-
-        let step = try #require(parsed.value.steps.first)
+        let step = try #require(Recipe.read("Melt @{30 g} butter@ in a #pan#.").firstStep)
         #expect(step.ingredients.map(\.name) == ["butter"])
         #expect(step.cookware.map(\.name) == ["pan"])
     }

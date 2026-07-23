@@ -298,7 +298,7 @@ struct StepGroupTests {
         "Use a #x\n#\\#  now."
     ])
     func escapesContentThatWouldOtherwiseBeReadAsAHeading(source: String) {
-        let recipe = SousParser().parseRecipe(source).value
+        let recipe = Recipe.read(source)
         let reRead = SousParser().parseRecipe(recipe.serialized())
 
         #expect(reRead.value.groups.map(\.name) == recipe.groups.map(\.name))

@@ -67,7 +67,7 @@ struct DiagnosticsTests {
     func locatesAnUnclosedSpan() throws {
         let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")
 
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .unclosedSpan)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 1)
         #expect(range.start.column == 5)
@@ -84,7 +84,7 @@ struct DiagnosticsTests {
         """
 
         let parsed = SousParser().parseRecipe(source)
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .unclosedSpan)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 3)
         #expect(range.start.column == 5)
@@ -101,7 +101,7 @@ struct DiagnosticsTests {
         """
 
         let parsed = SousParser().parseRecipe(source)
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unknownHeaderKey }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .unknownHeaderKey)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 3)
         #expect(range.start.column == 1)
@@ -119,7 +119,7 @@ struct DiagnosticsTests {
         """
 
         let parsed = SousParser().parseRecipe(source)
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .repeatedScalarKey }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .repeatedScalarKey)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 3)
         #expect(range.start.column == 1)
@@ -135,7 +135,7 @@ struct DiagnosticsTests {
         """
 
         let parsed = SousParser().parseRecipe(source)
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .malformedHeaderLine }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .malformedHeaderLine)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 3)
         #expect(range.start.column == 1)
@@ -146,7 +146,7 @@ struct DiagnosticsTests {
     func locatesAnUnrecognizedFlag() throws {
         let parsed = SousParser().parseRecipe("Add @sauce@:homemade now.")
 
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unknownFlag }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .unknownFlag)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 1)
         #expect(range.start.column == 12)
@@ -159,7 +159,7 @@ struct DiagnosticsTests {
     func locatesAnUnclosedReferenceSpan() throws {
         let parsed = SousParser().parseRecipe("Spread the >sauce on top.")
 
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .unclosedSpan)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 1)
         #expect(range.start.column == 12)
@@ -172,7 +172,7 @@ struct DiagnosticsTests {
     func locatesAnUnterminatedHeaderAtItsOpeningFence() throws {
         let parsed = SousParser().parseRecipe("---\ntitle: Buttered Toast")
 
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unterminatedHeader }))
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .unterminatedHeader)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 1)
         #expect(range.start.column == 1)

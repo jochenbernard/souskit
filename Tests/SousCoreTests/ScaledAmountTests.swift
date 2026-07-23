@@ -104,7 +104,7 @@ struct ScaledAmountTests {
         (digits: 400, factor: 0.0)
     ])
     func refusesAProductItCouldNotWriteBack(digits: Int, factor: Double) {
-        let recipe = SousParser().parseRecipe("Add @{\(Self.quantity(digits: digits)) g} water@.").value
+        let recipe = Recipe.read("Add @{\(Self.quantity(digits: digits)) g} water@.")
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try recipe.scaled(by: factor)
@@ -113,7 +113,7 @@ struct ScaledAmountTests {
 
     @Test
     func refusesAProductItCouldNotWriteBackInTheHeader() {
-        let recipe = SousParser().parseRecipe("---\nyield: \(Self.quantity(digits: 400)) g\n---").value
+        let recipe = Recipe.read("---\nyield: \(Self.quantity(digits: 400)) g\n---")
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try recipe.scaled(by: 0.0)
@@ -127,7 +127,7 @@ struct ScaledAmountTests {
     func leavesAQuantityAlreadyPastThatRangeAlone() throws {
         let source = "Add @{\(Self.quantity(digits: 400)) g} water@."
 
-        #expect(try SousParser().parseRecipe(source).value.scaled(by: 2.0).steps.first?.text == source)
+        #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == source)
     }
 
     // A whole quantity, one space, and a fraction is a mixed number, so an amount whose unit
@@ -174,7 +174,7 @@ struct ScaledAmountTests {
     @Test
     func refusesARangeWithOneEndItCouldNotWriteBack() {
         let source = "Add @{1-\(Self.quantity(digits: 308)) g} water@."
-        let recipe = SousParser().parseRecipe(source).value
+        let recipe = Recipe.read(source)
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try recipe.scaled(by: 10.0)
@@ -185,7 +185,7 @@ struct ScaledAmountTests {
     func keepsAFractionUnitOutOfADeclaredYield() throws {
         let source = "---\nyield: [0.5 2/3 cups]\nservings: 0.5 1/2 batches\n---\n\nMix @{200 g} flour@."
 
-        let recipe = try SousParser().parseRecipe(source).value.scaled(by: 2.0)
+        let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.yields.map(\.text) == ["1.0 2/3 cups"])
         #expect(recipe.metadata.yields.compactMap(\.unit) == ["2/3 cups"])
         #expect(recipe.metadata["servings"] == "1.0 1/2 batches")

@@ -13,7 +13,7 @@ import Testing
 @Suite("Group validation")
 struct GroupValidationTests {
     private func validate(_ source: String) -> [Diagnostic] {
-        SousParser().parseRecipe(source).value.validate()
+        Recipe.read(source).validate()
     }
 
     // Repeated group names

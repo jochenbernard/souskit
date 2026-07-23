@@ -8,10 +8,6 @@ import Testing
 
 @Suite("Mutated models")
 struct MutatedModelTests {
-    private func reRead(_ recipe: Recipe) -> Recipe {
-        SousParser().parseRecipe(recipe.serialized()).value
-    }
-
     // The values that stop being an annotation: nothing to bound, a sigil the opener rule
     // leaves shut, or a paragraph break the span cannot reach across.
 
@@ -22,7 +18,7 @@ struct MutatedModelTests {
         ingredient.name = name
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
-        #expect(reRead(value).ingredients.isEmpty)
+        #expect(value.reRead().ingredients.isEmpty)
     }
 
     @Test(arguments: ["", " pan", "\tpan", "a\n\nb"])
@@ -32,7 +28,7 @@ struct MutatedModelTests {
         cookware.name = name
         value.groups[0].steps[0].segments[1] = .cookware(cookware)
 
-        #expect(reRead(value).cookware.isEmpty)
+        #expect(value.reRead().cookware.isEmpty)
     }
 
     @Test(arguments: ["", " 40 min", "\t40 min", "a\n\nb"])
@@ -42,7 +38,7 @@ struct MutatedModelTests {
         timer.text = text
         value.groups[0].steps[0].segments[1] = .timer(timer)
 
-        #expect(reRead(value).timers.isEmpty)
+        #expect(value.reRead().timers.isEmpty)
     }
 
     @Test(arguments: ["", " sauce", "\tsauce", "a\n\nb"])
@@ -52,7 +48,7 @@ struct MutatedModelTests {
         reference.target = target
         value.groups[0].steps[0].segments[1] = .reference(reference)
 
-        #expect(reRead(value).references.isEmpty)
+        #expect(value.reRead().references.isEmpty)
     }
 
     // A fence stands between the opening sigil and the target, so it is the one place a target
@@ -65,7 +61,7 @@ struct MutatedModelTests {
         reference.target = " sauce"
         value.groups[0].steps[0].segments[1] = .reference(reference)
 
-        #expect(reRead(value).references.map(\.target) == [" sauce"])
+        #expect(value.reRead().references.map(\.target) == [" sauce"])
     }
 
     // The values that stay an annotation, which is what makes the list above a real boundary
@@ -79,7 +75,7 @@ struct MutatedModelTests {
         reference.target = target
         value.groups[0].steps[0].segments[1] = .reference(reference)
 
-        #expect(reRead(value).references.map(\.target) == [target])
+        #expect(value.reRead().references.map(\.target) == [target])
     }
 
     @Test(arguments: ["salt ", "sa lt", "a\nb"])
@@ -89,7 +85,7 @@ struct MutatedModelTests {
         ingredient.name = name
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
-        #expect(reRead(value).ingredients.map(\.name) == [name])
+        #expect(value.reRead().ingredients.map(\.name) == [name])
     }
 
     // An amount is written between the fence's braces rather than between sigils, so its own
@@ -102,7 +98,7 @@ struct MutatedModelTests {
         ingredient.amount?.text = "a}b"
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
-        let written = try #require(reRead(value).ingredients.first)
+        let written = try #require(value.reRead().ingredients.first)
         #expect(written.amount?.text == "a")
         #expect(written.name == "b} salt")
     }
@@ -114,7 +110,7 @@ struct MutatedModelTests {
         ingredient.amount?.text = "a\n\nb"
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
-        #expect(reRead(value).ingredients.isEmpty)
+        #expect(value.reRead().ingredients.isEmpty)
     }
 
     @Test
@@ -124,7 +120,7 @@ struct MutatedModelTests {
         ingredient.amount?.text = ""
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
-        let written = try #require(reRead(value).ingredients.first)
+        let written = try #require(value.reRead().ingredients.first)
         #expect(written.amount?.text.isEmpty == true)
         #expect(written.name == "salt")
     }
@@ -144,7 +140,7 @@ struct MutatedModelTests {
         var value = Recipe.read("## Sauce\nBrown the beef.")
         value.groups[0].name = name
 
-        let written = reRead(value)
+        let written = value.reRead()
         #expect(written.groups.map(\.name) == groups)
         #expect(written.steps.map(\.text) == steps)
     }
@@ -157,7 +153,7 @@ struct MutatedModelTests {
         var value = Recipe.read("## Sauce\nBrown the beef.")
         value.groups[0].name = name
 
-        #expect(reRead(value).groups.map(\.name) == [name])
+        #expect(value.reRead().groups.map(\.name) == [name])
     }
 
     // An unnamed group states no heading, so one holding no step states nothing at all.

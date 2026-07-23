@@ -8,18 +8,10 @@ import Testing
 
 @Suite("Scaled yields")
 struct ScaledYieldTests {
-    private func recipe(_ header: String) -> String {
-        "---\n\(header)\n---\n\nMix @{200 g} flour@."
-    }
-
     private func scaled(_ header: String, to target: String) throws -> Recipe {
         let parser = SousParser()
 
-        return try parser.parseRecipe(recipe(header)).value.scaled(to: parser.parseAmount(target))
-    }
-
-    private func flour(in recipe: Recipe) throws -> Double {
-        try #require(recipe.firstAmount?.kind.preciseQuantity?.value)
+        return try parser.parseRecipe(Recipe.flourRecipe(header)).value.scaled(to: parser.parseAmount(target))
     }
 
     // A factor is derived by dividing and applied by multiplying, and the two do not always
@@ -70,7 +62,7 @@ struct ScaledYieldTests {
 
     @Test(arguments: ["servings: 0\nservings: 1", "servings: 3\nservings: 8"])
     func scalingToWhatAShadowedKeyAlreadyStatesChangesNothing(header: String) throws {
-        let parsed = SousParser().parseRecipe(recipe(header)).value
+        let parsed = Recipe.read(Recipe.flourRecipe(header))
         let target = "\(parsed.metadata.servings ?? 0) servings"
 
         #expect(try scaled(header, to: target) == parsed)
@@ -97,7 +89,7 @@ struct ScaledYieldTests {
 
     @Test
     func statesAServingsTargetExactly() throws {
-        let parsed = SousParser().parseRecipe(recipe("servings: 11")).value
+        let parsed = Recipe.read(Recipe.flourRecipe("servings: 11"))
 
         #expect(try parsed.scaled(toServings: 15.0).metadata["servings"] == "15")
     }
@@ -111,7 +103,7 @@ struct ScaledYieldTests {
 
         #expect(scaled.metadata["servings"] == "15")
         #expect(scaled.metadata.yields.map(\.text) == ["4.090909090909091 kg"])
-        #expect(try flour(in: scaled) == 200.0 * (15.0 / 11.0))
+        #expect(try scaled.flourWeight() == 200.0 * (15.0 / 11.0))
     }
 
     // A value stating no quantity names no dimension, so the target never replaces it, even

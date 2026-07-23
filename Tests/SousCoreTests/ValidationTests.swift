@@ -16,7 +16,7 @@ import Testing
 @Suite("Validation")
 struct ValidationTests {
     private func validate(_ header: String) -> [Diagnostic] {
-        SousParser().parseRecipe("---\n\(header)\n---\n\nMix @{200 g} flour@.").value.validate()
+        Recipe.read(Recipe.flourRecipe(header)).validate()
     }
 
     @Test
@@ -30,12 +30,12 @@ struct ValidationTests {
         Cook @{200 g} spaghetti@ in a #large pot#.
         """
 
-        #expect(SousParser().parseRecipe(source).value.validate().isEmpty)
+        #expect(Recipe.read(source).validate().isEmpty)
     }
 
     @Test
     func aProseOnlyRecipeValidatesWithoutDiagnostics() {
-        #expect(SousParser().parseRecipe("Toast the bread.").value.validate().isEmpty)
+        #expect(Recipe.read("Toast the bread.").validate().isEmpty)
     }
 
     @Test
@@ -145,8 +145,8 @@ struct ValidationTests {
 
     @Test
     func scalingDoesNotChangeWhatValidationReports() throws {
-        let clean = SousParser().parseRecipe("---\nservings: 4\n---").value
-        let repeated = SousParser().parseRecipe("---\nservings: 4\nyield: 6 servings\n---").value
+        let clean = Recipe.read("---\nservings: 4\n---")
+        let repeated = Recipe.read("---\nservings: 4\nyield: 6 servings\n---")
 
         #expect(try clean.scaled(by: 2.0).validate().isEmpty)
         #expect(try repeated.scaled(by: 2.0).validate().map(\.kind) == [.repeatedYield])
