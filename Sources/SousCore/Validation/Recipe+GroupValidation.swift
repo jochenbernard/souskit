@@ -6,27 +6,18 @@ extension Recipe {
     /// Reports each name more than one heading states.
     ///
     /// Names are matched normalized, so two headings collide while they normalize to one name,
-    /// which leaves a reference to that name unable to resolve to one of them. The name is
+    /// which leaves a reference to that name reaching only the first of them. The name is
     /// reported as the first heading writes it, because the diagnostic carries no range.
     func repeatedGroupNames() -> [Diagnostic] {
-        let names = groups.compactMap(\.name)
-        var stated: [String: Int] = [:]
-        var reported: Set<String> = []
-
-        for name in names { stated[Normalization.normalized(name), default: 0] += 1 }
-
-        return names.compactMap({ name in
-            let normalized = Normalization.normalized(name)
-            guard stated[normalized] ?? 0 > 1, reported.insert(normalized).inserted else { return nil }
-
-            return .error(.repeatedGroupName, "Recipe states more than one group named '\(name)'.")
-        })
+        Repetition.firstOfEachRepeated(in: groups.compactMap(\.name), by: Normalization.normalized)
+            .map({ .error(.repeatedGroupName, "Recipe states more than one group named '\($0)'.") })
     }
 
     /// Reports each target that names no group of this recipe.
     ///
-    /// A target is reported once however often it is written, because the diagnostic carries no
-    /// range and its place in the list is the only position a reader gets.
+    /// A target is reported once however many references normalize to it, and is written as the
+    /// first of those references writes it, because the diagnostic carries no range and its
+    /// place in the list is the only position a reader gets.
     func unresolvedReferences() -> [Diagnostic] {
         var reported: Set<String> = []
 
@@ -40,10 +31,11 @@ extension Recipe {
         })
     }
 
-    /// Reports each loop the groups consume each other's intermediates in.
+    /// Reports each set of groups that consume each other's intermediates.
     ///
-    /// A loop is one problem however many groups it runs through, so it is reported once, under
-    /// the first of them. The default group is consumed by nothing, so it is part of no loop.
+    /// Groups that reach each other are one problem however many loops run through them, so the
+    /// set is reported once, under the first of them. The default group is consumed by nothing,
+    /// so it belongs to no such set.
     func referenceCycles() -> [Diagnostic] {
         let reaches = consumptionReach
         var reported: Set<Int> = []

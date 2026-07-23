@@ -8,12 +8,8 @@ import Testing
 
 @Suite("Group resolution")
 struct GroupResolutionTests {
-    private func recipe(_ source: String) -> Recipe {
-        SousParser().parseRecipe(source).value
-    }
-
     private var pastaBake: Recipe {
-        recipe("""
+        Recipe.read("""
         ## Sauce
         Brown the beef.
 
@@ -37,9 +33,21 @@ struct GroupResolutionTests {
         #expect(pastaBake.group(named: name)?.name == "Sauce")
     }
 
+    // A path separator is ordinary text in a name, so it matches like any other character. From
+    // v0.5 a target holding one names a file instead, and reaches this group no longer.
+
+    @Test
+    func matchesANameHoldingAPathSeparator() throws {
+        let value = Recipe.read("## sauces/red\nBrown it.\n\n## Assemble\nLayer the >sauces/red>.")
+        let assemble = try #require(value.groups.last)
+
+        #expect(value.group(named: "sauces/red")?.name == "sauces/red")
+        #expect(value.dependencies(of: assemble).map(\.name) == ["sauces/red"])
+    }
+
     @Test
     func matchesANameWrittenWithoutTheAccentTheHeadingCarries() {
-        #expect(recipe("## B\u{E9}chamel\nWhisk it.").group(named: "bechamel")?.name == "B\u{E9}chamel")
+        #expect(Recipe.read("## B\u{E9}chamel\nWhisk it.").group(named: "bechamel")?.name == "B\u{E9}chamel")
     }
 
     @Test(arguments: ["Filling", "sauces/red", "sauce topping"])
@@ -50,7 +58,7 @@ struct GroupResolutionTests {
     @Test
     func refersToTheDefaultGroupByNothing() {
         // The default group has no name, so no name reaches it, an empty one included.
-        let value = recipe("Warm the oven.\n\n## Sauce\nBrown the beef.")
+        let value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown the beef.")
 
         #expect(value.group(named: "") == nil)
         #expect(value.group(named: "   ") == nil)
@@ -60,7 +68,7 @@ struct GroupResolutionTests {
     @Test
     func returnsTheFirstOfTwoGroupsThatShareAName() {
         // The file is not valid, but a reference to that name still resolves to one group.
-        let value = recipe("## Sauce\nBrown the beef.\n\n## sauce\nGrate the cheese.")
+        let value = Recipe.read("## Sauce\nBrown the beef.\n\n## sauce\nGrate the cheese.")
 
         #expect(value.group(named: "sauce")?.steps.map(\.text) == ["Brown the beef."])
     }
@@ -74,7 +82,7 @@ struct GroupResolutionTests {
         let names = parts.flatMap({ first in parts.map({ first + $0 }) }) + parts
         let failures = names.flatMap({ heading in
             names.compactMap({ target -> String? in
-                let value = recipe("## \(heading)\nMix it.")
+                let value = Recipe.read("## \(heading)\nMix it.")
                 // A line naming nothing is not a heading, so it forms no group to find.
                 guard value.groups.first?.name != nil else { return nil }
 
@@ -110,7 +118,7 @@ struct GroupResolutionTests {
 
     @Test
     func listsEachGroupOnceHoweverOftenItIsConsumed() throws {
-        let value = recipe("""
+        let value = Recipe.read("""
         ## Sauce
         Brown the beef.
 
@@ -124,7 +132,7 @@ struct GroupResolutionTests {
 
     @Test
     func listsDependenciesInTheOrderTheirReferencesAppear() throws {
-        let value = recipe("""
+        let value = Recipe.read("""
         ## Sauce
         Brown the beef.
 
@@ -141,7 +149,7 @@ struct GroupResolutionTests {
 
     @Test
     func dependsOnAGroupWrittenAfterIt() throws {
-        let value = recipe("""
+        let value = Recipe.read("""
         ## Assemble
         Layer the >sauce> in a dish.
 
@@ -155,7 +163,7 @@ struct GroupResolutionTests {
 
     @Test
     func leavesOutATargetThatNamesNoGroup() throws {
-        let value = recipe("""
+        let value = Recipe.read("""
         ## Sauce
         Brown the beef.
 
@@ -169,7 +177,7 @@ struct GroupResolutionTests {
 
     @Test
     func listsAGroupThatConsumesItsOwnIntermediate() throws {
-        let value = recipe("## Sauce\nStir the >sauce> again.")
+        let value = Recipe.read("## Sauce\nStir the >sauce> again.")
         let sauce = try #require(value.groups.first)
 
         #expect(value.dependencies(of: sauce).map(\.name) == ["Sauce"])
@@ -177,7 +185,7 @@ struct GroupResolutionTests {
 
     @Test
     func letsTheDefaultGroupDependOnANamedGroup() throws {
-        let value = recipe("Layer the >sauce> in a dish.\n\n## Sauce\nBrown the beef.")
+        let value = Recipe.read("Layer the >sauce> in a dish.\n\n## Sauce\nBrown the beef.")
         let group = try #require(value.groups.first)
 
         #expect(group.name == nil)

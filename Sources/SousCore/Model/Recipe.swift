@@ -7,7 +7,8 @@ public struct Recipe: Equatable, Hashable, Sendable {
     ///
     /// The groups are the store the step and annotation lists read, so editing them moves the
     /// lists with them. A body opening with steps rather than with a heading holds them in an
-    /// unnamed group, so a file writing no heading at all holds one group.
+    /// unnamed group, so a file writing no heading at all holds one group, and a file with no
+    /// body holds none.
     public var groups: [StepGroup]
 
     /// The steps of every group, in document order.

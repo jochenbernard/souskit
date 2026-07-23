@@ -23,9 +23,9 @@ extension Step {
                     text,
                     afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
                     beforeAnnotation: index + 1 < segments.count,
-                    // A step opens a line of its own, so only its first segment can hold the
-                    // start of that line.
-                    startingALine: index == 0
+                    // A heading is decided by the whole line, and what an earlier segment wrote
+                    // stands on it, so the run is judged against the line it continues.
+                    lineSoFar: Self.lineSoFar(in: result)
                 )
             case let .ingredient(ingredient):
                 result += Self.rendered(
@@ -110,8 +110,14 @@ extension Step {
             let escaped = character == annotation.sigil
                 || SourceText.escapesFollowing(character, before: following)
                 || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
-                // A sigil opens the span, so the name never holds the start of the first line.
-                || opensHeading(characters, at: index, startingALine: false)
+                // The sigil that opens the span stands on the line before the name, and the
+                // closing one, with any flag after it, continues the name's last line.
+                || opensHeading(
+                    characters,
+                    at: index,
+                    lineSoFar: [annotation.sigil],
+                    followedByContent: true
+                )
 
             if escaped { result.append(SourceText.escape) }
             result.append(character)
@@ -120,18 +126,53 @@ extension Step {
         return result
     }
 
+    /// The characters already written on the line the next segment continues, which is what a
+    /// heading opening across a segment boundary is judged against.
+    private static func lineSoFar(in text: String) -> [Character] {
+        Array(text.reversed().prefix(while: { !$0.isNewline }).reversed())
+    }
+
     /// Whether the content at this position would be read as a group heading rather than as the
     /// text it stands for.
     ///
-    /// A heading is decided by the shape of a whole line, so only content starting one can open
-    /// it, and what a line has to look like is asked of the shared table rather than restated
-    /// here. Escaping that first character is what keeps the line prose, and the escape reads
-    /// back as the character, so the content survives either way.
-    private static func opensHeading(_ characters: [Character], at index: Int, startingALine: Bool) -> Bool {
-        let startsLine = index == 0 ? startingALine : characters[index - 1].isNewline
+    /// A heading is decided by the shape of a whole line, and a run of content holds only part
+    /// of one: what an earlier segment wrote stands before it, and what a later segment writes
+    /// continues its last line and can state the name. What a line has to look like is asked of
+    /// the shared table rather than restated here. Escaping the run's first character of that
+    /// line is what keeps the line prose, and the escape reads back as the character, so the
+    /// content survives either way.
+    ///
+    /// - Parameters:
+    ///   - lineSoFar: What stands on the line before the run: the text written so far for a run
+    ///     of prose, and the opening sigil for a name. The sigil stands for the whole line
+    ///     before a name, because a name can supply neither half of a marker a segment before
+    ///     it began: a sigil opens no span before whitespace, so a name never opens with the
+    ///     space, and a fence between the two opens no heading either.
+    ///   - followedByContent: Whether a further segment continues the run's last line.
+    private static func opensHeading(
+        _ characters: [Character],
+        at index: Int,
+        lineSoFar: [Character],
+        followedByContent: Bool
+    ) -> Bool {
+        // Only a line start can open a heading, and deciding that first is what keeps the line
+        // read once per line rather than once per character.
+        let before: [Character]
 
-        return startsLine
-            && Heading.name(of: characters[index...].prefix(while: { !$0.isNewline })) != nil
+        if index == 0 {
+            before = lineSoFar
+        } else if characters[index - 1].isNewline {
+            before = []
+        } else {
+            return false
+        }
+
+        let line = characters[index...].prefix(while: { !$0.isNewline })
+
+        return Heading.opens(
+            before + line,
+            continuedByContent: followedByContent && line.endIndex == characters.endIndex
+        )
     }
 
     /// Escapes a prose character that would otherwise be read as something else: a sigil that
@@ -144,7 +185,7 @@ extension Step {
         _ text: String,
         afterFlags: Bool,
         beforeAnnotation: Bool,
-        startingALine: Bool
+        lineSoFar: [Character]
     ) -> String {
         let characters = Array(text)
         var escapes = [Bool](repeating: false, count: characters.count)
@@ -155,7 +196,12 @@ extension Step {
                 followedBy: SourceText.character(in: characters, at: index + 1),
                 escaped: index + 1 < characters.count && escapes[index + 1],
                 beforeAnnotation: beforeAnnotation
-            ) || opensHeading(characters, at: index, startingALine: startingALine)
+            ) || opensHeading(
+                characters,
+                at: index,
+                lineSoFar: lineSoFar,
+                followedByContent: beforeAnnotation
+            )
         }
 
         // A flag chain reads on from the closing sigil, so only the character right after one
@@ -187,7 +233,9 @@ extension Step {
         // A backslash escapes whatever follows it, so a literal one is escaped in turn. An
         // annotation opens with a sigil, which is escapable.
         if character == SourceText.escape {
-            return following.map(SourceText.isEscapable) ?? beforeAnnotation
+            guard let following else { return beforeAnnotation }
+
+            return SourceText.escapesFollowing(character, before: following)
         }
 
         guard Annotation(rawValue: character) != nil else { return false }

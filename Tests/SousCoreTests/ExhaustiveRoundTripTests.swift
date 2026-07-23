@@ -136,6 +136,20 @@ struct ExhaustiveRoundTripTests {
         expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, prefix: prefix)
     }
 
+    // The line a run of content sits on is not the run. What follows the run continues its
+    // last line and can name a heading the run only opens, and what precedes it is already on
+    // that line, so both sides of a run have to be swept as well as the run itself.
+
+    @Test(arguments: ["@a@", "#p#", ">a>", "~4 h~"])
+    func everyContentThatCouldOpenAHeadingBeforeAnAnnotation(suffix: String) {
+        expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, suffix: suffix)
+    }
+
+    @Test
+    func everyContentThatCouldOpenAHeadingAfterASpanEndingALine() {
+        expectRoundTrips(["#", " ", "\\", "a", "\n"], upTo: 5, prefix: "Use a #x\n")
+    }
+
     @Test
     func everyTimerContent() {
         expectRoundTrips(["~", "\\", "4", "-", " ", "h"], upTo: 4, prefix: "Wait ~", suffix: "~ now.")
@@ -193,7 +207,8 @@ struct ExhaustiveRoundTripTests {
     func everyFileOverWholeConstructs() {
         let constructs = [
             "@{2 g} a@", "#p#", "\\@", "\n\n", "\n", "---\n", "@a@", "tags: [a, b]\n",
-            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@", ">a>", ">{2 g} a>", ">a>?", "## a"
+            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@", ">a>", ">{2 g} a>", ">a>?", "## a",
+            "\\## ", "## "
         ]
 
         expectRoundTrips(constructs, upTo: 3)

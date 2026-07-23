@@ -1,5 +1,8 @@
 /// A parser for Sous source text.
-public struct SousParser {
+///
+/// A parser holds nothing of its own, so one may be shared across isolation domains and reused
+/// for as many sources as an application reads.
+public struct SousParser: Sendable {
     /// Creates a parser.
     public init() {}
 

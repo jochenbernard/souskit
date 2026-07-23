@@ -5,9 +5,11 @@ public struct Reference: Equatable, Hashable, Sendable {
     /// It names a group of the same file, matched normalized, so `bechamel` consumes what a
     /// group named `Bechamel` produced.
     ///
-    /// Writing wraps the target in its sigils, so a target that is empty, that opens with
-    /// whitespace, or that holds a blank line writes text a reader takes for prose rather than
-    /// for a reference. Reading produces no such target.
+    /// Writing wraps the target in its sigils, so a target that is empty or that holds a blank
+    /// line writes text a reader takes for prose rather than for a reference, and reading
+    /// produces neither. A target opening with whitespace writes such text too, unless an
+    /// amount fence stands between it and the opening sigil, which is where reading does
+    /// produce one.
     public var target: String
 
     /// The portion of the intermediate the reference consumes, or `nil` when no amount fence is

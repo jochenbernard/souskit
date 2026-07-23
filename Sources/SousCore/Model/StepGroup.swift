@@ -6,9 +6,9 @@ public struct StepGroup: Equatable, Hashable, Sendable {
     /// produces an intermediate a reference can consume, so the default group is consumed by
     /// nothing.
     ///
-    /// Writing opens the group with a heading, so a name that is empty leaves the heading
-    /// naming nothing, and one that holds a line break ends it and leaves the rest a step.
-    /// Either writes text a reader takes for prose rather than for a heading, and reading
+    /// Writing opens the group with a heading, so a name that is empty leaves a line a reader
+    /// takes for prose rather than for a heading, and one that holds a line break ends the
+    /// heading at that break and leaves the rest to be read as the body after it. Reading
     /// produces neither.
     public var name: String?
 

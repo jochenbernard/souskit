@@ -47,6 +47,19 @@ struct StepProjectionTests {
         #expect(recipe.cookware.isEmpty)
     }
 
+    // A run of prose is one segment when a step is read, so only a mutation puts two of them
+    // side by side. The writer asks each what annotation it stands for, and a run of prose
+    // stands for none, so the two write as the one run they spell.
+
+    @Test
+    func writesTwoAdjacentProseSegmentsAsOneRun() {
+        var recipe = SousParser().parseRecipe("Add @salt@.").value
+        recipe.groups[0].steps[0].segments = [.text("Season it"), .text("? Yes.")]
+
+        #expect(recipe.serialized() == "Season it? Yes.")
+        #expect(SousParser().parseRecipe(recipe.serialized()).value.steps.map(\.text) == ["Season it? Yes."])
+    }
+
     // The step list is a view over the groups, and each group's lists are views over its own
     // steps, so editing a group's steps moves both.
 

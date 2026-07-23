@@ -1,12 +1,13 @@
 import SousCore
 import Testing
 
-// One routine matches every name the language compares, so a group a reference resolves to is
-// a group a consumer looking the same name up finds. It folds capitalization and accents,
-// trims the whitespace around the name, and drops each leading connective word.
+// One routine matches every name the language resolves by identity, so a group a reference
+// resolves to is a group a consumer looking the same name up finds. It folds capitalization and
+// accents, trims the whitespace around the name, and drops each leading connective word along
+// with the whitespace after it.
 //
-// Nothing else is changed. The whitespace within a name still tells two names apart, and a
-// connective that is not leading is part of the name.
+// Nothing else is changed. The whitespace within the rest of a name still tells two names
+// apart, and a connective that is not leading is part of the name.
 
 @Suite("Normalization")
 struct NormalizationTests {
@@ -46,6 +47,15 @@ struct NormalizationTests {
     func keepsTheWhitespaceWithinAName() {
         #expect(Normalization.normalized("baby  spinach") == "baby  spinach")
         #expect(Normalization.normalized("baby spinach") != Normalization.normalized("baby  spinach"))
+    }
+
+    // The whitespace after a dropped connective goes with it, which is the one place the
+    // whitespace within a name does not tell two names apart.
+
+    @Test
+    func dropsTheWhitespaceAfterAConnectiveAlongWithIt() {
+        #expect(Normalization.normalized("of  sauce") == "sauce")
+        #expect(Normalization.normalized("of  sauce") == Normalization.normalized("of sauce"))
     }
 
     // Leading connectives
@@ -90,7 +100,22 @@ struct NormalizationTests {
         #expect(Normalization.normalized(text) == normalized)
     }
 
-    @Test(arguments: ["  Of The B\u{E9}chamel  ", "baby  spinach", "", "of"])
+    @Test(arguments: [
+        "  Of The B\u{E9}chamel  ",
+        "baby  spinach",
+        "",
+        "of",
+        // A combining mark folds one at a time, so a name carrying more than one that no base
+        // letter absorbs takes more than one pass to reach its form. Normalizing is idempotent
+        // regardless, so a name normalized once is a name a second pass leaves alone.
+        "caf\u{FEFF}\u{0301}\u{0301}",
+        "e\u{0301}\u{0301}\u{0301}",
+        // Folding is sensitive to what leads a mark, and trimming and connective-dropping
+        // change what leads it, so a mark folding leaves while a prefix precedes it must fold
+        // again once that prefix is gone.
+        "\u{2028}\u{1F3FF}\u{0486}",
+        "of \u{1F3FF}\u{0486}"
+    ])
     func normalizingANormalizedNameChangesNothing(text: String) {
         let normalized = Normalization.normalized(text)
 

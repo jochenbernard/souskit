@@ -1,11 +1,11 @@
 import SousCore
 import Testing
 
-// The complete files the Sous documentation works through, read back here so the
-// outcomes it states stay the outcomes this reader produces. Each also round-trips byte
-// for byte, including the constructs later versions introduce, which a v0.3 reader
-// carries through as ordinary prose. The one exception is a `yield` line, whose key is a list
-// field from v0.3 and so comes back in the inline form every list value is written in.
+// The complete files the Sous documentation works through, read back here so the outcomes it
+// states stay the outcomes this reader produces. Each also round-trips byte for byte, the
+// header keys later versions introduce included, which this reader preserves and warns about
+// rather than reading. The one exception is a `yield` line, whose key is a list field from v0.3
+// and so comes back in the inline form every list value is written in.
 
 @Suite("Specification examples")
 struct SpecificationExampleTests {

@@ -11,12 +11,8 @@ import Testing
 
 @Suite("References")
 struct ReferenceTests {
-    private func recipe(_ source: String) -> Recipe {
-        SousParser().parseRecipe(source).value
-    }
-
     private func reference(in source: String) throws -> Reference {
-        try #require(recipe(source).references.first)
+        try #require(Recipe.read(source).references.first)
     }
 
     // Reading
@@ -37,7 +33,7 @@ struct ReferenceTests {
 
     @Test
     func readsAReferenceAsItsOwnSegment() throws {
-        let segments = try #require(recipe("Spread the >sauce> on top.").steps.first?.segments)
+        let segments = try #require(Recipe.read("Spread the >sauce> on top.").steps.first?.segments)
 
         #expect(segments.count == 3)
         #expect(segments.first?.proseText == "Spread the ")
@@ -49,7 +45,7 @@ struct ReferenceTests {
     func opensAReferenceAtTheStartOfALine() {
         // A line beginning "> " is the reserved markdown form, which the opener rule already
         // leaves as text, so a line may still open a reference.
-        #expect(recipe(">sauce> goes in first.").references.map(\.target) == ["sauce"])
+        #expect(Recipe.read(">sauce> goes in first.").references.map(\.target) == ["sauce"])
     }
 
     @Test
@@ -79,7 +75,7 @@ struct ReferenceTests {
 
     @Test
     func closesAReferenceOnALaterLineOfTheSameParagraph() {
-        #expect(recipe("Spread the >sauce\nlayer> on top.").references.map(\.target) == ["sauce\nlayer"])
+        #expect(Recipe.read("Spread the >sauce\nlayer> on top.").references.map(\.target) == ["sauce\nlayer"])
     }
 
     @Test
@@ -106,7 +102,7 @@ struct ReferenceTests {
     @Test
     func contributesNoIngredient() {
         // The intermediate's ingredients are those of its group's steps, already counted there.
-        let value = recipe("## Sauce\nBrown @{500 g} minced beef@.\n\n## Assemble\nLayer the >sauce>.")
+        let value = Recipe.read("## Sauce\nBrown @{500 g} minced beef@.\n\n## Assemble\nLayer the >sauce>.")
 
         #expect(value.ingredients.map(\.name) == ["minced beef"])
     }
@@ -126,6 +122,17 @@ struct ReferenceTests {
     @Test
     func readsAFenceWithNoSeparatingSpace() throws {
         #expect(try reference(in: "Layer the >{300 g}sauce> in a dish.").target == "sauce")
+    }
+
+    // Only the one space after the fence separates it from the target, so a second begins the
+    // target. It is the one place reading produces a target opening with whitespace.
+
+    @Test
+    func keepsWhitespaceBeyondTheOneSeparatingSpaceInTheTarget() throws {
+        let source = "Layer the >{300 g}  sauce> in a dish."
+
+        #expect(try reference(in: source).target == " sauce")
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test
@@ -188,7 +195,7 @@ struct ReferenceTests {
 
     @Test
     func listsItsReferencesOnTheStepTheGroupAndTheRecipe() throws {
-        let value = recipe("""
+        let value = Recipe.read("""
         ## Assemble
         Layer the >sauce> in a dish.
 
@@ -213,23 +220,23 @@ struct ReferenceTests {
         "Spread the >sauces/red> on top."
     ])
     func writesAReferenceBackAsItWasRead(source: String) {
-        #expect(recipe(source).serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test
     func escapesTheClosingSigilInATarget() {
-        #expect(recipe("Spread the >a\\>b> on top.").serialized() == "Spread the >a\\>b> on top.")
+        #expect(Recipe.read("Spread the >a\\>b> on top.").serialized() == "Spread the >a\\>b> on top.")
     }
 
     @Test
     func escapesProseThatWouldOpenAFlagAfterAReference() {
         // A flag chain reads on from the closing sigil, so prose needing a literal flag
         // character there escapes it, exactly as it does after an ingredient.
-        #expect(recipe("Is the >sauce>\\? Yes.").serialized() == "Is the >sauce>\\? Yes.")
+        #expect(Recipe.read("Is the >sauce>\\? Yes.").serialized() == "Is the >sauce>\\? Yes.")
     }
 
     @Test
     func escapesProseThatWouldOpenAReference() {
-        #expect(recipe("Reduce by \\>half.").serialized() == "Reduce by \\>half.")
+        #expect(Recipe.read("Reduce by \\>half.").serialized() == "Reduce by \\>half.")
     }
 }

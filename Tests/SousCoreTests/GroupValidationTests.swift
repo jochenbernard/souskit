@@ -1,9 +1,10 @@
 import SousCore
 import Testing
 
-// Version 0.4 brings the three conditional requirements groups and references carry: a name
-// two headings share leaves a reference to it unable to resolve, a reference matching no group
-// consumes nothing, and groups consuming each other in a loop can none of them be made first.
+// Version 0.4 brings the three conditional requirements groups and references carry: a name two
+// headings share leaves a reference to it reaching only the first of them, a reference matching
+// no group consumes nothing, and groups consuming each other in a loop can none of them be made
+// first.
 //
 // Each leaves the file well-formed but not valid, so each is an error rather than a warning.
 // Validation reads a recipe, which holds no source map, so no diagnostic carries a range, and
@@ -76,7 +77,10 @@ struct GroupValidationTests {
         "## B\u{E9}chamel\nWhisk it.\n\n## Assemble\nLayer the >bechamel> in a dish.",
         "## Sauce\nBrown it.\n\n## Assemble\nLayer the >the sauce> in a dish.",
         // The default group may consume a named one.
-        "Layer the >sauce> in a dish.\n\n## Sauce\nBrown it."
+        "Layer the >sauce> in a dish.\n\n## Sauce\nBrown it.",
+        // A path separator is ordinary text in a name, so a target holding one matches the
+        // group holding one. From v0.5 such a target names a file instead.
+        "## sauces/red\nBrown it.\n\n## Assemble\nLayer the >sauces/red> in a dish."
     ])
     func acceptsAReferenceThatMatchesAGroup(source: String) {
         #expect(validate(source).isEmpty)
@@ -222,12 +226,33 @@ struct GroupValidationTests {
         ])
     }
 
-    // Which groups a loop runs through is easy to state and easy to get subtly wrong, so every
+    // Groups that reach each other are one problem however many loops run through them, so two
+    // loops sharing a group are one report.
+
+    @Test
+    func reportsTwoLoopsSharingAGroupOnce() {
+        let source = """
+        ## Sauce
+        Stir in the >topping> and the >base>.
+
+        ## Topping
+        Stir in the >sauce>.
+
+        ## Base
+        Stir in the >sauce>.
+        """
+
+        #expect(validate(source).map(\.message) == [
+            "Group 'Sauce' consumes an intermediate that depends on it."
+        ])
+    }
+
+    // Which groups a set runs through is easy to state and easy to get subtly wrong, so every
     // graph three groups can form is checked against a walk of the edges written separately
     // from the one validation does.
 
     @Test
-    func reportsTheSameLoopsAsAnIndependentWalkOfTheEdges() {
+    func reportsTheSameSetsAsAnIndependentWalkOfTheEdges() {
         var failures: [String] = []
 
         for encoded in 0..<512 {
@@ -252,8 +277,8 @@ struct GroupValidationTests {
         #expect(report.isEmpty)
     }
 
-    /// The first group of each loop the edges form, in document order, which is the group each
-    /// diagnostic is reported under.
+    /// The first group of each mutually-consuming set the edges form, in document order, which
+    /// is the group each diagnostic is reported under.
     private static func loops(in edges: [[Int]]) -> [Int] {
         let reaches = edges.indices.map({ reached(from: $0, edges: edges) })
         var loops: [Int] = []

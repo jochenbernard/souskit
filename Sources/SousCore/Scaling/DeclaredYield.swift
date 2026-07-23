@@ -21,7 +21,7 @@ struct DeclaredYield {
 
 extension Metadata {
     /// Every yield the header declares that states a quantity, in document order, which is the
-    /// order ``repeatedYields()`` reports a dimension in.
+    /// order ``repeatedYields()`` reports a unit in.
     ///
     /// The `servings` value is read as the portion yield it is an alias for, and stands where
     /// the entry it is read from stands: a repeated scalar key is read from its last

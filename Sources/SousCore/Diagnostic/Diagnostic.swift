@@ -42,13 +42,14 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
         /// A group heading stated a name a heading of the same file already stated.
         ///
         /// Names are matched normalized, so two headings collide while they normalize to one
-        /// name, which leaves a reference to that name unable to resolve to one of them.
+        /// name, which leaves a reference to that name reaching only the first of them.
         case repeatedGroupName
 
         /// A reference named no group of the same file, so there is nothing for it to consume.
         case unresolvedReference
 
-        /// Groups consume each other's intermediates in a loop, so none of them can be made first.
+        /// Groups consume each other's intermediates in a loop, a group consuming its own
+        /// included, so none of them can be made first.
         case referenceCycle
     }
 

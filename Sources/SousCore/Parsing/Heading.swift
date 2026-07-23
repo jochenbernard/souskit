@@ -8,18 +8,31 @@ enum Heading {
     /// from the name and belongs to neither.
     static let marker = "## "
 
+    /// Whether the line opens a group.
+    ///
+    /// A heading is the marker and a name, so a line stating no name after the marker, and a
+    /// line the marker does not open, are ordinary body text.
+    ///
+    /// A reader holds the whole line and asks with nothing continuing it. A writer is composing
+    /// one and knows what it is about to write next, so content ending at the bare marker opens
+    /// a heading exactly when something follows it on that line to name.
+    ///
+    /// - Parameters:
+    ///   - line: The line, or the part of it written so far.
+    ///   - continuedByContent: Whether more is written on the same line after it.
+    /// - Returns: Whether a reader takes the line for a heading.
+    static func opens(_ line: some Collection<Character>, continuedByContent: Bool) -> Bool {
+        line.starts(with: marker) && (continuedByContent || line.count > marker.count)
+    }
+
     /// The name the line opens a group with, or `nil` when the line is not a heading.
     ///
-    /// A heading is the marker and a name, so a line stating no name after it, and a line the
-    /// marker does not open, are ordinary body text. The name is what follows the marker, with
-    /// each escape resolved and nothing stripped, so a second space begins the name.
+    /// The name is what follows the marker, with each escape resolved and nothing stripped, so
+    /// a second space begins the name.
     static func name(of line: some Collection<Character>) -> String? {
-        guard line.starts(with: marker) else { return nil }
+        guard opens(line, continuedByContent: false) else { return nil }
 
-        let name = line.dropFirst(marker.count)
-        guard !name.isEmpty else { return nil }
-
-        return SourceText.unescaped(name, escaping: SourceText.isEscapable)
+        return SourceText.unescaped(line.dropFirst(marker.count), escaping: SourceText.isEscapable)
     }
 
     /// The line a group with the given name is written as.

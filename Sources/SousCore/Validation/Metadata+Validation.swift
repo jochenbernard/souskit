@@ -7,18 +7,8 @@ extension Metadata {
     /// dimension, so ``declaredYields`` leaves it out and it restates nothing. A repeated
     /// `servings` key is the reader's report rather than this one: only its last value is read.
     func repeatedYields() -> [Diagnostic] {
-        let declared = declaredYields
-        var stated: [String: Int] = [:]
-        var reported: Set<String> = []
-
-        for yield in declared { stated[yield.unit, default: 0] += 1 }
-        let repeated = Set(stated.filter({ $0.value > 1 }).keys)
-
-        return declared.compactMap({ yield in
-            guard repeated.contains(yield.unit), reported.insert(yield.unit).inserted else { return nil }
-
-            return .warning(.repeatedYield, Self.repeatedMessage(in: yield.unit), at: nil)
-        })
+        Repetition.firstOfEachRepeated(in: declaredYields, by: { $0.unit })
+            .map({ .warning(.repeatedYield, Self.repeatedMessage(in: $0.unit), at: nil) })
     }
 
     private static func repeatedMessage(in unit: String) -> String {
