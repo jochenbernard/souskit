@@ -7,13 +7,13 @@
 extension Step {
     /// The step as source text: its segments written in order, each escaped so the step
     /// re-reads as itself.
-    var rendered: String {
-        Self.rendered(segments)
+    func serialized() -> String {
+        Self.serialized(segments)
     }
 
     /// Segments render on their own, so a step can be built already stating the text it now
     /// holds rather than being given a placeholder and corrected.
-    static func rendered(_ segments: [Segment]) -> String {
+    static func serialized(_ segments: [Segment]) -> String {
         var result = ""
 
         for index in segments.indices {

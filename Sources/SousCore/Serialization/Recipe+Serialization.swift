@@ -9,10 +9,10 @@ extension Recipe {
         var blocks: [String] = []
 
         if !metadata.entries.isEmpty {
-            blocks.append(metadata.rendered)
+            blocks.append(metadata.serialized())
         }
 
-        let body = groups.map(\.rendered).filter({ !$0.isEmpty })
+        let body = groups.map({ $0.serialized() }).filter({ !$0.isEmpty })
         if !body.isEmpty {
             blocks.append(body.joined(separator: "\n\n"))
         }

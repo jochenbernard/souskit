@@ -5,7 +5,7 @@
 extension Metadata {
     /// The header as source text: its entries between an opening and a closing fence, one to
     /// a line.
-    var rendered: String {
+    func serialized() -> String {
         var lines = [SourceText.fence]
 
         for entry in entries {

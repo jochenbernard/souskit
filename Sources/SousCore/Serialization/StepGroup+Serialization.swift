@@ -4,8 +4,8 @@ extension StepGroup {
     /// A heading ends the paragraph before it, so the first step needs no blank line between
     /// it and the heading, while the steps after it are separated by one like every other
     /// block. The default group states no heading, so one holding no step states nothing.
-    var rendered: String {
-        let body = steps.map(\.rendered).joined(separator: "\n\n")
+    func serialized() -> String {
+        let body = steps.map({ $0.serialized() }).joined(separator: "\n\n")
         guard let name else { return body }
 
         let heading = Heading.line(naming: name)

@@ -15,7 +15,7 @@ extension Step {
 
         guard scaled != segments else { return nil }
 
-        return Step(segments: scaled, text: Self.rendered(scaled))
+        return Step(segments: scaled, text: Self.serialized(scaled))
     }
 
     /// The segment with the amount it states multiplied, or the segment itself when it states
