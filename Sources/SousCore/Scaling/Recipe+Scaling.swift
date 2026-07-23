@@ -19,7 +19,7 @@ extension Recipe {
 
         return Recipe(
             metadata: try metadata.scaled(by: factor),
-            steps: try steps.map({ try $0.scaled(by: factor) ?? $0 })
+            groups: try groups.map({ try $0.scaled(by: factor) })
         )
     }
 

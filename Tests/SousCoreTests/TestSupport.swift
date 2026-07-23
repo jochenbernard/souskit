@@ -40,6 +40,12 @@ extension SousParser {
 }
 
 extension Recipe {
+    /// The recipe a source reads as, which is what a test stating a source and no expectation
+    /// about diagnostics is asking for.
+    static func read(_ source: String) -> Recipe {
+        SousParser().parseRecipe(source).value
+    }
+
     /// The amount of the first ingredient annotated anywhere in the recipe, which is the one
     /// a test naming a single amount is asking about.
     var firstAmount: Amount? {
@@ -67,6 +73,14 @@ extension Segment {
     var cookwareValue: Cookware? {
         if case let .cookware(cookware) = self {
             cookware
+        } else {
+            nil
+        }
+    }
+
+    var referenceValue: Reference? {
+        if case let .reference(reference) = self {
+            reference
         } else {
             nil
         }

@@ -4,6 +4,6 @@ public struct Cookware: Equatable, Hashable, Sendable {
     ///
     /// Writing wraps the name in its sigils, so a name that is empty, that opens with
     /// whitespace, or that holds a blank line writes text a reader takes for prose rather than
-    /// for cookware. Reading produces no such name.
+    /// for cookware, and reading produces none of them.
     public var name: String
 }

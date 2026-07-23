@@ -12,8 +12,9 @@ extension Recipe {
             blocks.append(Self.rendered(metadata))
         }
 
-        if !steps.isEmpty {
-            blocks.append(steps.map(\.rendered).joined(separator: "\n\n"))
+        let body = groups.map(\.rendered).filter({ !$0.isEmpty })
+        if !body.isEmpty {
+            blocks.append(body.joined(separator: "\n\n"))
         }
 
         let text = blocks.joined(separator: "\n\n")

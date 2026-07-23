@@ -9,6 +9,7 @@ extension Segment {
         case .ingredient: .ingredient
         case .cookware: .cookware
         case .timer: .timer
+        case .reference: .reference
         }
     }
 }

@@ -33,7 +33,8 @@ struct ReadingRulesTests {
         "Add a \\@ symbol here.",
         "Use a \\# symbol here.",
         "Write a \\{ brace here.",
-        "Wait \\~40 min and check."
+        "Wait \\~40 min and check.",
+        "Reduce by \\>half."
     ])
     func doesNotOpenASpanForAnEscapedSigil(source: String) throws {
         let parsed = SousParser().parseRecipe(source)
@@ -42,6 +43,7 @@ struct ReadingRulesTests {
         #expect(step.ingredients.isEmpty)
         #expect(step.cookware.isEmpty)
         #expect(step.timers.isEmpty)
+        #expect(step.references.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
 
@@ -107,7 +109,8 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
-        // "## Name" is a v0.4 group heading, so a v0.2 reader leaves it as ordinary text.
+        // A line-initial "## " opens a group heading, which is a line-level construct rather
+        // than an inline annotation, so no cookware is read from it.
         let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
 
         let step = try #require(parsed.value.steps.first)
@@ -127,12 +130,12 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // Forward compatibility: constructs from later versions are not understood by a v0.2
-    // reader, so they stay ordinary text and survive unchanged.
+    // Forward compatibility: a construct a later version introduces is not understood here, so
+    // it stays ordinary text and survives unchanged. Nothing this version leaves unread carries
+    // a sigil of its own, so what remains is the block header form a later version adds.
     @Test(arguments: [
-        "Spread the >sauce> on top.",
-        "Layer the >{300 g} bolognese> in a dish.",
-        "Serve with >chili-oil>? on the side."
+        "---\nnutrition:\n  calories: 3840 kcal\n---",
+        "---\ntags:\n  - italian\n---"
     ])
     func preservesConstructsFromLaterVersions(source: String) {
         #expect(SousParser().parseRecipe(source).value.serialized() == source)
@@ -244,6 +247,7 @@ struct ReadingRulesTests {
         (source: "Use \\{ here.", prose: "Use { here."),
         (source: "Use \\: here.", prose: "Use : here."),
         (source: "Use \\? here.", prose: "Use ? here."),
+        (source: "Use \\> here.", prose: "Use > here."),
         (source: "Use \\\\ here.", prose: "Use \\ here.")
     ])
     func unescapesAnEscapedCharacterInProse(source: String, prose: String) throws {
@@ -254,27 +258,41 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // A reader resolves an escape only for the characters it gives a meaning to. A backslash
-    // before a sigil a later version introduces is ordinary text and is kept, so the escape
-    // survives for the reader that does give that sigil a meaning.
+    // A reader resolves an escape only for the characters it gives a meaning to. This version
+    // reads the reference sigil, so it resolves the escape before one, and the writer puts that
+    // escape back wherever the sigil would otherwise open a span.
 
     @Test
-    func keepsAnEscapeForASigilALaterVersionIntroduces() throws {
+    func resolvesAnEscapedReferenceSigilInProse() throws {
         let parsed = SousParser().parseRecipe("Reduce by \\>half.")
 
         let step = try #require(parsed.value.steps.first)
-        #expect(step.segments.first?.proseText == "Reduce by \\>half.")
+        #expect(step.segments.first?.proseText == "Reduce by >half.")
+        #expect(step.references.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test(arguments: [
         "Heat to \\>200C, then cool to \\>50C before adding @salt@.",
-        "Spread the \\>sauce\\> on top.",
         "Layer the \\>{300 g} bolognese\\> in a dish.",
         "Reduce by \\>half."
     ])
-    func writesAnEscapeForALaterSigilBackUnchanged(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+    func writesAProseReferenceSigilBackEscaped(source: String) {
+        let recipe = SousParser().parseRecipe(source).value
+        let written = recipe.serialized()
+        let reRead = SousParser().parseRecipe(written)
+
+        #expect(reRead.value.steps.map(\.segments) == recipe.steps.map(\.segments))
+        #expect(reRead.diagnostics.isEmpty)
+    }
+
+    @Test
+    func dropsAnEscapeTheProseDoesNotNeed() {
+        // A sigil no non-whitespace character follows opens no span, so it needs no escape,
+        // and a writer may drop one the text does not need.
+        let written = SousParser().parseRecipe("Spread the \\>sauce\\> on top.").value.serialized()
+
+        #expect(written == "Spread the \\>sauce> on top.")
     }
 
     @Test

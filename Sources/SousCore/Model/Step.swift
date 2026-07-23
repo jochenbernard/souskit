@@ -25,4 +25,9 @@ public struct Step: Equatable, Hashable, Sendable {
     public var timers: [Timer] {
         segments.compactMap({ if case let .timer(timer) = $0 { timer } else { nil } })
     }
+
+    /// The references annotated in the step, in document order.
+    public var references: [Reference] {
+        segments.compactMap({ if case let .reference(reference) = $0 { reference } else { nil } })
+    }
 }

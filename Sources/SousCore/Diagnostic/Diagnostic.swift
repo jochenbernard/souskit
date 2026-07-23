@@ -2,8 +2,7 @@
 public struct Diagnostic: Equatable, Hashable, Sendable {
     /// How serious a diagnostic is.
     public enum Severity: Equatable, Hashable, Sendable {
-        /// The problem leaves the file well-formed but not valid. No rule this version has
-        /// reports one, so every diagnostic it produces is a warning.
+        /// The problem leaves the file well-formed but not valid.
         case error
 
         /// The problem leaves the file usable, with the flagged construct preserved.
@@ -39,6 +38,19 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
         /// The values need not disagree: a unit states how much the recipe makes, so stating
         /// one more than once is the report whatever the two values are.
         case repeatedYield
+
+        /// A group heading stated a name a heading of the same file already stated.
+        ///
+        /// Names are matched normalized, so two headings collide while they normalize to one
+        /// name, which leaves a reference to that name reaching only the first of them.
+        case repeatedGroupName
+
+        /// A reference named no group of the same file, so there is nothing for it to consume.
+        case unresolvedReference
+
+        /// Groups consume each other's intermediates in a loop, a group consuming its own
+        /// included, so none of them can be made first.
+        case referenceCycle
     }
 
     /// The diagnostic's severity.

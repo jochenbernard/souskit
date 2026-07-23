@@ -31,12 +31,46 @@ struct StepProjectionTests {
     }
 
     @Test
+    func derivesTheReferencesFromTheSegments() {
+        var step = SousParser().parseRecipe("Layer the >sauce> and the >topping>.").value.steps[0]
+        step.segments = Array(step.segments.dropLast(2))
+
+        #expect(step.references.map(\.target) == ["sauce"])
+    }
+
+    @Test
     func derivesARecipeWideListFromTheSegments() {
         var recipe = SousParser().parseRecipe("Fry @garlic@ in a #pan#.\n\nAdd @salt@.").value
-        recipe.steps[0].segments = []
+        recipe.groups[0].steps[0].segments = []
 
         #expect(recipe.ingredients.map(\.name) == ["salt"])
         #expect(recipe.cookware.isEmpty)
+    }
+
+    // A run of prose is one segment when a step is read, so only a mutation puts two of them
+    // side by side. The writer asks each what annotation it stands for, and a run of prose
+    // stands for none, so the two write as the one run they spell.
+
+    @Test
+    func writesTwoAdjacentProseSegmentsAsOneRun() {
+        var recipe = SousParser().parseRecipe("Add @salt@.").value
+        recipe.groups[0].steps[0].segments = [.text("Season it"), .text("? Yes.")]
+
+        #expect(recipe.serialized() == "Season it? Yes.")
+        #expect(SousParser().parseRecipe(recipe.serialized()).value.steps.map(\.text) == ["Season it? Yes."])
+    }
+
+    // The step list is a view over the groups, and each group's lists are views over its own
+    // steps, so editing a group's steps moves both.
+
+    @Test
+    func derivesTheStepsAndTheGroupListsFromTheGroups() {
+        var recipe = SousParser().parseRecipe("## Sauce\nFry @garlic@.\n\n## Top\nAdd @salt@.").value
+        recipe.groups[0].steps = []
+
+        #expect(recipe.steps.map(\.text) == ["Add @salt@."])
+        #expect(recipe.groups[0].ingredients.isEmpty)
+        #expect(recipe.ingredients.map(\.name) == ["salt"])
     }
 
     @Test

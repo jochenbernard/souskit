@@ -21,7 +21,11 @@ struct ExhaustiveRoundTripTests {
         if reRead.value.metadata != recipe.metadata {
             return "\(source.debugDescription) wrote \(written.debugDescription), losing header entries"
         }
-        if reRead.value.steps.map(\.segments) != recipe.steps.map(\.segments) {
+        if reRead.value.groups.map(\.name) != recipe.groups.map(\.name) {
+            return "\(source.debugDescription) wrote \(written.debugDescription), losing groups"
+        }
+        if reRead.value.groups.map({ $0.steps.map(\.segments) })
+            != recipe.groups.map({ $0.steps.map(\.segments) }) {
             return "\(source.debugDescription) wrote \(written.debugDescription), losing step segments"
         }
         if reRead.diagnostics.contains(where: { $0.kind == .unclosedSpan }) {
@@ -109,6 +113,44 @@ struct ExhaustiveRoundTripTests {
     }
 
     @Test
+    func everyReferenceContent() {
+        expectRoundTrips([">", "{", "}", "\\", "a", " "], upTo: 4, prefix: "Spread the >", suffix: "> now.")
+    }
+
+    // A heading is a line-level construct, so what decides it is the shape of the whole line:
+    // the two hashes, the one space after them, and whether a name follows.
+
+    @Test(arguments: [
+        ["#", " ", "\n", "\\", ">"],
+        ["## a", "\n", "a", " ", "#"]
+    ])
+    func everyHeadingLine(alphabet: [String]) {
+        expectRoundTrips(alphabet, upTo: 4)
+    }
+
+    // A heading needs five characters to be written out of content, an escaped one included, so
+    // this is the shortest sweep that reaches content a reader would take for a heading.
+
+    @Test(arguments: ["", "Add @", "Use a #", "Wait ~", "Spread the >"])
+    func everyContentThatCouldOpenAHeading(prefix: String) {
+        expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, prefix: prefix)
+    }
+
+    // The line a run of content sits on is not the run. What follows the run continues its
+    // last line and can name a heading the run only opens, and what precedes it is already on
+    // that line, so both sides of a run have to be swept as well as the run itself.
+
+    @Test(arguments: ["@a@", "#p#", ">a>", "~4 h~"])
+    func everyContentThatCouldOpenAHeadingBeforeAnAnnotation(suffix: String) {
+        expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, suffix: suffix)
+    }
+
+    @Test
+    func everyContentThatCouldOpenAHeadingAfterASpanEndingALine() {
+        expectRoundTrips(["#", " ", "\\", "a", "\n"], upTo: 5, prefix: "Use a #x\n")
+    }
+
+    @Test
     func everyTimerContent() {
         expectRoundTrips(["~", "\\", "4", "-", " ", "h"], upTo: 4, prefix: "Wait ~", suffix: "~ now.")
     }
@@ -165,7 +207,8 @@ struct ExhaustiveRoundTripTests {
     func everyFileOverWholeConstructs() {
         let constructs = [
             "@{2 g} a@", "#p#", "\\@", "\n\n", "\n", "---\n", "@a@", "tags: [a, b]\n",
-            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@"
+            "~4 h~", "@a@?", "@a@:staple", "@{=2 g} a@", ">a>", ">{2 g} a>", ">a>?", "## a",
+            "\\## ", "## "
         ]
 
         expectRoundTrips(constructs, upTo: 3)

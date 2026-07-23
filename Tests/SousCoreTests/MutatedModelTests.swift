@@ -8,11 +8,6 @@ import Testing
 
 @Suite("Mutated models")
 struct MutatedModelTests {
-    /// The one-annotation recipe each case mutates, whose middle segment is the annotation.
-    private func recipe(_ source: String) -> Recipe {
-        SousParser().parseRecipe(source).value
-    }
-
     private func reRead(_ recipe: Recipe) -> Recipe {
         SousParser().parseRecipe(recipe.serialized()).value
     }
@@ -22,44 +17,77 @@ struct MutatedModelTests {
 
     @Test(arguments: ["", " salt", "\tsalt", "a\n\nb"])
     func writesAnIngredientNameThatNoLongerReadsBackAsOne(name: String) throws {
-        var value = recipe("Add @salt@ now.")
+        var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.name = name
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(reRead(value).ingredients.isEmpty)
     }
 
     @Test(arguments: ["", " pan", "\tpan", "a\n\nb"])
     func writesACookwareNameThatNoLongerReadsBackAsOne(name: String) throws {
-        var value = recipe("Use a #pan# now.")
+        var value = Recipe.read("Use a #pan# now.")
         var cookware = try #require(value.cookware.first)
         cookware.name = name
-        value.steps[0].segments[1] = .cookware(cookware)
+        value.groups[0].steps[0].segments[1] = .cookware(cookware)
 
         #expect(reRead(value).cookware.isEmpty)
     }
 
     @Test(arguments: ["", " 40 min", "\t40 min", "a\n\nb"])
     func writesATimerTextThatNoLongerReadsBackAsOne(text: String) throws {
-        var value = recipe("Wait ~40 min~ now.")
+        var value = Recipe.read("Wait ~40 min~ now.")
         var timer = try #require(value.timers.first)
         timer.text = text
-        value.steps[0].segments[1] = .timer(timer)
+        value.groups[0].steps[0].segments[1] = .timer(timer)
 
         #expect(reRead(value).timers.isEmpty)
+    }
+
+    @Test(arguments: ["", " sauce", "\tsauce", "a\n\nb"])
+    func writesAReferenceTargetThatNoLongerReadsBackAsOne(target: String) throws {
+        var value = Recipe.read("Layer the >sauce> in a dish.")
+        var reference = try #require(value.references.first)
+        reference.target = target
+        value.groups[0].steps[0].segments[1] = .reference(reference)
+
+        #expect(reRead(value).references.isEmpty)
+    }
+
+    // A fence stands between the opening sigil and the target, so it is the one place a target
+    // opening with whitespace still reads back as one.
+
+    @Test
+    func writesAWhitespaceLeadingTargetBackWhenAFencePrecedesIt() throws {
+        var value = Recipe.read("Layer the >{2 g} sauce> in a dish.")
+        var reference = try #require(value.references.first)
+        reference.target = " sauce"
+        value.groups[0].steps[0].segments[1] = .reference(reference)
+
+        #expect(reRead(value).references.map(\.target) == [" sauce"])
     }
 
     // The values that stay an annotation, which is what makes the list above a real boundary
     // rather than a blanket warning: only leading whitespace, emptiness, and a blank line cost
     // the annotation its sigils.
 
+    @Test(arguments: ["sauce ", "sa uce", "a\nb", "sauces/red"])
+    func writesAReferenceTargetThatStillReadsBack(target: String) throws {
+        var value = Recipe.read("Layer the >sauce> in a dish.")
+        var reference = try #require(value.references.first)
+        reference.target = target
+        value.groups[0].steps[0].segments[1] = .reference(reference)
+
+        #expect(reRead(value).references.map(\.target) == [target])
+    }
+
     @Test(arguments: ["salt ", "sa lt", "a\nb"])
     func writesAnIngredientNameThatStillReadsBack(name: String) throws {
-        var value = recipe("Add @salt@ now.")
+        var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.name = name
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(reRead(value).ingredients.map(\.name) == [name])
     }
@@ -69,10 +97,10 @@ struct MutatedModelTests {
 
     @Test
     func writesAnAmountTextHoldingAClosingBraceThatEndsTheFenceEarly() throws {
-        var value = recipe("Add @{200 g} salt@ now.")
+        var value = Recipe.read("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.amount?.text = "a}b"
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         let written = try #require(reRead(value).ingredients.first)
         #expect(written.amount?.text == "a")
@@ -81,24 +109,65 @@ struct MutatedModelTests {
 
     @Test
     func writesAnAmountTextHoldingABlankLineThatEndsTheParagraph() throws {
-        var value = recipe("Add @{200 g} salt@ now.")
+        var value = Recipe.read("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.amount?.text = "a\n\nb"
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(reRead(value).ingredients.isEmpty)
     }
 
     @Test
     func writesAnEmptyAmountTextAsAnAmountStill() throws {
-        var value = recipe("Add @{200 g} salt@ now.")
+        var value = Recipe.read("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
         ingredient.amount?.text = ""
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         let written = try #require(reRead(value).ingredients.first)
         #expect(written.amount?.text.isEmpty == true)
         #expect(written.name == "salt")
+    }
+
+    // A group's name is written after the "##" and the one space of a heading line, so it stops
+    // opening a group when nothing bounds it: an empty name leaves the line naming nothing, and
+    // a line break ends the heading and leaves the rest to be read as the body after it.
+    // Reading produces neither, so what each one writes back is stated rather than only denied.
+
+    @Test(arguments: [
+        (name: "", groups: [nil], steps: ["## \nBrown the beef."]),
+        (name: "Sauce\nMore", groups: ["Sauce"], steps: ["More\nBrown the beef."]),
+        // A break before a second marker ends the heading and opens another group.
+        (name: "Sauce\n## Other", groups: ["Sauce", "Other"], steps: ["Brown the beef."])
+    ])
+    func writesAGroupNameThatNoLongerReadsBackAsOne(name: String, groups: [String?], steps: [String]) {
+        var value = Recipe.read("## Sauce\nBrown the beef.")
+        value.groups[0].name = name
+
+        let written = reRead(value)
+        #expect(written.groups.map(\.name) == groups)
+        #expect(written.steps.map(\.text) == steps)
+    }
+
+    // Whitespace around a name costs it nothing, because the one space after the "##" belongs
+    // to neither side and a second begins the name.
+
+    @Test(arguments: [" Sauce", "\tSauce", "Sauce ", " ", "Rich Sauce", "sauces/red", "@salt@"])
+    func writesAGroupNameThatStillReadsBack(name: String) {
+        var value = Recipe.read("## Sauce\nBrown the beef.")
+        value.groups[0].name = name
+
+        #expect(reRead(value).groups.map(\.name) == [name])
+    }
+
+    // An unnamed group states no heading, so one holding no step states nothing at all.
+
+    @Test
+    func writesAnEmptyDefaultGroupAsNothing() {
+        var value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown the beef.")
+        value.groups[0].steps = []
+
+        #expect(value.serialized() == "## Sauce\nBrown the beef.")
     }
 
     // A quantity is a leading run of digits, so a negative value writes text that is not one.
@@ -107,7 +176,7 @@ struct MutatedModelTests {
 
     @Test
     func refusesToScaleAQuantityMutatedToANegativeValue() throws {
-        var value = recipe("Add @{200 g} flour@.")
+        var value = Recipe.read("Add @{200 g} flour@.")
         var ingredient = try #require(value.ingredients.first)
         var amount = try #require(ingredient.amount)
         var quantity = try #require(amount.kind.preciseQuantity)
@@ -115,7 +184,7 @@ struct MutatedModelTests {
         quantity.value = -200
         amount.kind = .precise(quantity)
         ingredient.amount = amount
-        value.steps[0].segments[1] = .ingredient(ingredient)
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try value.scaled(by: 2.0)

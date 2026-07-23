@@ -1,4 +1,4 @@
-// The inline annotations version 0.2 reads, and the sigil rules that govern them.
+// The inline annotations version 0.4 reads, and the sigil rules that govern them.
 //
 // Reading and writing share this one table, so the sigil a writer wraps a span in is the
 // sigil a reader opens it on, and a sigil a later version activates is added once.
@@ -7,6 +7,7 @@ enum Annotation: Character, CaseIterable {
     case ingredient = "@"
     case cookware = "#"
     case timer = "~"
+    case reference = ">"
 
     /// The sigil that opens and closes the span.
     var sigil: Character { rawValue }
@@ -17,13 +18,14 @@ enum Annotation: Character, CaseIterable {
         case .ingredient: "Ingredient"
         case .cookware: "Cookware"
         case .timer: "Timer"
+        case .reference: "Reference"
         }
     }
 
     /// Whether the span may open with an `{...}` amount fence.
     var allowsAmount: Bool {
         switch self {
-        case .ingredient: true
+        case .ingredient, .reference: true
         case .cookware, .timer: false
         }
     }
@@ -31,7 +33,7 @@ enum Annotation: Character, CaseIterable {
     /// Whether a chain of flags may follow the span's closing sigil.
     var allowsFlags: Bool {
         switch self {
-        case .ingredient: true
+        case .ingredient, .reference: true
         case .cookware, .timer: false
         }
     }
