@@ -13,21 +13,21 @@ public struct Step: Equatable, Hashable, Sendable {
 
     /// The ingredients annotated in the step, in document order.
     public var ingredients: [Ingredient] {
-        segments.compactMap({ if case let .ingredient(ingredient) = $0 { ingredient } else { nil } })
+        segments.compactMap(\.ingredient)
     }
 
     /// The cookware annotated in the step, in document order.
     public var cookware: [Cookware] {
-        segments.compactMap({ if case let .cookware(cookware) = $0 { cookware } else { nil } })
+        segments.compactMap(\.cookware)
     }
 
     /// The timers annotated in the step, in document order.
     public var timers: [Timer] {
-        segments.compactMap({ if case let .timer(timer) = $0 { timer } else { nil } })
+        segments.compactMap(\.timer)
     }
 
     /// The references annotated in the step, in document order.
     public var references: [Reference] {
-        segments.compactMap({ if case let .reference(reference) = $0 { reference } else { nil } })
+        segments.compactMap(\.reference)
     }
 }

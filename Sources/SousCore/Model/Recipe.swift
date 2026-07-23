@@ -18,21 +18,21 @@ public struct Recipe: Equatable, Hashable, Sendable {
 
     /// The ingredients annotated across every step, in document order.
     public var ingredients: [Ingredient] {
-        steps.flatMap(\.ingredients)
+        steps.ingredients
     }
 
     /// The cookware annotated across every step, in document order.
     public var cookware: [Cookware] {
-        steps.flatMap(\.cookware)
+        steps.cookware
     }
 
     /// The timers annotated across every step, in document order.
     public var timers: [Timer] {
-        steps.flatMap(\.timers)
+        steps.timers
     }
 
     /// The references annotated across every step, in document order.
     public var references: [Reference] {
-        steps.flatMap(\.references)
+        steps.references
     }
 }
