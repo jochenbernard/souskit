@@ -1,3 +1,5 @@
+// swiftlint:disable:this file_name
+
 // The annotations rolled up across a run of steps, read the same way wherever a body is
 // grouped: a recipe reads them across all of its steps, and a group reads them across its own.
 

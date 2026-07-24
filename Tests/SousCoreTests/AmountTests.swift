@@ -92,22 +92,17 @@ struct AmountTests {
         #expect(amount.unit == nil)
     }
 
-    @Test
-    func doesNotDivideByAZeroDenominator() throws {
-        let amount = try #require(Recipe.read("Add @{1/0 cup} flour@.").firstAmount)
+    @Test(arguments: [
+        (fence: "1/0 cup", unit: "/0 cup"),
+        (fence: "1 1/0 cup", unit: "1/0 cup"),
+        (fence: "1/0.0 cup", unit: "/0.0 cup")
+    ])
+    func doesNotDivideByAZeroDenominator(fence: String, unit: String) throws {
+        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
         #expect(quantity.value == 1.0)
         #expect(quantity.text == "1")
-        #expect(amount.unit == "/0 cup")
-    }
-
-    @Test
-    func doesNotDivideByAZeroDenominatorInAMixedNumber() throws {
-        let amount = try #require(Recipe.read("Add @{1 1/0 cup} flour@.").firstAmount)
-        let quantity = try #require(amount.kind.preciseQuantity)
-        #expect(quantity.value == 1.0)
-        #expect(quantity.text == "1")
-        #expect(amount.unit == "1/0 cup")
+        #expect(amount.unit == unit)
     }
 
     @Test
@@ -126,15 +121,6 @@ struct AmountTests {
         #expect(quantity.value == 0.4)
         #expect(quantity.text == "1/2.5")
         #expect(amount.unit == "cups")
-    }
-
-    @Test
-    func doesNotDivideByADenominatorThatIsADecimalZero() throws {
-        let amount = try #require(Recipe.read("Add @{1/0.0 cup} flour@.").firstAmount)
-        let quantity = try #require(amount.kind.preciseQuantity)
-        #expect(quantity.value == 1.0)
-        #expect(quantity.text == "1")
-        #expect(amount.unit == "/0.0 cup")
     }
 
     @Test

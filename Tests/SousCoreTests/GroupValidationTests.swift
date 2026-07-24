@@ -273,8 +273,7 @@ struct GroupValidationTests {
             }
         }
 
-        let report = failures.isEmpty ? "" : "\(failures.count) failures, the first being that \(failures[0])"
-        #expect(report.isEmpty)
+        TestSupport.expectNoFailures(failures)
     }
 
     /// The first group of each mutually-consuming set the edges form, in document order, which

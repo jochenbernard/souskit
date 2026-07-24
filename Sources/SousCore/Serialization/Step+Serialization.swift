@@ -92,17 +92,14 @@ extension Step {
     /// a named flag written directly before prose that starts with one would read back as a
     /// single unrecognized flag. The shorthand is one character and cannot be run into.
     private static func renderedFlags(_ flags: Flags) -> String {
-        var result = ""
+        let named = Flag.allCases
+            .filter({ $0 != .shorthanded && flags[keyPath: $0.property] })
+            .map({ Flag.written($0.rawValue) })
+            .joined()
+        let unrecognized = flags.unrecognized.map(Flag.written).joined()
+        let shorthand = flags[keyPath: Flag.shorthanded.property] ? String(Flag.shorthand) : ""
 
-        for flag in Flag.allCases where flag != .shorthanded && flags[keyPath: flag.property] {
-            result += Flag.written(flag.rawValue)
-        }
-        for word in flags.unrecognized {
-            result += Flag.written(word)
-        }
-        if flags[keyPath: Flag.shorthanded.property] { result.append(Flag.shorthand) }
-
-        return result
+        return named + unrecognized + shorthand
     }
 
     /// Escapes each occurrence of the span's own closing sigil in a name, a backslash that

@@ -28,17 +28,15 @@ enum StepParser {
         private var searchedTo = 0
 
         mutating func closingBrace(in characters: [Character], from start: Int) -> Int? {
-            var cursor = start
-
+            let from: Int
             if start >= searchedFrom, start <= searchedTo {
-                cursor = searchedTo
+                from = searchedTo
             } else {
+                from = start
                 searchedFrom = start
             }
 
-            while cursor < characters.count, characters[cursor] != AmountFence.closing {
-                cursor += 1
-            }
+            let cursor = SourceText.run(in: characters, from: from, while: { $0 != AmountFence.closing })
             searchedTo = cursor
 
             return cursor < characters.count ? cursor : nil
@@ -71,7 +69,7 @@ enum StepParser {
 
             // A backslash produces the literal character, so the escape is resolved and the
             // backslash dropped. Serialization escapes the character again where needed.
-            if opensEscape(characters, at: cursor, end: characters.count) {
+            if opensEscape(characters, at: cursor) {
                 prose.append(characters[cursor + 1])
                 cursor += 2
                 continue
@@ -135,11 +133,11 @@ enum StepParser {
         Annotation.opensSpan(before: SourceText.character(in: characters, at: index + 1))
     }
 
-    /// Whether an escape begins at the given index, within the given end. A trailing
-    /// backslash escapes nothing, so it is ordinary text.
-    private static func opensEscape(_ characters: [Character], at index: Int, end: Int) -> Bool {
+    /// Whether an escape begins at the given index. A trailing backslash escapes nothing, so it
+    /// is ordinary text.
+    private static func opensEscape(_ characters: [Character], at index: Int) -> Bool {
         characters[index] == SourceText.escape
-            && index + 1 < end
+            && index + 1 < characters.count
             && SourceText.isEscapable(characters[index + 1])
     }
 
@@ -148,7 +146,7 @@ enum StepParser {
     private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
         var cursor = start
         while cursor < characters.count {
-            if opensEscape(characters, at: cursor, end: characters.count) {
+            if opensEscape(characters, at: cursor) {
                 cursor += 2
                 continue
             }

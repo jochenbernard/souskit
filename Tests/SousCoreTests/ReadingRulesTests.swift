@@ -54,13 +54,21 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    @Test
-    func recoversFromAnUnclosedTimerSpan() throws {
-        let parsed = SousParser().parseRecipe("Simmer ~40 min gently.")
+    @Test(arguments: [
+        "Simmer ~40 min gently.",
+        "Fry @garlic until fragrant.",
+        "Use a #pan to fry the eggs.",
+        "Cook @{200 g pasta@ now."
+    ])
+    func recoversFromAnUnclosedSpan(source: String) throws {
+        let parsed = SousParser().parseRecipe(source)
 
         let step = try #require(parsed.value.steps.first)
+        #expect(step.ingredients.isEmpty)
+        #expect(step.cookware.isEmpty)
         #expect(step.timers.isEmpty)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
+        #expect(diagnostic.severity == .warning)
     }
 
     @Test
@@ -76,33 +84,6 @@ struct ReadingRulesTests {
         // The first sigil opens a span its own paragraph never closes, so it is warned about.
         // The second is followed by a space, so it never opens one and has nothing to report.
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
-    }
-
-    @Test
-    func recoversFromAnUnclosedIngredientSpan() throws {
-        let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")
-
-        let step = try #require(parsed.value.steps.first)
-        #expect(step.ingredients.isEmpty)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
-    }
-
-    @Test
-    func recoversFromAnUnclosedCookwareSpan() throws {
-        let parsed = SousParser().parseRecipe("Use a #pan to fry the eggs.")
-
-        let step = try #require(parsed.value.steps.first)
-        #expect(step.cookware.isEmpty)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
-    }
-
-    @Test
-    func recoversFromAnUnclosedAmountFence() throws {
-        let parsed = SousParser().parseRecipe("Cook @{200 g pasta@ now.")
-
-        let step = try #require(parsed.value.steps.first)
-        #expect(step.ingredients.isEmpty)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
     }
 
     @Test
@@ -166,7 +147,7 @@ struct ReadingRulesTests {
     func closesASpanOnALaterLineOfTheSameParagraph() throws {
         let parsed = SousParser().parseRecipe("Add @baby\nspinach@ to the pan.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "baby\nspinach")
     }
 
@@ -211,18 +192,10 @@ struct ReadingRulesTests {
     }
 
     @Test
-    func reportsAnUnclosedSpanAsAWarning() throws {
-        let parsed = SousParser().parseRecipe("Fry @garlic until fragrant.")
-
-        let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
-        #expect(diagnostic.severity == .warning)
-    }
-
-    @Test
     func unescapesAnEscapedClosingSigilInsideAnIngredientName() throws {
         let parsed = SousParser().parseRecipe("Add @a\\@b@ now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "a@b")
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -231,7 +204,7 @@ struct ReadingRulesTests {
     func unescapesAnEscapedClosingSigilInsideACookwareName() throws {
         let parsed = SousParser().parseRecipe("Use a #8\\# pan#.")
 
-        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        let cookware = try #require(parsed.value.firstCookware)
         #expect(cookware.name == "8# pan")
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -297,7 +270,7 @@ struct ReadingRulesTests {
     func unescapesAnEscapedLeadingBraceInAnIngredientName() throws {
         let parsed = SousParser().parseRecipe("Add @\\{note}@ now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "{note}")
         #expect(ingredient.amount == nil)
         #expect(parsed.diagnostics.isEmpty)

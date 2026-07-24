@@ -16,11 +16,11 @@ enum GroupParser {
     ) -> [StepGroup] {
         var groups: [StepGroup] = []
 
-        for run in Self.runs(in: lines) {
-            let steps = Self.steps(in: run.lines, map: map, diagnostics: &diagnostics)
-            guard run.name != nil || !steps.isEmpty else { continue }
+        for run in runs(in: lines) {
+            let groupSteps = steps(in: run.lines, map: map, diagnostics: &diagnostics)
+            guard run.name != nil || !groupSteps.isEmpty else { continue }
 
-            groups.append(StepGroup(name: run.name, steps: steps))
+            groups.append(StepGroup(name: run.name, steps: groupSteps))
         }
 
         return groups

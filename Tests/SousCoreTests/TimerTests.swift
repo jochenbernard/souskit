@@ -7,7 +7,7 @@ struct TimerTests {
     func parsesAPreciseDuration() throws {
         let parsed = SousParser().parseRecipe("Simmer gently for ~40 min~.")
 
-        let timer = try #require(parsed.value.steps.first?.timers.first)
+        let timer = try #require(parsed.value.firstTimer)
         #expect(timer.kind == .precise)
         #expect(timer.text == "40 min")
         #expect(timer.components.count == 1)
@@ -57,7 +57,7 @@ struct TimerTests {
     func parsesAQualitativeDuration(content: String) throws {
         let parsed = SousParser().parseRecipe("Chill ~\(content)~ before serving.")
 
-        let timer = try #require(parsed.value.steps.first?.timers.first)
+        let timer = try #require(parsed.value.firstTimer)
         #expect(timer.kind == .qualitative)
         #expect(timer.components.isEmpty)
         #expect(timer.text == content)
@@ -116,7 +116,7 @@ struct TimerTests {
         // ordinary characters of its text.
         let parsed = SousParser().parseRecipe("Wait ~{40 min}~ now.")
 
-        let timer = try #require(parsed.value.steps.first?.timers.first)
+        let timer = try #require(parsed.value.firstTimer)
         #expect(timer.kind == .qualitative)
         #expect(timer.text == "{40 min}")
         #expect(parsed.diagnostics.isEmpty)
@@ -133,7 +133,7 @@ struct TimerTests {
     func unescapesAnEscapedSigilInsideATimer() throws {
         let parsed = SousParser().parseRecipe("Chill ~over\\~night~ now.")
 
-        let timer = try #require(parsed.value.steps.first?.timers.first)
+        let timer = try #require(parsed.value.firstTimer)
         #expect(timer.text == "over~night")
         #expect(timer.kind == .qualitative)
         #expect(parsed.diagnostics.isEmpty)

@@ -8,12 +8,6 @@ import Testing
 
 @Suite("Scaled yields")
 struct ScaledYieldTests {
-    private func scaled(_ header: String, to target: String) throws -> Recipe {
-        let parser = SousParser()
-
-        return try parser.parseRecipe(Recipe.flourRecipe(header)).value.scaled(to: parser.parseAmount(target))
-    }
-
     // A factor is derived by dividing and applied by multiplying, and the two do not always
     // land back on the number the division started from. The target is a value its caller
     // stated, so the yield naming it is written as that value rather than as the product.
@@ -25,14 +19,14 @@ struct ScaledYieldTests {
         (header: "servings: 23", target: "13 servings", written: "13")
     ])
     func statesTheTargetItWasGivenExactly(header: String, target: String, written: String) throws {
-        let scaled = try scaled(header, to: target)
+        let scaled = try SousParser().scaled(Recipe.flourRecipe(header), to: target)
 
         #expect(scaled.metadata["servings"] == written)
     }
 
     @Test
     func statesAYieldTargetExactly() throws {
-        let scaled = try scaled("yield: [11 pancakes]", to: "15 pancakes")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe("yield: [11 pancakes]"), to: "15 pancakes")
 
         #expect(scaled.metadata.yields.map(\.text) == ["15 pancakes"])
     }
@@ -42,7 +36,10 @@ struct ScaledYieldTests {
 
     @Test
     func statesEverySpellingOfTheTargetsUnitExactly() throws {
-        let scaled = try scaled("servings: 11\nyield: [11 servings]", to: "15 servings")
+        let scaled = try SousParser().scaled(
+            Recipe.flourRecipe("servings: 11\nyield: [11 servings]"),
+            to: "15 servings"
+        )
 
         #expect(scaled.metadata["servings"] == "15")
         #expect(scaled.metadata.yields.map(\.text) == ["15 servings"])
@@ -54,7 +51,7 @@ struct ScaledYieldTests {
 
     @Test
     func statesOnlyTheEntryTheAliasIsReadFrom() throws {
-        let scaled = try scaled("servings: 4\nservings: 6", to: "12 servings")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe("servings: 4\nservings: 6"), to: "12 servings")
 
         #expect(scaled.metadata.entries.map(\.value) == [.scalar("8"), .scalar("12")])
         #expect(scaled.metadata.servings == 12.0)
@@ -65,7 +62,7 @@ struct ScaledYieldTests {
         let parsed = Recipe.read(Recipe.flourRecipe(header))
         let target = "\(parsed.metadata.servings ?? 0) servings"
 
-        #expect(try scaled(header, to: target) == parsed)
+        #expect(try SousParser().scaled(Recipe.flourRecipe(header), to: target) == parsed)
     }
 
     // The alias is read from the last scalar entry, so a later one stating no quantity leaves
@@ -73,7 +70,10 @@ struct ScaledYieldTests {
 
     @Test
     func statesNoTargetInAnEntryTheAliasDoesNotStandFor() throws {
-        let scaled = try scaled("servings: 4\nservings: six\nyield: [11 servings]", to: "15 servings")
+        let scaled = try SousParser().scaled(
+            Recipe.flourRecipe("servings: 4\nservings: six\nyield: [11 servings]"),
+            to: "15 servings"
+        )
 
         #expect(scaled.metadata.entries.map(\.value) == [
             .scalar("5.454545454545454"), .scalar("six"), .list(["15 servings"])
@@ -82,7 +82,7 @@ struct ScaledYieldTests {
 
     @Test
     func statesTheTargetInAServingsValueThatCarriesAUnit() throws {
-        let scaled = try scaled("servings: 4 people\nservings: 8", to: "16 servings")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe("servings: 4 people\nservings: 8"), to: "16 servings")
 
         #expect(scaled.metadata.entries.map(\.value) == [.scalar("8 people"), .scalar("16")])
     }
@@ -99,7 +99,7 @@ struct ScaledYieldTests {
 
     @Test
     func leavesEveryOtherYieldAtTheProductTheFactorLeft() throws {
-        let scaled = try scaled("servings: 11\nyield: [3 kg]", to: "15 servings")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe("servings: 11\nyield: [3 kg]"), to: "15 servings")
 
         #expect(scaled.metadata["servings"] == "15")
         #expect(scaled.metadata.yields.map(\.text) == ["4.090909090909091 kg"])
@@ -111,7 +111,7 @@ struct ScaledYieldTests {
 
     @Test
     func leavesAValueStatingNoQuantityAlone() throws {
-        let scaled = try scaled("yield: [plenty, 11]", to: "15")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe("yield: [plenty, 11]"), to: "15")
 
         #expect(scaled.metadata.yields.map(\.text) == ["plenty", "15"])
     }

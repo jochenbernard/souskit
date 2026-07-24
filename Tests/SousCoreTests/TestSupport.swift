@@ -1,7 +1,7 @@
-// swiftlint:disable:this file_name
-
 import SousCore
 import Testing
+
+// swiftlint:disable file_types_order
 
 // Convenience extractors so tests can read an annotation's associated values without
 // repeating a `case let` pattern match at every call site.
@@ -37,6 +37,20 @@ extension SousParser {
     /// a test naming a single fence is asking about.
     func scaledAmount(in source: String, by factor: Double) throws -> Amount? {
         try parseRecipe(source).value.scaled(by: factor).firstAmount
+    }
+
+    /// The amount the one annotated ingredient of a source states after scaling, required to
+    /// exist, which is what a test asserting a value about that amount is asking about.
+    func amount(in source: String, scaledBy factor: Double) throws -> Amount {
+        let scaled = try scaledAmount(in: source, by: factor)
+
+        return try #require(scaled)
+    }
+
+    /// The recipe a source scales to a target, with the target read from its text as an amount.
+    /// The target-scaling suites share it.
+    func scaled(_ source: String, to target: String) throws -> Recipe {
+        try parseRecipe(source).value.scaled(to: parseAmount(target))
     }
 }
 
@@ -79,7 +93,7 @@ extension Recipe {
     /// The recipe its own serialized text reads back as, which a round-trip test compares
     /// against the recipe it started from.
     func reRead() -> Recipe {
-        Recipe.read(serialized())
+        Self.read(serialized())
     }
 
     /// A one-amount recipe under a header, so a scaled flour weight reads back as the factor the
@@ -92,6 +106,17 @@ extension Recipe {
     func flourWeight() throws -> Double {
         try #require(firstAmount?.kind.preciseQuantity?.value)
     }
+
+    /// A recipe that both reads and validates without diagnostics, shared by the diagnostics
+    /// and validation suites as a well-formed fixture.
+    static let wellFormedSource = """
+    ---
+    title: Garlic Pasta
+    servings: 2
+    ---
+
+    Cook @{200 g} spaghetti@ in a #large pot#.
+    """
 }
 
 extension Metadata {
@@ -143,3 +168,27 @@ extension Segment {
         }
     }
 }
+
+extension String {
+    /// A quantity of this many digits is past the range a number holds, so it reads as no
+    /// finite value and states no product a factor moves it to.
+    static func quantity(digits: Int) -> String {
+        "1" + String(repeating: "0", count: digits)
+    }
+}
+
+enum TestSupport {
+    /// Reported as one line, because a broken escape rule fails on hundreds of inputs at once.
+    static func expectNoFailures(
+        _ failures: [String],
+        sourceLocation: Testing.SourceLocation = #_sourceLocation
+    ) {
+        #expect(
+            failures.isEmpty,
+            "\(failures.count) failures, the first being that \(failures[0])",
+            sourceLocation: sourceLocation
+        )
+    }
+}
+
+// swiftlint:enable file_types_order

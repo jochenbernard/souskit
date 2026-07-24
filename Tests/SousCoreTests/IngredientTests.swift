@@ -41,7 +41,7 @@ struct IngredientTests {
     func keepsWhitespaceBeyondTheOneSeparatingSpaceInTheName() throws {
         let parsed = SousParser().parseRecipe("Cook @{200 g}  pasta@.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == " pasta")
         #expect(parsed.value.serialized() == "Cook @{200 g}  pasta@.")
     }
@@ -62,7 +62,7 @@ struct IngredientTests {
     func readsALiteralSigilInsideAFenceAsPartOfTheAmount() throws {
         let parsed = SousParser().parseRecipe("Add @{a@b} sauce@ now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "sauce")
         #expect(ingredient.amount?.kind.impreciseText == "a@b")
         #expect(parsed.diagnostics.isEmpty)

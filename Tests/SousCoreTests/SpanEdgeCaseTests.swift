@@ -19,7 +19,7 @@ struct SpanEdgeCaseTests {
         // read before the closing sigil is looked for.
         let parsed = SousParser().parseRecipe("Add @{2 @ g} flour@ now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "flour")
         #expect(ingredient.amount?.kind.preciseQuantity?.value == 2.0)
         #expect(ingredient.amount?.unit == "@ g")
@@ -31,7 +31,7 @@ struct SpanEdgeCaseTests {
         // Cookware carries a single value, so a brace is part of its name.
         let parsed = SousParser().parseRecipe("Use a #{200 g} pan#.")
 
-        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        let cookware = try #require(parsed.value.firstCookware)
         #expect(cookware.name == "{200 g} pan")
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -100,7 +100,7 @@ struct SpanEdgeCaseTests {
     func keepsAnOrdinaryBackslashInAName() throws {
         let parsed = SousParser().parseRecipe("Use a #8\\ pan#.")
 
-        let cookware = try #require(parsed.value.steps.first?.cookware.first)
+        let cookware = try #require(parsed.value.firstCookware)
         #expect(cookware.name == "8\\ pan")
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -130,7 +130,7 @@ struct SpanEdgeCaseTests {
     func readsAnEscapedBackslashInsideAName() throws {
         let parsed = SousParser().parseRecipe("Add @a\\\\b@ now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "a\\b")
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -139,7 +139,7 @@ struct SpanEdgeCaseTests {
     func readsANameThatEndsInAnEscapedBackslash() throws {
         let parsed = SousParser().parseRecipe("Add @flour\\\\@ now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "flour\\")
         #expect(parsed.diagnostics.isEmpty)
     }

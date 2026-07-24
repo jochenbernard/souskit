@@ -141,7 +141,8 @@ struct ReferenceTests {
 
     @Test
     func readsTheFixedMarkerInAFence() throws {
-        #expect(try #require(Recipe.read("Spread the >{=300 g} sauce> over it.").firstReference).amount?.isFixed == true)
+        let reference = try #require(Recipe.read("Spread the >{=300 g} sauce> over it.").firstReference)
+        #expect(reference.amount?.isFixed == true)
     }
 
     @Test

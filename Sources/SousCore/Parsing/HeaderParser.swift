@@ -68,14 +68,13 @@ enum HeaderParser {
 
         let isIndented = line.first?.isWhitespace ?? false
         guard !isIndented, let field = field(in: line) else {
-            return (
-                Metadata.Entry(key: "", value: .raw(String(line))),
-                [.warning(
-                    .malformedHeaderLine,
-                    "Header line is not a top-level 'key: value' entry.",
-                    at: map.range(from: line.startIndex, length: line.count)
-                )]
+            let diagnostic = Diagnostic.warning(
+                .malformedHeaderLine,
+                "Header line is not a top-level 'key: value' entry.",
+                at: map.range(from: line.startIndex, length: line.count)
             )
+
+            return (Metadata.Entry(key: "", value: .raw(String(line))), [diagnostic])
         }
 
         let keyRange = map.range(from: line.startIndex, length: field.key.count)
@@ -165,7 +164,7 @@ enum HeaderParser {
         }
 
         for (character, isEscaped) in SourceText.escapeScanned(content) {
-            if character == "," && !isEscaped {
+            if character == ",", !isEscaped {
                 endItem()
             } else {
                 item.append(character)

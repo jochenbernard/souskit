@@ -24,7 +24,9 @@ extension Amount.Kind {
     /// The one value the kind states, or `nil` when it states none or more than one. A range
     /// states two, so it serves as neither a divisor nor a target.
     var soleValue: Double? {
-        values.count == 1 ? values[0] : nil
+        // swiftlint:disable:next variable_shadowing
+        let values = self.values
+        return values.count == 1 ? values[0] : nil
     }
 }
 

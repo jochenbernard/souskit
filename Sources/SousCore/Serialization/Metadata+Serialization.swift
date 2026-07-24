@@ -41,13 +41,6 @@ extension Metadata {
     /// Escapes each character an inline list reads as its own structure, so an item holding a
     /// separator, a bracket, or a backslash reads back verbatim.
     private static func escapedItem(_ item: String) -> String {
-        var result = ""
-
-        for character in item {
-            if SourceText.isEscapableInList(character) { result.append(SourceText.escape) }
-            result.append(character)
-        }
-
-        return result
+        SourceText.escaped(item, escaping: SourceText.isEscapableInList)
     }
 }

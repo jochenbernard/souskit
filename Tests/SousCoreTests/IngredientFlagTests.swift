@@ -7,7 +7,7 @@ struct IngredientFlagTests {
     func readsTheStapleFlag() throws {
         let parsed = SousParser().parseRecipe("Season with @salt@:staple.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "salt")
         #expect(ingredient.flags.isStaple)
         #expect(!ingredient.flags.isOptional)
@@ -20,7 +20,7 @@ struct IngredientFlagTests {
     func readsTheNonFoodFlag() throws {
         let parsed = SousParser().parseRecipe("Loosen with @{50 ml} water@:non-food if needed.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.isNonFood)
         #expect(ingredient.amount?.unit == "ml")
         #expect(parsed.diagnostics.isEmpty)
@@ -30,7 +30,7 @@ struct IngredientFlagTests {
     func readsTheOptionalFlag() throws {
         let parsed = SousParser().parseRecipe("Scatter @chili flakes@:optional over the top.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.isOptional)
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -39,7 +39,7 @@ struct IngredientFlagTests {
     func readsTheQuestionMarkAsTheOptionalShorthand() throws {
         let parsed = SousParser().parseRecipe("Scatter @rosemary@? over the top.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.isOptional)
         #expect(ingredient.name == "rosemary")
         #expect(parsed.diagnostics.isEmpty)
@@ -80,7 +80,8 @@ struct IngredientFlagTests {
 
     @Test
     func attachesEachFlagChainToItsOwnIngredient() throws {
-        let ingredients = try #require(Recipe.read("Season with @salt@:staple and @rosemary@?.").steps.first?.ingredients)
+        let recipe = Recipe.read("Season with @salt@:staple and @rosemary@?.")
+        let ingredients = try #require(recipe.steps.first?.ingredients)
         #expect(ingredients.map(\.flags.isStaple) == [true, false])
         #expect(ingredients.map(\.flags.isOptional) == [false, true])
     }
@@ -214,7 +215,7 @@ struct IngredientFlagTests {
     func preservesAnUnrecognizedFlag() throws {
         let parsed = SousParser().parseRecipe("Add @sauce@:homemade now.")
 
-        let ingredient = try #require(parsed.value.steps.first?.ingredients.first)
+        let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.unrecognized == ["homemade"])
         #expect(!ingredient.flags.isStaple)
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownFlag }))

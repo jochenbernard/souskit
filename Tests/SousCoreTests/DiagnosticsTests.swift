@@ -5,16 +5,7 @@ import Testing
 struct DiagnosticsTests {
     @Test
     func aWellFormedRecipeHasNoDiagnostics() {
-        let source = """
-        ---
-        title: Garlic Pasta
-        servings: 2
-        ---
-
-        Cook @{200 g} spaghetti@ in a #large pot#.
-        """
-
-        #expect(SousParser().parseRecipe(source).diagnostics.isEmpty)
+        #expect(SousParser().parseRecipe(Recipe.wellFormedSource).diagnostics.isEmpty)
     }
 
     @Test

@@ -33,13 +33,13 @@ extension Amount {
     func scaled(by factor: Double) throws -> Amount? {
         guard !isFixed else { return nil }
 
-        let scaled = kind.scaled(by: factor)
+        let scaled = kind.quantities.map({ $0.scaled(by: factor) })
         let values = scaled.values
 
         guard values != kind.values else { return nil }
         guard values.allSatisfy(Quantity.isWritable) else { throw ScalingError.unwritableQuantity }
 
-        return Amount(scaled.quantities, unit: unit ?? "")
+        return Amount(scaled, unit: unit ?? "")
     }
 
     /// A quantity with no unit is followed by nothing.
@@ -47,20 +47,5 @@ extension Amount {
         let text = quantities.map(\.text).joined(separator: String(AmountParser.rangeSeparator))
 
         return unit.isEmpty ? text : "\(text)\(AmountParser.unitSeparator)\(unit)"
-    }
-}
-
-extension Amount.Kind {
-    /// The kind with every quantity it states multiplied by a factor. One stating none comes
-    /// back as it was.
-    func scaled(by factor: Double) -> Self {
-        switch self {
-        case let .precise(quantity):
-            .precise(quantity.scaled(by: factor))
-        case let .range(low, high):
-            .range(low.scaled(by: factor), high.scaled(by: factor))
-        case .imprecise:
-            self
-        }
     }
 }

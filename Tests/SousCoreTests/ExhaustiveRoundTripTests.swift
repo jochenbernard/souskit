@@ -58,15 +58,8 @@ struct ExhaustiveRoundTripTests {
         prefix: String = "",
         suffix: String = ""
     ) {
-        expectNoFailures(strings(over: alphabet, upTo: length)
+        TestSupport.expectNoFailures(strings(over: alphabet, upTo: length)
             .compactMap({ roundTripFailure(prefix + $0 + suffix) }))
-    }
-
-    /// Reported as one line, because a broken escape rule fails on hundreds of inputs at once.
-    private func expectNoFailures(_ failures: [String]) {
-        let report = failures.isEmpty ? "" : "\(failures.count) failures, the first being that \(failures[0])"
-
-        #expect(report.isEmpty)
     }
 
     @Test(arguments: [
@@ -100,7 +93,7 @@ struct ExhaustiveRoundTripTests {
     func everyScaledAmountFence(factor: Double) {
         let parser = SousParser()
 
-        expectNoFailures(strings(over: ["1", ".", "/", " "], upTo: 7).compactMap({ fence -> String? in
+        TestSupport.expectNoFailures(strings(over: ["1", ".", "/", " "], upTo: 7).compactMap({ fence -> String? in
             let source = "Add @{\(fence)} water@."
             guard let scaled = try? parser.parseRecipe(source).value.scaled(by: factor) else { return nil }
 

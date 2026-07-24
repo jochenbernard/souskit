@@ -28,12 +28,12 @@ struct MetadataListTests {
     }
 
     @Test(arguments: [
-        "---\ntags: [italian, quick] \n---",
-        "---\ntags:  [italian, quick]\n---",
-        "---\ntags: \t[italian, quick]\t\n---"
+        "tags: [italian, quick] ",
+        "tags:  [italian, quick]",
+        "tags: \t[italian, quick]\t"
     ])
-    func readsAnInlineListWithSurroundingWhitespaceAsAList(source: String) {
-        #expect(SousParser().parseRecipe(source).value.metadata.tags == ["italian", "quick"])
+    func readsAnInlineListWithSurroundingWhitespaceAsAList(header: String) {
+        #expect(Metadata.read(header).tags == ["italian", "quick"])
     }
 
     @Test
@@ -73,14 +73,14 @@ struct MetadataListTests {
     }
 
     @Test(arguments: [
-        "---\ntags: [a]b]\n---",
-        "---\ntags: [a]b\n---",
-        "---\ntags: [a], [b]\n---"
+        "tags: [a]b]",
+        "tags: [a]b",
+        "tags: [a], [b]"
     ])
-    func doesNotReadAValueThatContinuesPastItsClosingBracketAsAList(source: String) {
+    func doesNotReadAValueThatContinuesPastItsClosingBracketAsAList(header: String) {
         // The list closes on the first unescaped "]", so anything after it leaves the value
         // unclosed and the whole of it is one literal item.
-        let value = SousParser().parseRecipe(source).value.metadata.tags
+        let value = Metadata.read(header).tags
 
         #expect(value.count == 1)
         #expect(value.first?.hasPrefix("[") == true)
@@ -117,7 +117,7 @@ struct MetadataListTests {
 
     @Test(arguments: ["---\ntags:\n---", "---\ntags: []\n---"])
     func writesAListOfNoItemsAsTheKeyAlone(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == "---\ntags:\n---")
+        #expect(Recipe.read(source).serialized() == "---\ntags:\n---")
     }
 
     @Test
@@ -126,12 +126,12 @@ struct MetadataListTests {
     }
 
     @Test(arguments: [
-        "---\ntags: [ ]\n---",
-        "---\ntags: [,]\n---",
-        "---\ntags: [, ,]\n---"
+        "tags: [ ]",
+        "tags: [,]",
+        "tags: [, ,]"
     ])
-    func readsAnInlineListOfNothingButSeparatorsAsNoItems(source: String) {
-        #expect(SousParser().parseRecipe(source).value.metadata.tags.isEmpty)
+    func readsAnInlineListOfNothingButSeparatorsAsNoItems(header: String) {
+        #expect(Metadata.read(header).tags.isEmpty)
     }
 
     @Test

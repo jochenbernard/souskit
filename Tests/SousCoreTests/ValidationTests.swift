@@ -21,16 +21,7 @@ struct ValidationTests {
 
     @Test
     func aWellFormedRecipeValidatesWithoutDiagnostics() {
-        let source = """
-        ---
-        title: Garlic Pasta
-        servings: 2
-        ---
-
-        Cook @{200 g} spaghetti@ in a #large pot#.
-        """
-
-        #expect(Recipe.read(source).validate().isEmpty)
+        #expect(Recipe.read(Recipe.wellFormedSource).validate().isEmpty)
     }
 
     @Test

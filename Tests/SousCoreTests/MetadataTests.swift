@@ -45,11 +45,11 @@ struct MetadataTests {
     }
 
     @Test(arguments: [
-        (source: "---\nservings: 6 \n---", value: "6 "),
-        (source: "---\nservings:  6\n---", value: " 6")
+        (header: "servings: 6 ", value: "6 "),
+        (header: "servings:  6", value: " 6")
     ])
-    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim(source: String, value: String) {
-        let metadata = SousParser().parseRecipe(source).value.metadata
+    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim(header: String, value: String) {
+        let metadata = Metadata.read(header)
         #expect(metadata.servings == 6)
         #expect(metadata["servings"] == value)
     }

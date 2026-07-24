@@ -42,11 +42,16 @@ extension Metadata {
         Metadata(entries: zip(entries, yieldRoles()).map({ entry, role in
             switch role {
             case let .servings(value) where unit == HeaderField.servings:
-                Entry(key: entry.key, value: .scalar(Self.stating(target, in: value)))
+                Entry(
+                    key: entry.key,
+                    value: .scalar(Self.restated(target, of: AmountParser.parse(unfenced: value)) ?? value)
+                )
             case let .yieldList(items):
                 Entry(key: entry.key, value: .list(items.map({ item in
-                    DeclaredYield.matching(AmountParser.parse(unfenced: item).unit) == unit
-                        ? Self.stating(target, in: item)
+                    let amount = AmountParser.parse(unfenced: item)
+
+                    return DeclaredYield.matching(amount.unit) == unit
+                        ? Self.restated(target, of: amount) ?? item
                         : item
                 })))
             default:
@@ -55,12 +60,10 @@ extension Metadata {
         }))
     }
 
-    /// A value restated as a target, keeping the unit it was written with. A value stating no
-    /// single quantity names no dimension, and one already stating the target has nothing to
-    /// restate, so both come back exactly as written.
-    private static func stating(_ target: Double, in value: String) -> String {
-        let amount = AmountParser.parse(unfenced: value)
-        guard let stated = amount.kind.soleValue, stated != target else { return value }
+    /// The amount restated as the target, keeping the unit it was written with, or `nil` when it
+    /// already states the target or states no single quantity to restate.
+    private static func restated(_ target: Double, of amount: Amount) -> String? {
+        guard let stated = amount.kind.soleValue, stated != target else { return nil }
 
         return Amount([Quantity(target)], unit: amount.unit ?? "").text
     }

@@ -8,15 +8,9 @@ import Testing
 
 @Suite("Scaling by a factor")
 struct ScalingTests {
-    private func amount(in source: String, scaledBy factor: Double) throws -> Amount {
-        let scaled = try SousParser().scaledAmount(in: source, by: factor)
-
-        return try #require(scaled)
-    }
-
     @Test
     func multipliesAPreciseAmount() throws {
-        let amount = try amount(in: "Mix @{200 g} flour@.", scaledBy: 1.5)
+        let amount = try SousParser().amount(in: "Mix @{200 g} flour@.", scaledBy: 1.5)
 
         #expect(amount.kind.preciseQuantity?.value == 300.0)
         #expect(amount.unit == "g")
@@ -24,7 +18,7 @@ struct ScalingTests {
 
     @Test
     func multipliesBothEndsOfARange() throws {
-        let amount = try amount(in: "Add @{1-2 tbsp} oil@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Add @{1-2 tbsp} oil@.", scaledBy: 2.0)
 
         #expect(amount.kind.rangeQuantities?.low.value == 2.0)
         #expect(amount.kind.rangeQuantities?.high.value == 4.0)
@@ -35,7 +29,7 @@ struct ScalingTests {
 
     @Test
     func leavesAFixedAmountUnchanged() throws {
-        let amount = try amount(in: "Stir in @{=1 tsp} salt@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Stir in @{=1 tsp} salt@.", scaledBy: 2.0)
 
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == 1.0)
@@ -44,7 +38,7 @@ struct ScalingTests {
 
     @Test
     func leavesAnImpreciseAmountUnchanged() throws {
-        let amount = try amount(in: "Stir in @{a pinch} salt@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Stir in @{a pinch} salt@.", scaledBy: 2.0)
 
         #expect(amount.kind.impreciseText == "a pinch")
         #expect(amount.text == "a pinch")
@@ -253,6 +247,6 @@ struct ScalingTests {
 
     @Test
     func scalingByZeroIsAllowed() throws {
-        #expect(try amount(in: "Mix @{200 g} flour@.", scaledBy: 0.0).kind.preciseQuantity?.value == 0.0)
+        #expect(try SousParser().amount(in: "Mix @{200 g} flour@.", scaledBy: 0.0).kind.preciseQuantity?.value == 0.0)
     }
 }

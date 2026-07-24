@@ -14,9 +14,7 @@ public enum Segment: Equatable, Hashable, Sendable {
 
     /// A reference annotation.
     case reference(Reference)
-}
 
-extension Segment {
     /// The ingredient the segment annotates, or `nil` for any other kind of segment.
     var ingredient: Ingredient? {
         if case let .ingredient(ingredient) = self { ingredient } else { nil }

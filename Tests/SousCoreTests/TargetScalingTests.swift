@@ -9,12 +9,6 @@ import Testing
 
 @Suite("Scaling to a target")
 struct TargetScalingTests {
-    private func scaled(_ source: String, to target: String) throws -> Recipe {
-        let parser = SousParser()
-
-        return try parser.parseRecipe(source).value.scaled(to: parser.parseAmount(target))
-    }
-
     // The parser is where an amount is read from text, so a caller states a target the way a
     // recipe states a yield.
 
@@ -53,7 +47,7 @@ struct TargetScalingTests {
     func derivesTheFactorFromTheYieldOfTheTargetsUnit() throws {
         let source = "---\nyield: 12 pancakes\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        let recipe = try scaled(source, to: "18 pancakes")
+        let recipe = try SousParser().scaled(source, to: "18 pancakes")
         #expect(try recipe.flourWeight() == 300.0)
         #expect(recipe.metadata.yields.map(\.text) == ["18 pancakes"])
     }
@@ -62,7 +56,7 @@ struct TargetScalingTests {
     func countsServingsAsAYieldInPortions() throws {
         let source = "---\nservings: 4\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        let recipe = try scaled(source, to: "8 servings")
+        let recipe = try SousParser().scaled(source, to: "8 servings")
         #expect(try recipe.flourWeight() == 400.0)
         #expect(recipe.metadata.servings == 8.0)
     }
@@ -71,7 +65,7 @@ struct TargetScalingTests {
     func picksTheYieldOfTheTargetsOwnUnitFromSeveral() throws {
         let source = "---\nyield: [6 servings, 3.2 kg]\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        let recipe = try scaled(source, to: "1.6 kg")
+        let recipe = try SousParser().scaled(source, to: "1.6 kg")
         #expect(try recipe.flourWeight() == 100.0)
         // Every declared yield scales, not only the one the factor came from.
         #expect(recipe.metadata.yields.map(\.text) == ["3 servings", "1.6 kg"])
@@ -81,14 +75,14 @@ struct TargetScalingTests {
     func matchesAUnitThroughTheWhitespaceAroundIt() throws {
         let source = "---\nyield: 800  g\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        #expect(try scaled(source, to: "1000 g").flourWeight() == 250.0)
+        #expect(try SousParser().scaled(source, to: "1000 g").flourWeight() == 250.0)
     }
 
     @Test
     func matchesAnEmptyUnitAgainstAnEmptyUnit() throws {
         let source = "---\nyield: 12\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        #expect(try scaled(source, to: "18").flourWeight() == 300.0)
+        #expect(try SousParser().scaled(source, to: "18").flourWeight() == 300.0)
     }
 
     // Two spellings of one dimension are two units here, and case is part of the spelling.
@@ -96,14 +90,14 @@ struct TargetScalingTests {
     @Test(arguments: ["1 kg", "18 Pancakes", "18", "500 ml"])
     func refusesATargetNoDeclaredYieldStates(target: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try scaled(Recipe.flourRecipe("servings: 4\nyield: [800 g, 12 pancakes]"), to: target)
+            try SousParser().scaled(Recipe.flourRecipe("servings: 4\nyield: [800 g, 12 pancakes]"), to: target)
         }
     }
 
     @Test
     func refusesARecipeThatDeclaresNothingToDivideBy() {
         #expect(throws: ScalingError.noMatchingYield) {
-            try scaled("Mix @{200 g} flour@.", to: "400 g")
+            try SousParser().scaled("Mix @{200 g} flour@.", to: "400 g")
         }
     }
 
@@ -113,7 +107,7 @@ struct TargetScalingTests {
     @Test(arguments: ["1-2 kg", "plenty", "a lot of g"])
     func refusesATargetThatStatesNoSingleQuantity(target: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try scaled(Recipe.flourRecipe("yield: 800 g"), to: target)
+            try SousParser().scaled(Recipe.flourRecipe("yield: 800 g"), to: target)
         }
     }
 
@@ -123,7 +117,7 @@ struct TargetScalingTests {
     ])
     func refusesToDivideByAYieldOfZero(header: String, target: String) {
         #expect(throws: ScalingError.zeroYield) {
-            try scaled(Recipe.flourRecipe(header), to: target)
+            try SousParser().scaled(Recipe.flourRecipe(header), to: target)
         }
     }
 
@@ -136,7 +130,7 @@ struct TargetScalingTests {
         (header: "yield: [plenty g, 800 g]", target: "1600 g", expected: 400.0)
     ])
     func looksPastAYieldThatStatesNoQuantity(header: String, target: String, expected: Double) throws {
-        #expect(try scaled(Recipe.flourRecipe(header), to: target).flourWeight() == expected)
+        #expect(try SousParser().scaled(Recipe.flourRecipe(header), to: target).flourWeight() == expected)
     }
 
     @Test
@@ -152,7 +146,7 @@ struct TargetScalingTests {
     @Test(arguments: ["servings: =4", "yield: =4 servings"])
     func readsNoFixedMarkerInAHeaderValue(header: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try scaled(Recipe.flourRecipe(header), to: "8 servings")
+            try SousParser().scaled(Recipe.flourRecipe(header), to: "8 servings")
         }
     }
 
@@ -165,7 +159,7 @@ struct TargetScalingTests {
         "yield: 4 servings\nyield: 4 servings"
     ])
     func dividesByADimensionStatedTwiceThatAgrees(header: String) throws {
-        let scaled = try scaled(Recipe.flourRecipe(header), to: "8 servings")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe(header), to: "8 servings")
 
         #expect(try scaled.flourWeight() == 400.0)
         // The repetition is still reported; only the request was satisfiable.
@@ -180,7 +174,7 @@ struct TargetScalingTests {
     ])
     func refusesADimensionStatedTwiceThatDisagrees(header: String) {
         #expect(throws: ScalingError.conflictingYields) {
-            try scaled(Recipe.flourRecipe(header), to: "8 servings")
+            try SousParser().scaled(Recipe.flourRecipe(header), to: "8 servings")
         }
     }
 
@@ -215,7 +209,7 @@ struct TargetScalingTests {
     ])
     func reportsWhatStoppedTheDivision(header: String, target: String, error: ScalingError) {
         #expect(throws: error) {
-            try scaled(Recipe.flourRecipe(header), to: target)
+            try SousParser().scaled(Recipe.flourRecipe(header), to: target)
         }
     }
 
@@ -224,7 +218,9 @@ struct TargetScalingTests {
 
     @Test
     func matchesAUnitThroughTheWhitespaceAroundTheTarget() throws {
-        #expect(try scaled(Recipe.flourRecipe("yield: 12 pancakes"), to: "18  pancakes").flourWeight() == 300.0)
+        #expect(
+            try SousParser().scaled(Recipe.flourRecipe("yield: 12 pancakes"), to: "18  pancakes").flourWeight() == 300.0
+        )
     }
 
     // A target has to state one quantity to be divided by too, so a range names a dimension it
@@ -233,7 +229,7 @@ struct TargetScalingTests {
     @Test
     func refusesToDivideByAYieldThatStatesARange() {
         #expect(throws: ScalingError.noMatchingYield) {
-            try scaled(Recipe.flourRecipe("yield: 10-12 muffins"), to: "18 muffins")
+            try SousParser().scaled(Recipe.flourRecipe("yield: 10-12 muffins"), to: "18 muffins")
         }
     }
 
@@ -272,7 +268,7 @@ struct TargetScalingTests {
     func refusesATargetDerivingAFactorItCouldNotWriteBack() {
         let parser = SousParser()
         let parsed = parser.parseRecipe(Recipe.flourRecipe("yield: 800 g")).value
-        let target = parser.parseAmount("1" + String(repeating: "0", count: 400) + " g")
+        let target = parser.parseAmount(String.quantity(digits: 400) + " g")
 
         #expect(throws: ScalingError.unusableFactor) {
             try parsed.scaled(to: target)

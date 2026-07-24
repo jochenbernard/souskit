@@ -28,29 +28,26 @@ extension Metadata {
     /// occurrence. The alias is named by the unit it stands for rather than by whatever follows
     /// its number, so `servings: 6 people` states six portions and not six people.
     var declaredYields: [DeclaredYield] {
-        var declared: [DeclaredYield] = []
-
-        for role in yieldRoles() {
-            switch role {
-            case let .servings(value):
-                declared.append(DeclaredYield(
-                    unit: HeaderField.servings,
-                    kind: AmountParser.parse(unfenced: value).kind
-                ))
-            case let .yieldList(items):
-                declared += items.map({ item in
-                    let yield = AmountParser.parse(unfenced: item)
-
-                    return DeclaredYield(unit: DeclaredYield.matching(yield.unit), kind: yield.kind)
-                })
-            case .other:
-                break
-            }
-        }
-
         // A value stating no quantity states no dimension, so it stands for none, and it hides
         // no yield of the unit it was written with either.
-        return declared.filter({ !$0.kind.values.isEmpty })
+        yieldRoles().flatMap(Self.declaredYields(from:)).filter({ !$0.kind.values.isEmpty })
+    }
+
+    /// The declared yields a header entry states, by the role scaling reads it as. An entry
+    /// stating no yield states none.
+    private static func declaredYields(from role: YieldRole) -> [DeclaredYield] {
+        switch role {
+        case let .servings(value):
+            [DeclaredYield(unit: HeaderField.servings, kind: AmountParser.parse(unfenced: value).kind)]
+        case let .yieldList(items):
+            items.map({ item in
+                let yield = AmountParser.parse(unfenced: item)
+
+                return DeclaredYield(unit: DeclaredYield.matching(yield.unit), kind: yield.kind)
+            })
+        case .other:
+            []
+        }
     }
 
     /// Where the `servings` alias stands: the entry its value is read from, which is the last

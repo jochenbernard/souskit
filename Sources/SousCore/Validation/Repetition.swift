@@ -14,14 +14,13 @@ enum Repetition {
     static func firstOfEachRepeated<Value>(in values: [Value], by key: (Value) -> String) -> [Value] {
         // Keying a value can cost a normalization, so each is keyed once and carried.
         let keyed = values.map({ (value: $0, key: key($0)) })
-        var stated: [String: Int] = [:]
+        let counts = keyed.reduce(into: [String: Int](), { counts, entry in
+            counts[entry.key, default: 0] += 1
+        })
         var reported: Set<String> = []
 
-        for entry in keyed { stated[entry.key, default: 0] += 1 }
-        let repeated = Set(stated.filter({ $0.value > 1 }).keys)
-
         return keyed
-            .filter({ repeated.contains($0.key) && reported.insert($0.key).inserted })
+            .filter({ counts[$0.key, default: 0] > 1 && reported.insert($0.key).inserted })
             .map(\.value)
     }
 }

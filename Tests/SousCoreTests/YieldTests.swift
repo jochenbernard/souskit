@@ -152,7 +152,7 @@ struct YieldTests {
 
     @Test(arguments: ["---\nyield:\n---", "---\nyield:\n  - 800 g\n---"])
     func writesAYieldOfNoItemsAsTheKeyAlone(source: String) {
-        #expect(SousParser().parseRecipe(source).value.serialized() == source)
+        #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test

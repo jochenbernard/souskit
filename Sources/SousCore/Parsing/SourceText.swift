@@ -132,6 +132,22 @@ enum SourceText {
         return result
     }
 
+    /// Inserts an escape before each character the predicate marks, the forward companion of
+    /// ``unescaped(_:escaping:)``, so a value written through here reads back verbatim.
+    static func escaped(
+        _ characters: some Sequence<Character>,
+        escaping needsEscape: (Character) -> Bool
+    ) -> String {
+        var result = ""
+
+        for character in characters {
+            if needsEscape(character) { result.append(escape) }
+            result.append(character)
+        }
+
+        return result
+    }
+
     /// Each character paired with whether an unescaped backslash escapes it.
     ///
     /// A backslash that escapes the character after it is paired like any other, so no

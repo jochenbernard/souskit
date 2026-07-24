@@ -98,11 +98,10 @@ extension [Metadata.Entry] {
     /// A repeated list key accumulates: the items of every occurrence are concatenated in
     /// document order, rather than the last occurrence overwriting the earlier ones.
     func mergedList(_ key: String) -> [String] {
-        var items: [String] = []
-        for entry in self where entry.key == key {
-            if case let .list(values) = entry.value { items += values }
-        }
+        flatMap({ entry -> [String] in
+            guard entry.key == key, case let .list(values) = entry.value else { return [] }
 
-        return items
+            return values
+        })
     }
 }

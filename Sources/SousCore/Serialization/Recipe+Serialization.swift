@@ -6,9 +6,10 @@ extension Recipe {
     ///
     /// - Returns: The recipe rendered as Sous source text.
     public func serialized() -> String {
+        let hasHeader = !metadata.entries.isEmpty
         var blocks: [String] = []
 
-        if !metadata.entries.isEmpty {
+        if hasHeader {
             blocks.append(metadata.serialized())
         }
 
@@ -21,7 +22,7 @@ extension Recipe {
 
         // With no header block in front of it, a body that starts the file is read as whatever
         // that position means, so a blank line keeps it in the body where it belongs.
-        guard metadata.entries.isEmpty, Self.opensAsAnotherConstruct(text) else { return text }
+        guard !hasHeader, Self.opensAsAnotherConstruct(text) else { return text }
 
         return "\n" + text
     }

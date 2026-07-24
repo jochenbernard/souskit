@@ -7,12 +7,6 @@ import Testing
 
 @Suite("Writing a scaled amount")
 struct ScaledAmountTests {
-    private func amount(in source: String, scaledBy factor: Double) throws -> Amount {
-        let scaled = try SousParser().scaledAmount(in: source, by: factor)
-
-        return try #require(scaled)
-    }
-
     /// Whatever scaling writes has to read back as what it states, or the round-trip guarantee
     /// holds only for recipes nobody scaled.
     private func expectAScaledRecipeRoundTrips(
@@ -34,12 +28,6 @@ struct ScaledAmountTests {
         #expect(reRead.diagnostics.isEmpty, note, sourceLocation: sourceLocation)
     }
 
-    /// A quantity of this many digits is past the range a number holds, so it reads as no
-    /// finite value and states no product a factor moves it to.
-    private static func quantity(digits: Int) -> String {
-        "1" + String(repeating: "0", count: digits)
-    }
-
     // The regenerated text holds the exact value. An integral one carries no decimal point,
     // and nothing is ever rounded.
 
@@ -54,12 +42,12 @@ struct ScaledAmountTests {
         (fence: "3 g", factor: 0.5, text: "1.5 g")
     ])
     func regeneratesTheTextOfAScaledAmount(fence: String, factor: Double, text: String) throws {
-        #expect(try amount(in: "Add @{\(fence)} water@.", scaledBy: factor).text == text)
+        #expect(try SousParser().amount(in: "Add @{\(fence)} water@.", scaledBy: factor).text == text)
     }
 
     @Test
     func neverRoundsAScaledQuantity() throws {
-        let amount = try amount(in: "Add @{1/3 cup} water@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Add @{1/3 cup} water@.", scaledBy: 2.0)
 
         #expect(amount.kind.preciseQuantity?.value == 2.0 / 3.0)
         #expect(amount.text == "0.6666666666666666 cup")
@@ -73,7 +61,7 @@ struct ScaledAmountTests {
         (fence: "200  g", text: "400  g")
     ])
     func regeneratesTheSeparatorButNotTheUnit(fence: String, text: String) throws {
-        #expect(try amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0).text == text)
+        #expect(try SousParser().amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0).text == text)
     }
 
     // A value is written positionally whatever its magnitude, because the exponent notation
@@ -88,7 +76,7 @@ struct ScaledAmountTests {
         (factor: 1.5e20, text: "150000000000000000000 g")
     ])
     func writesAScaledValuePositionallyAtEveryMagnitude(factor: Double, text: String) throws {
-        #expect(try amount(in: "Add @{1 g} water@.", scaledBy: factor).text == text)
+        #expect(try SousParser().amount(in: "Add @{1 g} water@.", scaledBy: factor).text == text)
     }
 
     @Test(arguments: [0.00001, 1e20])
@@ -104,7 +92,7 @@ struct ScaledAmountTests {
         (digits: 400, factor: 0.0)
     ])
     func refusesAProductItCouldNotWriteBack(digits: Int, factor: Double) {
-        let recipe = Recipe.read("Add @{\(Self.quantity(digits: digits)) g} water@.")
+        let recipe = Recipe.read("Add @{\(String.quantity(digits: digits)) g} water@.")
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try recipe.scaled(by: factor)
@@ -113,7 +101,7 @@ struct ScaledAmountTests {
 
     @Test
     func refusesAProductItCouldNotWriteBackInTheHeader() {
-        let recipe = Recipe.read("---\nyield: \(Self.quantity(digits: 400)) g\n---")
+        let recipe = Recipe.read("---\nyield: \(String.quantity(digits: 400)) g\n---")
 
         #expect(throws: ScalingError.unwritableQuantity) {
             try recipe.scaled(by: 0.0)
@@ -125,7 +113,7 @@ struct ScaledAmountTests {
 
     @Test
     func leavesAQuantityAlreadyPastThatRangeAlone() throws {
-        let source = "Add @{\(Self.quantity(digits: 400)) g} water@."
+        let source = "Add @{\(String.quantity(digits: 400)) g} water@."
 
         #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == source)
     }
@@ -140,7 +128,7 @@ struct ScaledAmountTests {
         (fence: "1-2.5 1/2", text: "2.0-5.0 1/2")
     ])
     func keepsAFractionUnitOutOfTheQuantityItFollows(fence: String, text: String) throws {
-        let amount = try amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0)
 
         #expect(amount.text == text)
         #expect(amount.unit == String(fence.drop(while: { $0 != " " }).dropFirst()))
@@ -151,7 +139,7 @@ struct ScaledAmountTests {
 
     @Test
     func keepsAFractionUnitOutOfTheQuantityWhenTheValuesStillAgree() throws {
-        let amount = try amount(in: "Add @{1.5 0/2 cups} water@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Add @{1.5 0/2 cups} water@.", scaledBy: 2.0)
 
         #expect(amount.text == "3.0 0/2 cups")
         #expect(amount.unit == "0/2 cups")
@@ -162,7 +150,7 @@ struct ScaledAmountTests {
 
     @Test
     func keepsAFractionUnitOutOfAQuantityAtAnExtremeMagnitude() throws {
-        let amount = try amount(in: "Add @{1.5 1/2-cup servings} water@.", scaledBy: 1e16)
+        let amount = try SousParser().amount(in: "Add @{1.5 1/2-cup servings} water@.", scaledBy: 1e16)
 
         #expect(amount.text == "15000000000000000.0 1/2-cup servings")
         #expect(amount.unit == "1/2-cup servings")
@@ -173,7 +161,7 @@ struct ScaledAmountTests {
 
     @Test
     func refusesARangeWithOneEndItCouldNotWriteBack() {
-        let source = "Add @{1-\(Self.quantity(digits: 308)) g} water@."
+        let source = "Add @{1-\(String.quantity(digits: 308)) g} water@."
         let recipe = Recipe.read(source)
 
         #expect(throws: ScalingError.unwritableQuantity) {

@@ -7,7 +7,7 @@ struct FixedAmountTests {
     func readsTheMarkerBeforeAPreciseQuantity() throws {
         let parsed = SousParser().parseRecipe("Stir in @{=1 tsp} baking soda@.")
 
-        let amount = try #require(parsed.value.ingredients.first?.amount)
+        let amount = try #require(parsed.value.firstAmount)
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == 1.0)
         #expect(amount.kind.preciseQuantity?.text == "1")
