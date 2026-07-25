@@ -29,16 +29,19 @@ enum GroupParser {
     /// The runs of body lines the headings divide the body into, each carrying the name of the
     /// group it opens. The first run is the default group's and carries none.
     ///
-    /// A heading line belongs to no run, which is what ends the paragraph before it whether or
-    /// not a blank line follows.
+    /// A heading line belongs to no run. It opens a group only where no step line stands
+    /// directly before it, so a blank line, another heading, or the start of the body is what
+    /// lets one open, and a heading line a step continues is that step's prose.
     private static func runs(in lines: [Substring]) -> [(name: String?, lines: [Substring])] {
         var runs: [(name: String?, lines: [Substring])] = [(name: nil, lines: [])]
+        var continuesAStep = false
 
         for line in lines {
-            if let name = Heading.name(of: line) {
+            if !continuesAStep, let name = Heading.name(of: line) {
                 runs.append((name: name, lines: []))
             } else {
                 runs[runs.count - 1].lines.append(line)
+                continuesAStep = !SourceText.isBlank(line)
             }
         }
 

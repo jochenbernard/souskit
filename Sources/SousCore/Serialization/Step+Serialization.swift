@@ -5,6 +5,25 @@
 // never restates a rule the reader owns.
 
 extension Step {
+    /// Where what is written next stands in the step, which is what decides whether a line of
+    /// it opens a group heading: a heading opens one only where no step line stands before it,
+    /// so the line the step opens with is the only one that can be one.
+    private enum Position {
+        /// The step's first line, after the characters already written on it.
+        case firstLine([Character])
+
+        /// A line the step continues, where every line is prose whatever its shape.
+        case insideStep
+
+        /// The same position with one more character written on that line, which is how the
+        /// sigil opening a span stands between what came before it and the name.
+        func continued(by character: Character) -> Self {
+            guard case let .firstLine(written) = self else { return .insideStep }
+
+            return .firstLine(written + [character])
+        }
+    }
+
     /// The step as source text: its segments written in order, each escaped so the step
     /// re-reads as itself.
     func serialized() -> String {
@@ -17,24 +36,28 @@ extension Step {
         var result = ""
 
         for index in segments.indices {
+            let position = Self.position(after: result)
+
             switch segments[index] {
             case let .text(text):
-                result += Self.renderedProse(text, at: index, in: segments, lineSoFar: Self.lineSoFar(in: result))
+                result += Self.renderedProse(text, at: index, in: segments, at: position)
             case let .ingredient(ingredient):
                 result += Self.renderedSpan(
                     ingredient.name,
                     as: .ingredient,
+                    at: position,
                     amount: ingredient.amount,
                     flags: ingredient.flags
                 )
             case let .cookware(cookware):
-                result += Self.renderedSpan(cookware.name, as: .cookware)
+                result += Self.renderedSpan(cookware.name, as: .cookware, at: position)
             case let .timer(timer):
-                result += Self.renderedSpan(timer.text, as: .timer)
+                result += Self.renderedSpan(timer.text, as: .timer, at: position)
             case let .reference(reference):
                 result += Self.renderedSpan(
                     reference.target,
                     as: .reference,
+                    at: position,
                     amount: reference.amount,
                     flags: reference.flags
                 )
@@ -51,7 +74,7 @@ extension Step {
         _ text: String,
         at index: Int,
         in segments: [Segment],
-        lineSoFar: [Character]
+        at position: Position
     ) -> String {
         // A run of prose is one segment, so whatever follows it opens with a sigil. Escaping
         // ahead of anything else would be harmless, so the test stays simple.
@@ -59,7 +82,7 @@ extension Step {
             text,
             afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
             beforeAnnotation: index + 1 < segments.count,
-            lineSoFar: lineSoFar
+            at: position
         )
     }
 
@@ -72,12 +95,22 @@ extension Step {
     private static func renderedSpan(
         _ name: String,
         as annotation: Annotation,
+        at position: Position,
         amount: Amount? = nil,
         flags: Flags = .empty
     ) -> String {
         // The fence and the name are separated by a space, so a leading brace in the name
         // cannot open a second fence and needs no escape.
-        var content = escapedName(name, in: annotation, afterAmount: amount != nil)
+        //
+        // The sigil that opens the span stands on the line between what came before it and the
+        // name. A fence between the two states no heading either, because a heading is decided
+        // by what a line opens with and the sigil already stands there.
+        var content = escapedName(
+            name,
+            in: annotation,
+            afterAmount: amount != nil,
+            at: position.continued(by: annotation.sigil)
+        )
         if let amount {
             content = "\(AmountFence.around(amount.text)) \(content)"
         }
@@ -106,7 +139,12 @@ extension Step {
     /// would otherwise escape what follows it, a leading brace where it could otherwise open an
     /// amount fence, and a line of the name that would otherwise open a heading, so the name
     /// re-reads verbatim.
-    private static func escapedName(_ name: String, in annotation: Annotation, afterAmount: Bool) -> String {
+    private static func escapedName(
+        _ name: String,
+        in annotation: Annotation,
+        afterAmount: Bool,
+        at position: Position
+    ) -> String {
         let characters = Array(name)
         let escapesLeadingBrace = annotation.allowsAmount && !afterAmount
         var result = ""
@@ -119,14 +157,8 @@ extension Step {
             let escaped = character == annotation.sigil
                 || SourceText.escapesFollowing(character, before: following)
                 || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
-                // The sigil that opens the span stands on the line before the name, and the
-                // closing one, with any flag after it, continues the name's last line.
-                || opensHeading(
-                    characters,
-                    at: index,
-                    lineSoFar: [annotation.sigil],
-                    followedByContent: true
-                )
+                // The closing sigil, with any flag after it, continues the name's last line.
+                || opensHeading(characters, at: index, at: position, followedByContent: true)
 
             if escaped { result.append(SourceText.escape) }
             result.append(character)
@@ -135,51 +167,39 @@ extension Step {
         return result
     }
 
-    /// The characters already written on the line the next segment continues, which is what a
-    /// heading opening across a segment boundary is judged against.
-    private static func lineSoFar(in text: String) -> [Character] {
-        Array(text.reversed().prefix(while: { !$0.isNewline }).reversed())
+    /// Where the text written so far leaves the next segment: on the step's first line, after
+    /// what it holds, or inside the step once a line break stands before it.
+    private static func position(after text: String) -> Position {
+        text.contains(where: \.isNewline) ? .insideStep : .firstLine(Array(text))
     }
 
-    /// Whether the content at this position would be read as a group heading rather than as the
+    /// Whether the content at this index would be read as a group heading rather than as the
     /// text it stands for.
     ///
-    /// A heading is decided by the shape of a whole line, and a run of content holds only part
-    /// of one: what an earlier segment wrote stands before it, and what a later segment writes
-    /// continues its last line and can state the name. What a line has to look like is asked of
-    /// the shared table rather than restated here. Escaping the run's first character of that
-    /// line is what keeps the line prose, and the escape reads back as the character, so the
-    /// content survives either way.
+    /// A run of content holds only part of the line it sits on: what an earlier segment wrote
+    /// stands before it, and what a later segment writes continues it and can state the name.
+    /// What a line has to look like is asked of the shared table rather than restated here.
+    /// Escaping the run's first character is what keeps the line prose, and the escape reads
+    /// back as the character, so the content survives either way.
     ///
     /// - Parameters:
-    ///   - lineSoFar: What stands on the line before the run: the text written so far for a run
-    ///     of prose, and the opening sigil for a name. The sigil stands for the whole line
-    ///     before a name, because a name can supply neither half of a marker a segment before
-    ///     it began: a sigil opens no span before whitespace, so a name never opens with the
-    ///     space, and a fence between the two opens no heading either.
+    ///   - position: Where the run stands in the step, which is what leaves its first line the
+    ///     step's own or leaves every line of it prose.
     ///   - followedByContent: Whether a further segment continues the run's last line.
     private static func opensHeading(
         _ characters: [Character],
         at index: Int,
-        lineSoFar: [Character],
+        at position: Position,
         followedByContent: Bool
     ) -> Bool {
-        // Only a line start can open a heading, and deciding that first is what keeps the line
-        // read once per line rather than once per character.
-        let before: [Character]
+        // Only the run's first character can stand on the step's first line, because a line
+        // break within the run leaves the run's own line before every character after it.
+        guard index == 0, case let .firstLine(written) = position else { return false }
 
-        if index == 0 {
-            before = lineSoFar
-        } else if characters[index - 1].isNewline {
-            before = []
-        } else {
-            return false
-        }
-
-        let line = characters[index...].prefix(while: { !$0.isNewline })
+        let line = characters.prefix(while: { !$0.isNewline })
 
         return Heading.opens(
-            before + line,
+            written + line,
             continuedByContent: followedByContent && line.endIndex == characters.endIndex
         )
     }
@@ -194,7 +214,7 @@ extension Step {
         _ text: String,
         afterFlags: Bool,
         beforeAnnotation: Bool,
-        lineSoFar: [Character]
+        at position: Position
     ) -> String {
         let characters = Array(text)
         var escapes = [Bool](repeating: false, count: characters.count)
@@ -208,7 +228,7 @@ extension Step {
             ) || opensHeading(
                 characters,
                 at: index,
-                lineSoFar: lineSoFar,
+                at: position,
                 followedByContent: beforeAnnotation
             )
         }

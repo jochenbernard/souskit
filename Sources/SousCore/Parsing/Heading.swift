@@ -8,10 +8,12 @@ enum Heading {
     /// from the name and belongs to neither.
     static let marker = "## "
 
-    /// Whether the line opens a group.
+    /// Whether the line is shaped as a heading.
     ///
     /// A heading is the marker and a name, so a line stating no name after the marker, and a
-    /// line the marker does not open, are ordinary body text.
+    /// line the marker does not open, are ordinary body text. Where the line stands decides
+    /// with its shape, because a heading opens a group only where no step line stands directly
+    /// before it, and that is the caller's to know.
     ///
     /// A reader holds the whole line and asks with nothing continuing it. A writer is composing
     /// one and knows what it is about to write next, so content ending at the bare marker opens

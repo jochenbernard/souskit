@@ -5,10 +5,14 @@ import Testing
 // every step up to the next heading belongs to it, and the steps written before any heading
 // form the unnamed default group.
 //
-// The heading is a line-level construct rather than an inline annotation, so it is read before
-// the body is divided into paragraphs and its name holds no annotation of its own. The name is
-// captured the way a fenced name is: one space separates it from the "##" and belongs to
-// neither, a second begins the name, and each escape reads as the single character.
+// A heading opens a group only where no step line stands directly before it, so a blank line
+// ends the step before it, another heading, or the start of the body is what lets one open. A
+// heading line a step continues is that step's prose, so no heading splits a step.
+//
+// The heading is a line-level construct rather than an inline annotation, so its name holds no
+// annotation of its own. The name is captured the way a fenced name is: one space separates it
+// from the "##" and belongs to neither, a second begins the name, and each escape reads as the
+// single character.
 
 @Suite("Step groups")
 struct StepGroupTests {
@@ -75,8 +79,11 @@ struct StepGroupTests {
         #expect(Recipe.read(source).groups.isEmpty)
     }
 
+    // A blank line is what ends the step before a heading. With none, the line is the prose of
+    // the step it continues, so a heading never splits one.
+
     @Test
-    func endsTheParagraphBeforeAHeadingWithNoBlankLine() {
+    func readsAHeadingNoBlankLineEndsTheStepBeforeAsProse() {
         let source = """
         Warm the oven.
         ## Sauce
@@ -84,8 +91,28 @@ struct StepGroupTests {
         """
 
         let value = Recipe.read(source)
-        #expect(value.groups.map(\.name) == [nil, "Sauce"])
-        #expect(value.steps.map(\.text) == ["Warm the oven.", "Brown the beef."])
+        #expect(value.groups.map(\.name) == [nil])
+        #expect(value.steps.map(\.text) == [source])
+    }
+
+    @Test
+    func readsNoAnnotationInAHeadingReadAsProse() {
+        // The two hashes close the span the first opens at once, so the line naming no cookware
+        // is what the reader already does with a span that names nothing.
+        let parsed = SousParser().parseRecipe("Warm the oven.\n## Sauce")
+
+        #expect(parsed.value.steps.map(\.text) == ["Warm the oven.\n## Sauce"])
+        #expect(parsed.value.cookware.isEmpty)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func opensAGroupOnAHeadingAnotherHeadingStandsBefore() {
+        // A heading is no step, so a group holding none leaves the heading after it opening one.
+        let value = Recipe.read("## Sauce\n## Topping\nGrate the cheese.")
+
+        #expect(value.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(value.groups.map({ $0.steps.map(\.text) }) == [[], ["Grate the cheese."]])
     }
 
     @Test
@@ -254,11 +281,23 @@ struct StepGroupTests {
     }
 
     @Test
-    func writesABlankLineBetweenAStepAndTheHeadingAfterIt() {
-        // A heading ends the paragraph before it, so it is read back the same either way, and
-        // the blank line every block is separated by is the layout the writer produces.
-        #expect(Recipe.read("Warm the oven.\n## Sauce\nBrown.").serialized()
-            == "Warm the oven.\n\n## Sauce\nBrown.")
+    func writesTheBlankLineAHeadingNeedsBeforeIt() {
+        // The blank line every block is separated by is what leaves the heading opening a group
+        // rather than continuing the step before it.
+        var value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown.")
+        value.groups[1].name = "Topping"
+
+        #expect(value.serialized() == "Warm the oven.\n\n## Topping\nBrown.")
+    }
+
+    @Test
+    func dropsTheEscapeALineInsideAStepDoesNotNeed() {
+        // A heading opens no group where a step line stands before it, so a line inside a step
+        // is prose whatever its shape and needs no escape to stay that way.
+        let written = Recipe.read("Warm the oven.\n\\## Sauce").serialized()
+
+        #expect(written == "Warm the oven.\n## Sauce")
+        #expect(Recipe.read(written).steps.map(\.text) == ["Warm the oven.\n## Sauce"])
     }
 
     @Test
@@ -266,9 +305,10 @@ struct StepGroupTests {
         #expect(Recipe.read("## Sauce \\\\@ Home").serialized() == "## Sauce \\\\@ Home")
     }
 
-    // A heading is decided by the shape of a whole line, so content written at the start of one
-    // is escaped wherever it would otherwise be read as a heading rather than as itself. The
-    // escape reads back as the character, so the content survives either way.
+    // A heading is decided by the shape of a whole line, and only the line a step opens with
+    // can be one, so content written there is escaped wherever it would otherwise be read as a
+    // heading rather than as itself. The escape reads back as the character, so the content
+    // survives either way, and a line inside a step needs none.
     //
     // The line a run of content sits on is not the run: what a segment before it wrote is on
     // that line too, and what a segment after it writes continues it. So a run ending at the
@@ -276,28 +316,29 @@ struct StepGroupTests {
     // hash completes a marker the segment before it began.
 
     @Test(arguments: [
-        "Mix it,\n\\## then rest it.",
-        "Add @a\n\\## b@ now.",
-        "Use a #a\n\\## b# now.",
-        "Wait ~4\n\\## h~ now.",
-        "Spread the >a\n\\## b> now.",
+        // The step opens with the content, where a heading would open a group.
         "\\## Sauce",
-        "Mix it,\n\\##  rest it.",
-        "## Sauce\nMix it,\n\\## then rest it.",
         // The name comes from the segment written after the run.
         "\\## @a@",
         "\\## #p#",
         "\\## ~4 h~",
         "\\## >a>",
-        "Mix.\n\\## @salt@ in.",
-        "Add @x\n\\## @ now.",
-        "Add @{2 g} x\n\\## @ now.",
-        "Add @x\n\\## @? now.",
-        // The first hash of the marker comes from the segment written before the run.
-        "Use a #x\n#\\# # now.",
-        "Use a #x\n#\\#  now."
+        // A line inside a step, which no longer opens a group and so needs no escape.
+        "Mix it,\n## then rest it.",
+        "Add @a\n## b@ now.",
+        "Use a #a\n## b# now.",
+        "Wait ~4\n## h~ now.",
+        "Spread the >a\n## b> now.",
+        "Mix it,\n##  rest it.",
+        "## Sauce\nMix it,\n## then rest it.",
+        "Mix.\n## @salt@ in.",
+        "Add @x\n## @ now.",
+        "Add @{2 g} x\n## @ now.",
+        "Add @x\n## @? now.",
+        "Use a #x\n## # now.",
+        "Use a #x\n##  now."
     ])
-    func escapesContentThatWouldOtherwiseBeReadAsAHeading(source: String) {
+    func preservesContentThatCouldBeReadAsAHeading(source: String) {
         let recipe = Recipe.read(source)
         let reRead = SousParser().parseRecipe(recipe.serialized())
 
