@@ -10,6 +10,12 @@ public struct SousParser: Sendable {
     ///
     /// Parsing always succeeds; any well-formedness problems are reported as diagnostics on the result.
     ///
+    /// Every line break a step carries is read as a line feed, whether the source wrote it as
+    /// one, as a carriage return, as the pair, or as one of the other characters Unicode breaks
+    /// a line on. The language asks for none of that: it states where a line ends, not what
+    /// ends it, so this is what this reader states its steps in rather than something another
+    /// reader owes a caller.
+    ///
     /// - Parameter text: The Sous source text to parse.
     /// - Returns: The parsed recipe together with any diagnostics.
     public func parseRecipe(_ text: String) -> Parsed<Recipe> {
