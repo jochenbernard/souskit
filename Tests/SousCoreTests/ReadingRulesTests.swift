@@ -232,6 +232,7 @@ struct ReadingRulesTests {
         (source: "Use \\# here.", prose: "Use # here."),
         (source: "Use \\~ here.", prose: "Use ~ here."),
         (source: "Use \\{ here.", prose: "Use { here."),
+        (source: "Use \\} here.", prose: "Use } here."),
         (source: "Use \\: here.", prose: "Use : here."),
         (source: "Use \\? here.", prose: "Use ? here."),
         (source: "Use \\> here.", prose: "Use > here."),

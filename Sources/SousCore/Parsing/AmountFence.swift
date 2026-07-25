@@ -23,10 +23,10 @@ enum AmountFence {
         "\(opening)\(content)\(closing)"
     }
 
-    /// The fence this writes around the given amount: its text, opened by the marker where the
-    /// amount is fixed. Reading takes the marker out of the text and into the amount, so
-    /// writing puts it back from there and an amount a caller fixes is written fixed.
-    static func around(_ amount: Amount) -> String {
-        around(amount.isFixed ? "\(fixedMarker)\(amount.text)" : amount.text)
+    /// The content a fence holds for the amount: the marker where the amount is fixed, then its
+    /// text. Reading takes the marker out of the text and into the amount, so writing puts it
+    /// back from there and an amount a caller fixes is written fixed.
+    static func content(of amount: Amount) -> String {
+        amount.isFixed ? "\(fixedMarker)\(amount.text)" : amount.text
     }
 }

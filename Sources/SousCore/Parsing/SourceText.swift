@@ -81,12 +81,12 @@ enum SourceText {
     }
 
     /// A reader escapes exactly the characters it gives a meaning to: the sigils it opens a
-    /// span on, the brace that opens an amount fence, the two that open a flag, and the
-    /// backslash itself. A sigil a later version introduces is none of them, so a backslash
+    /// span on, the braces that open and close an amount fence, the two that open a flag, and
+    /// the backslash itself. A sigil a later version introduces is none of them, so a backslash
     /// before one is ordinary text and is kept, which is what carries the escape through to
     /// the reader that does give that sigil a meaning.
     private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
-        .union([Flag.separator, Flag.shorthand, AmountFence.opening, escape])
+        .union([Flag.separator, Flag.shorthand, AmountFence.opening, AmountFence.closing, escape])
 
     /// Whether the character would escape the one after it, which is what makes a literal
     /// backslash need an escape of its own. Every writer asks through this one rule, so none

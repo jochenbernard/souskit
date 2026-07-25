@@ -39,9 +39,7 @@ enum StepParser {
 
             // A line break bounds the search, so the region remembered as holding no brace
             // ends there and a fence opening past it starts a search of its own line.
-            let cursor = SourceText.run(in: characters, from: from, while: { character in
-                character != AmountFence.closing && !character.isNewline
-            })
+            let cursor = StepParser.firstUnescaped(AmountFence.closing, in: characters, from: from)
             searchedTo = cursor
 
             return cursor < characters.count && characters[cursor] == AmountFence.closing ? cursor : nil
@@ -149,20 +147,32 @@ enum StepParser {
 
     /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays
     /// part of the name rather than closing it.
-    ///
-    /// A name holds no line break, so the search ends at one: a span closes on the line it
-    /// opens on or on no line at all.
     private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
+        let end = firstUnescaped(sigil, in: characters, from: start)
+
+        return end < characters.count && characters[end] == sigil ? end : nil
+    }
+
+    /// The index of the first occurrence of the character that no escape stands before, or the
+    /// index the line ends at when it holds none.
+    ///
+    /// An escape is stepped over whole, so the character it produces bounds nothing: `\@` inside
+    /// a name and `\}` inside an amount are each part of what they stand in. A name and an
+    /// amount hold no line break, so the search ends at one: each closes on the line it opens on
+    /// or on no line at all.
+    private static func firstUnescaped(_ character: Character, in characters: [Character], from start: Int) -> Int {
         var cursor = start
+
         while cursor < characters.count, !characters[cursor].isNewline {
             if opensEscape(characters, at: cursor) {
                 cursor += 2
                 continue
             }
-            if characters[cursor] == sigil { return cursor }
+            if characters[cursor] == character { return cursor }
             cursor += 1
         }
-        return nil
+
+        return cursor
     }
 
     /// Scans one annotation span that opens at `start`. A well-formed span becomes a named
@@ -188,7 +198,12 @@ enum StepParser {
                 return degradedFence(characters, from: start, as: annotation, origin: origin)
             }
 
-            let fence = String(characters[(contentStart + 1)..<closingBrace])
+            // The content states what it holds between the braces, so its escapes are resolved
+            // as a name's are, which is what lets an amount state a brace of its own.
+            let fence = SourceText.unescaped(
+                characters[(contentStart + 1)..<closingBrace],
+                escaping: SourceText.isEscapable
+            )
             amount = AmountParser.parse(fence)
 
             if let defect = AmountParser.defect(in: fence) {

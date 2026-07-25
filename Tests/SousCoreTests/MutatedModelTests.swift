@@ -99,19 +99,19 @@ struct MutatedModelTests {
         #expect(value.reRead().ingredients.map(\.name) == [name])
     }
 
-    // An amount is written between the fence's braces rather than between sigils, so its own
-    // boundary is the brace that closes the fence early.
+    // An amount is written between the fence's braces, and the brace that would close one
+    // early is escapable, so an amount stating one reads back as itself.
 
-    @Test
-    func writesAnAmountTextHoldingAClosingBraceThatEndsTheFenceEarly() throws {
+    @Test(arguments: ["a}b", "a\\b", "a\\}b"])
+    func writesAnAmountTextThatStatesABraceOrABackslash(text: String) throws {
         var value = Recipe.read("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
-        ingredient.amount?.text = "a}b"
+        ingredient.amount?.text = text
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         let written = try #require(value.reRead().ingredients.first)
-        #expect(written.amount?.text == "a")
-        #expect(written.name == "b} salt")
+        #expect(written.amount?.text == text)
+        #expect(written.name == "salt")
     }
 
     @Test(arguments: ["a\nb", "a\n\nb"])

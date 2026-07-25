@@ -112,10 +112,32 @@ extension Step {
             at: position.continued(by: annotation.sigil)
         )
         if let amount {
-            content = "\(AmountFence.around(amount)) \(content)"
+            content = "\(AmountFence.around(escapedAmount(amount))) \(content)"
         }
 
         return annotation.span(around: content) + renderedFlags(flags)
+    }
+
+    /// Escapes what a fence holds so its content re-reads as itself: the brace that would
+    /// close the fence early, and a backslash that would otherwise escape what follows it.
+    ///
+    /// Every other character the language escapes is inert between the braces, so it needs
+    /// none, and reading resolves the escape either way.
+    private static func escapedAmount(_ amount: Amount) -> String {
+        let characters = Array(AmountFence.content(of: amount))
+        var result = ""
+
+        for index in characters.indices {
+            let character = characters[index]
+            let following = SourceText.character(in: characters, at: index + 1)
+
+            if character == AmountFence.closing || SourceText.escapesFollowing(character, before: following) {
+                result.append(SourceText.escape)
+            }
+            result.append(character)
+        }
+
+        return result
     }
 
     /// Writes the flag chain in one canonical order: the named flags, then the unrecognized

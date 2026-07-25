@@ -96,6 +96,20 @@ struct IngredientTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
+    // The brace that closes a fence is escapable, as the brace that opens one is, so an
+    // amount may hold one and the fence closes on the first brace no escape stands before.
+
+    @Test
+    func readsAnEscapedBraceAsPartOfTheAmount() throws {
+        let parsed = SousParser().parseRecipe("Add @{a\\}b} salt@.")
+
+        let ingredient = try #require(parsed.value.firstIngredient)
+        #expect(ingredient.amount?.kind.impreciseText == "a}b")
+        #expect(ingredient.name == "salt")
+        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.serialized() == "Add @{a\\}b} salt@.")
+    }
+
     @Test
     func letsAnUnclosedFenceReachTheNextClosingBrace() throws {
         // A sigil is inert between the braces, so the fence closes on the next "}" in the
