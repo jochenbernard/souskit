@@ -13,6 +13,10 @@ public enum Normalization {
     /// and each leading connective word is dropped along with the whitespace after it. Nothing
     /// else is changed, so the whitespace within the rest of a name still tells two names apart.
     ///
+    /// A connective is dropped to reach the name it opens, so a name that states nothing else
+    /// keeps them: dropping them would leave it stating nothing, which no reference could reach
+    /// and every such name would match.
+    ///
     /// - Parameter text: The name to normalize.
     /// - Returns: The form it is matched in.
     public static func normalized(_ text: String) -> String {
@@ -21,13 +25,14 @@ public enum Normalization {
         // comes first, so a connective is recognized whatever accent it carries, and again
         // last, because dropping the whitespace and the connectives before it changes what
         // leads a mark, and a mark folds by what leads it.
-        var name = SourceText.trimmed(folded(text.lowercased()))
+        let name = SourceText.trimmed(folded(text.lowercased()))
+        var opened = name
 
-        while let stripped = withoutLeadingConnective(name) {
-            name = stripped
+        while let stripped = withoutLeadingConnective(opened) {
+            opened = stripped
         }
 
-        return folded(name)
+        return folded(opened.isEmpty ? name : opened)
     }
 
     /// The text with its diacritics folded away, to a fixed point.

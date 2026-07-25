@@ -75,13 +75,30 @@ struct NormalizationTests {
         (text: "of  the  sauce", normalized: "sauce"),
         // The words are matched after capitalization and accents are folded.
         (text: "Of The Sauce", normalized: "sauce"),
-        (text: "of\tthe\tsauce", normalized: "sauce"),
-        // A name that is nothing but connectives states no name at all.
-        (text: "of", normalized: ""),
-        (text: "of the", normalized: "")
+        (text: "of\tthe\tsauce", normalized: "sauce")
     ])
     func dropsEachLeadingConnective(text: String, normalized: String) {
         #expect(Normalization.normalized(text) == normalized)
+    }
+
+    // A connective is dropped to reach the name it opens, so a name that is nothing but
+    // connectives states them as its own. Dropping them would leave it stating nothing, which
+    // no reference could reach and every such name would collide with.
+
+    @Test(arguments: [
+        (text: "of", normalized: "of"),
+        (text: "The", normalized: "the"),
+        (text: "of the", normalized: "of the"),
+        (text: "  An  A  ", normalized: "an  a")
+    ])
+    func dropsNoConnectiveFromANameThatStatesNothingElse(text: String, normalized: String) {
+        #expect(Normalization.normalized(text) == normalized)
+    }
+
+    @Test
+    func tellsApartTwoGroupsNamedOnlyByConnectives() {
+        // The two would collide under a normalization that left each stating nothing.
+        #expect(Normalization.normalized("The") != Normalization.normalized("A"))
     }
 
     // A connective is a whole word, so a name only opens with one when whitespace or the end

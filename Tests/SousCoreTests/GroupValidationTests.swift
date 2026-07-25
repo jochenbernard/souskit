@@ -43,6 +43,9 @@ struct GroupValidationTests {
     @Test(arguments: [
         "## Sauce\nBrown it.\n\n## Topping\nGrate it.",
         "## Sauce\nBrown it.\n\n## Sauces\nBrown them.",
+        // A name that states nothing but connectives keeps them, so two such names differ
+        // rather than both normalizing to nothing.
+        "## The\nBrown it.\n\n## A\nBrown it again.",
         // The default group has no name, so it collides with nothing.
         "Warm the oven.\n\n## Sauce\nBrown it."
     ])
