@@ -1,28 +1,24 @@
-/// The named flags attached to an annotation after its closing sigil.
+/// The flags written after an ingredient or reference, such as `@salt@:staple`.
 ///
-/// A flag can only state a status, never deny one, so an unattached flag is `false`. Where
-/// reference data carries the same status, `false` leaves the answer to that reference data.
+/// A flag is written as `:` followed by its name, and flags chain: `@rosemary@?:staple`. The
+/// shorthand `?` is equivalent to `:optional`.
 public struct Flags: Equatable, Hashable, Sendable {
-    /// Whether an `:optional` flag, or its `?` shorthand, marks what it is attached to as one to leave out.
+    /// Whether `:optional`, or its `?` shorthand, is set.
     public var isOptional: Bool
 
-    /// Whether a `:staple` flag marks what it is attached to as a pantry staple.
+    /// Whether `:staple` is set.
     public var isStaple: Bool
 
-    /// Whether a `:non-food` flag marks what it is attached to as not a food or shopping item.
+    /// Whether `:non-food` is set.
     public var isNonFood: Bool
 
-    /// The flag names that are not recognized, in document order. They are preserved rather
-    /// than dropped.
+    /// The flag names this version does not recognize, in the order written.
     ///
-    /// A chain is a set, so reading holds each name once however many times it is written, as
-    /// a recognized flag's status is held once. A repeat a caller states is written back,
-    /// where it reads as the one flag it states.
+    /// An unrecognized flag is preserved rather than dropped, so a file using a flag from a
+    /// later version still reads and writes back unchanged.
     public var unrecognized: [String]
 
-    /// No flags at all: what an annotation carrying none reads, and what one that takes none
-    /// reads. It is the only place the unflagged value is spelled out, so a flag a later
-    /// version adds joins it in one edit.
+    /// Flags with nothing set.
     static let empty = Self(
         isOptional: false,
         isStaple: false,

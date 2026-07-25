@@ -1,30 +1,19 @@
 import Foundation
 
-/// The form names are matched in.
-///
-/// One routine matches every name the language resolves by identity, so a group a reference
-/// resolves to is a group a consumer looking the same name up finds. It governs group names and
-/// reference targets. A flag name and a header key are matched as written instead, and the unit
-/// a yield states with the whitespace around it ignored and nothing else.
+/// Reduces a name to the form group headings and references are matched in.
 public enum Normalization {
-    /// Returns the form a name is matched in.
+    /// The matching form of a name: lowercased, accent-folded, trimmed, and stripped of leading
+    /// connectives.
     ///
-    /// Capitalization and accents are folded away, the whitespace around the name is trimmed,
-    /// and each leading connective word is dropped along with the whitespace after it. Nothing
-    /// else is changed, so the whitespace within the rest of a name still tells two names apart.
+    /// Connectives are stripped repeatedly, so `the of sauce` and `sauce` match. A name of
+    /// nothing but connectives keeps them, so `the` and `a` stay distinct rather than both
+    /// reducing to nothing.
     ///
-    /// A connective is dropped to reach the name it opens, so a name that states nothing else
-    /// keeps them: dropping them would leave it stating nothing, which no reference could reach
-    /// and every such name would match.
+    /// This is idempotent: normalizing an already normalized name returns it unchanged.
     ///
-    /// - Parameter text: The name to normalize.
-    /// - Returns: The form it is matched in.
+    /// - Parameter text: The name to reduce.
+    /// - Returns: The matching form.
     public static func normalized(_ text: String) -> String {
-        // Folding is what strips a diacritic, whether the name carries it as one character or
-        // as a letter and a combining mark, so the two forms of a letter match each other. It
-        // comes first, so a connective is recognized whatever accent it carries, and again
-        // last, because dropping the whitespace and the connectives before it changes what
-        // leads a mark, and a mark folds by what leads it.
         let name = SourceText.trimmed(folded(text.lowercased()))
         var opened = name
 
@@ -35,10 +24,7 @@ public enum Normalization {
         return folded(opened.isEmpty ? name : opened)
     }
 
-    /// The text with its diacritics folded away, to a fixed point.
-    ///
-    /// One fold drops one combining mark from a run no base letter absorbs, so a name carrying
-    /// several is folded until folding changes nothing.
+    // Folds to a fixed point: Foundation removes one combining mark per pass.
     private static func folded(_ text: String) -> String {
         var current = text
 
@@ -50,16 +36,10 @@ public enum Normalization {
         }
     }
 
-    /// The words dropped from the start of a name, so `of parmesan` matches `parmesan`.
-    ///
-    /// A name is stripped of them for as long as it opens with one, so `of the sauce` matches
-    /// `sauce`.
+    /// The words dropped from the front of a name before matching.
     public static let leadingConnectives: Set<String> = ["a", "an", "of", "the"]
 
-    /// The name without the connective it opens with, or `nil` when it opens with none.
-    ///
-    /// A connective is a whole word, so the name opens with one only while whitespace or the
-    /// end of the name follows it, which is what leaves `office` whole.
+    /// The name without one leading connective, or `nil` when it opens with none.
     private static func withoutLeadingConnective(_ name: String) -> String? {
         guard let end = name.firstIndex(where: \.isWhitespace) else {
             return leadingConnectives.contains(name) ? "" : nil

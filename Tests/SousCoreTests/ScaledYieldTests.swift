@@ -1,17 +1,8 @@
 import SousCore
 import Testing
 
-// What the header of a scaled recipe states. Every yield moves with the amounts, but the one
-// naming the target's unit states the target itself: a factor is derived by dividing and
-// applied by multiplying, and the two do not always land back on the number the division
-// started from.
-
 @Suite("Scaled yields")
 struct ScaledYieldTests {
-    // A factor is derived by dividing and applied by multiplying, and the two do not always
-    // land back on the number the division started from. The target is a value its caller
-    // stated, so the yield naming it is written as that value rather than as the product.
-
     @Test(arguments: [
         (header: "servings: 11", target: "15 servings", written: "15"),
         (header: "servings: 11 people", target: "15 servings", written: "15 people"),
@@ -31,9 +22,6 @@ struct ScaledYieldTests {
         #expect(scaled.metadata.yields.map(\.text) == ["15 pancakes"])
     }
 
-    // Both spellings of the portion dimension state the target, because both name the unit
-    // the target was matched by.
-
     @Test
     func statesEverySpellingOfTheTargetsUnitExactly() throws {
         let scaled = try SousParser().scaled(
@@ -44,10 +32,6 @@ struct ScaledYieldTests {
         #expect(scaled.metadata["servings"] == "15")
         #expect(scaled.metadata.yields.map(\.text) == ["15 servings"])
     }
-
-    // Only the entry the alias is read from states the target. A repeated scalar key is read
-    // from its last occurrence, so an earlier one it shadows is left to the factor, exactly as
-    // scaling by that factor alone would leave it.
 
     @Test
     func statesOnlyTheEntryTheAliasIsReadFrom() throws {
@@ -64,9 +48,6 @@ struct ScaledYieldTests {
 
         #expect(try SousParser().scaled(Recipe.flourRecipe(header), to: target) == parsed)
     }
-
-    // The alias is read from the last scalar entry, so a later one stating no quantity leaves
-    // the dimension to a yield, and the earlier entry is still only multiplied.
 
     @Test
     func statesNoTargetInAnEntryTheAliasDoesNotStandFor() throws {
@@ -94,9 +75,6 @@ struct ScaledYieldTests {
         #expect(try parsed.scaled(toServings: 15.0).metadata["servings"] == "15")
     }
 
-    // Only the dimension the target names is stated exactly. Every other yield, and every
-    // amount, is the product the factor left.
-
     @Test
     func leavesEveryOtherYieldAtTheProductTheFactorLeft() throws {
         let scaled = try SousParser().scaled(Recipe.flourRecipe("servings: 11\nyield: [3 kg]"), to: "15 servings")
@@ -105,9 +83,6 @@ struct ScaledYieldTests {
         #expect(scaled.metadata.yields.map(\.text) == ["4.090909090909091 kg"])
         #expect(try scaled.flourWeight() == 200.0 * (15.0 / 11.0))
     }
-
-    // A value stating no quantity names no dimension, so the target never replaces it, even
-    // where it carries no unit to tell it apart by.
 
     @Test
     func leavesAValueStatingNoQuantityAlone() throws {

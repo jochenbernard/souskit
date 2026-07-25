@@ -1,9 +1,8 @@
-/// A numeric quantity: an integer, a decimal, a fraction, or a mixed number.
+/// A number read from an amount, together with the text it was written as.
 public struct Quantity: Equatable, Hashable, Sendable {
-    /// The computed numeric value. For example, `1 1/2` has the value `1.5`.
+    /// The numeric value.
     public var value: Double
 
-    /// The text the quantity was read from, or the text it is written back as when scaling
-    /// produced it rather than a reader.
+    /// The number as written, such as `1`, `0.5`, or `1/2`.
     public var text: String
 }

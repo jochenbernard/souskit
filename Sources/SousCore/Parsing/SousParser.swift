@@ -1,20 +1,16 @@
 /// A parser for Sous source text.
 ///
-/// A parser holds nothing of its own, so one may be shared across isolation domains and reused
-/// for as many sources as an application reads.
+/// A parser holds no state, so one instance may be shared across isolation domains and reused
+/// for any number of sources.
 public struct SousParser: Sendable {
     /// Creates a parser.
     public init() {}
 
     /// Parses Sous source text into a recipe.
     ///
-    /// Parsing always succeeds; any well-formedness problems are reported as diagnostics on the result.
-    ///
-    /// Every line break a step carries is read as a line feed, whether the source wrote it as
-    /// one, as a carriage return, as the pair, or as one of the other characters Unicode breaks
-    /// a line on. The language asks for none of that: it states where a line ends, not what
-    /// ends it, so this is what this reader states its steps in rather than something another
-    /// reader owes a caller.
+    /// Parsing always succeeds. Malformed constructs are recovered as literal text and reported
+    /// as diagnostics, so a recipe is always returned. A leading byte order mark is dropped, and
+    /// every line break is normalized to a line feed.
     ///
     /// - Parameter text: The Sous source text to parse.
     /// - Returns: The parsed recipe together with any diagnostics.
@@ -36,14 +32,8 @@ public struct SousParser: Sendable {
     /// Parses the content of an amount fence into an amount.
     ///
     /// The text is what a fence holds without its braces, such as `200 g` or `18 pancakes`, and
-    /// it is read exactly as one. The whitespace around it is layout rather than part of what
-    /// it states, so it is trimmed away and a target states what the header value of the same
-    /// text states.
-    ///
-    /// The amount is returned on its own, because a target is stated by a caller rather than
-    /// written in a file, so there is nothing for a diagnostic to point at. Text with no leading
-    /// number is an imprecise amount rather than a defect, and text opening as a number it
-    /// cannot finish states an imprecise amount too, which no scaling request can divide by.
+    /// surrounding whitespace is trimmed. Text with no usable leading number parses as an
+    /// imprecise amount rather than failing, so no diagnostics are returned.
     ///
     /// - Parameter text: The fence content to parse.
     /// - Returns: The parsed amount.

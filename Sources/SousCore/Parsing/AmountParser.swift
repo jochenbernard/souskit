@@ -1,75 +1,48 @@
-// Parses the verbatim content of an `{...}` amount fence.
-//
-// The leading run of numeric characters is the quantity and everything after it is the
-// unit. The split is purely positional, so no unit vocabulary is involved. Content with
-// no leading digit is an imprecise amount, kept verbatim.
-
+/// Reads amount text into a quantity, a range, or an imprecise amount.
 enum AmountParser {
-    /// The character between the two ends of a range. Reading and writing share it, so a range
-    /// a reader recognizes is a range a writer produces.
     static let rangeSeparator: Character = "-"
 
-    /// The one space a writer separates a unit from its quantity with. A reader takes any run
-    /// of whitespace for that separation and trims it away, so what a writer produces is the
-    /// one form of it that states nothing extra.
     static let unitSeparator: Character = " "
 
-    /// The character between a number's whole and fractional parts. Reading and writing share
-    /// it, so a decimal a writer produces is a decimal a reader recognizes, which is what keeps
-    /// a written quantity from running into a unit that opens a fraction.
     static let decimalPoint: Character = "."
 
-    /// The character many languages write a decimal point with and Sous never does. It states
-    /// no decimal here, and it is also the separator an inline list is written with, so reading
-    /// one would state something different inside a list than outside it. A quantity running
-    /// into one is reported rather than read as the number standing before it.
     static let commaPoint: Character = ","
 
-    /// The character between a fraction's numerator and its denominator.
     static let fractionSeparator: Character = "/"
 
-    /// What an amount opened as a number and could not finish with, which leaves it stating no
-    /// quantity at all rather than the number standing before the defect.
-    ///
-    /// Reading reports one where it can point at it, so a wrong quantity neither scales nor
-    /// aggregates and the author is told which spelling the language reads.
+    /// A way an amount can open as a number and fail to finish one.
     enum Defect {
-        /// A decimal point the quantity cannot use: a comma, or a point no digit follows.
+        /// A decimal point with no digits after it, or a comma used as one.
         case decimalPoint
 
-        /// A fraction with no number, or a zero, where its denominator belongs.
+        /// A fraction whose denominator is missing or zero.
         case fraction
 
-        /// A number-shaped text with no leading digit, such as `.5` or `-2`.
+        /// A number opening with a point, comma, or hyphen instead of a digit.
         case leadingCharacter
 
-        /// What a reader states about the defect.
+        /// The warning message for this defect.
         var message: String {
             switch self {
             case .decimalPoint:
-                "Amount states a decimal point it cannot use; a decimal is written '.' between digits."
+                "Amount has a decimal point it cannot use; write a decimal as '.' between digits."
             case .fraction:
-                "Amount states a fraction with no number other than zero under it."
+                "Amount has a fraction with a missing or zero denominator."
             case .leadingCharacter:
-                "Amount opens as a number with no leading digit; a quantity opens with one, as in '0.5'."
+                "Amount opens as a number with no leading digit; write one, as in '0.5'."
             }
         }
     }
 
-    /// Parses the content of an amount fence, where a leading `=` marks the amount fixed.
+    /// The amount a fence's content describes, honoring the `=` marker.
     static func parse(_ fence: String) -> Amount {
         parse(fence, fenced: true)
     }
 
-    /// What the text opened as a number and could not finish with, or `nil` where it states a
-    /// quantity or states no number at all.
+    /// The defect in the text, or `nil` when it opens as a usable number or as no number at all.
     ///
-    /// Reading an amount and reporting one are separate, because an amount is read where no
-    /// diagnostic can be attached to it and a defect is worth reporting only where one can.
-    ///
-    /// - Parameters:
-    ///   - text: The text the amount is read from.
-    ///   - fenced: Whether a fence holds it, which is what gives a leading `=` its meaning.
+    /// Text with no leading number is imprecise rather than defective, so it reports nothing.
+    /// Pass `fenced` when a leading `=` is a marker rather than part of the text.
     static func defect(in text: String, fenced: Bool = true) -> Defect? {
         let characters = Array(markerRemoved(from: SourceText.trimmed(text), fenced: fenced).text)
 
@@ -80,8 +53,7 @@ enum AmountParser {
         return defect(in: characters, at: scanned.end)
     }
 
-    /// The defect a text with no quantity opens with, which is a number's own punctuation
-    /// standing where its leading digit belongs.
+    /// The defect in text that opens with a point, comma, or hyphen before a digit.
     private static func leadingDefect(in characters: [Character], from start: Int) -> Defect? {
         guard let first = SourceText.character(in: characters, at: start),
               first == decimalPoint || first == commaPoint || first == rangeSeparator,
@@ -92,8 +64,7 @@ enum AmountParser {
         return .leadingCharacter
     }
 
-    /// The defect the character just past a scanned number states, that character being the one
-    /// a number would have run on through had it been written the way the language reads.
+    /// The defect in the character a scanned number stops at.
     private static func defect(in characters: [Character], at end: Int) -> Defect? {
         switch SourceText.character(in: characters, at: end) {
         case decimalPoint, commaPoint: .decimalPoint
@@ -102,31 +73,20 @@ enum AmountParser {
         }
     }
 
-    /// Parses a value stating an amount that no fence holds, such as a header field's or one
-    /// part of a timer.
-    ///
-    /// The fixed marker belongs to the fence, so a leading `=` is ordinary text here, which
-    /// leaves the amount imprecise as any other content with no leading number is.
+    /// The amount a header value describes, where a leading `=` is ordinary text.
     static func parse(unfenced text: String) -> Amount {
         parse(text, fenced: false)
     }
 
-    /// The amount a fence's content states, and whether the marker it opens with fixes it. The
-    /// whitespace separating the two belongs to neither, as whitespace does everywhere, so what
-    /// remains is the amount's own text.
+    /// The text without a leading `=` marker, and whether one was present.
     private static func markerRemoved(from text: String, fenced: Bool) -> (text: String, isFixed: Bool) {
         guard fenced, text.first == AmountFence.fixedMarker else { return (text, false) }
 
         return (String(text.dropFirst().drop(while: \.isWhitespace)), true)
     }
 
-    /// The whitespace around a value is layout rather than part of what it states, so it is
-    /// removed before reading and a fence states what the header value of the same text does.
+    /// The amount the text describes. Text opening with no usable number is imprecise.
     private static func parse(_ value: String, fenced: Bool) -> Amount {
-        // The marker states that the amount holds still rather than what it states, so it is
-        // read out of the text and the amount after it is read as any other is, precise or
-        // imprecise. A fence is what gives the marker that meaning, so a value no fence holds
-        // opens with ordinary text.
         let read = markerRemoved(from: SourceText.trimmed(value), fenced: fenced)
         let text = read.text
         let characters = Array(text)
@@ -140,8 +100,6 @@ enum AmountParser {
             )
         }
 
-        // The whitespace between the quantity and the unit separates the two and belongs to
-        // neither, so the unit opens where that run ends.
         let cursor = SourceText.run(in: characters, from: quantity.end, while: \.isWhitespace)
 
         return Amount(
@@ -152,15 +110,8 @@ enum AmountParser {
         )
     }
 
-    /// Scans the quantity at `start`: one number, or a range between two of them. Returns the
-    /// form it takes and the index just past it.
-    ///
-    /// The fixed marker is the fence's own rather than the quantity's, so it is not read here.
-    /// A caller that reads one scans from the index after it, and a caller with no fence, such
-    /// as a timer, never reads one at all.
+    /// The quantity beginning at the index, or `nil` when none is there or it is defective.
     static func quantity(in characters: [Character], from start: Int) -> (kind: Amount.Kind, end: Int)? {
-        // A number the text could not finish states none, so what stands before the defect is
-        // never read as the quantity the author meant.
         guard let scanned = scannedQuantity(in: characters, from: start),
               defect(in: characters, at: scanned.end) == nil
         else { return nil }
@@ -168,8 +119,7 @@ enum AmountParser {
         return scanned
     }
 
-    /// The quantity the text states, read without asking whether it finishes: one number, or a
-    /// range between two of them.
+    /// The quantity beginning at the index, defective or not.
     private static func scannedQuantity(
         in characters: [Character],
         from start: Int
@@ -181,11 +131,10 @@ enum AmountParser {
         return (.range(first.quantity, second.quantity), second.end)
     }
 
-    /// Scans the far end of a range: the separator, and the number after it.
+    /// The high quantity of a range, or `nil` when no separator and number follow.
     ///
-    /// The separator stands between the two ends, so the whitespace on either side of it
-    /// separates each end from it and belongs to neither, as whitespace does everywhere. A
-    /// separator no number follows states no range, leaving it to open the unit instead.
+    /// Whitespace around the separator belongs to neither side, so `1-2`, `1 - 2`, and `1- 2`
+    /// read alike.
     private static func rangeEnd(in characters: [Character], from start: Int) -> (quantity: Quantity, end: Int)? {
         let separator = SourceText.run(in: characters, from: start, while: \.isWhitespace)
         guard SourceText.character(in: characters, at: separator) == rangeSeparator else { return nil }
@@ -193,11 +142,9 @@ enum AmountParser {
         return number(in: characters, from: SourceText.run(in: characters, from: separator + 1, while: \.isWhitespace))
     }
 
-    /// Scans one quantity: a number, a fraction, or a mixed number.
+    /// One number: a decimal, a fraction, or a whole number followed by a fraction.
     private static func number(in characters: [Character], from start: Int) -> (quantity: Quantity, end: Int)? {
         guard let leading = decimal(in: characters, from: start) else {
-            // A character stating a fraction is a quantity of its own, standing where a digit
-            // would otherwise have to.
             guard let standalone = fraction(in: characters, from: start) else { return nil }
 
             return (
@@ -208,15 +155,13 @@ enum AmountParser {
 
         var end = leading.end
         var value = leading.value
-        // The mixed form follows a whole number, so a decimal one never opens one.
+        // Only a whole number takes a mixed fraction, so `1.5 1/2` is a number and a separate part.
         let isWhole = !characters[start..<end].contains(decimalPoint)
 
         if let bare = denominator(in: characters, from: end) {
-            // A bare fraction, whose numerator is the number just scanned.
             value /= bare.value
             end = bare.end
         } else if isWhole, let mixed = mixedFraction(in: characters, from: end) {
-            // A mixed number: a whole number, whitespace, then a fraction.
             value += mixed.value
             end = mixed.end
         }
@@ -224,11 +169,8 @@ enum AmountParser {
         return (Quantity(value: value, text: String(characters[start..<end])), end)
     }
 
-    /// Scans the fraction a mixed number states after its whole number: the whitespace
-    /// separating the two, which belongs to neither, and then the fraction itself.
+    /// The fractional part following a whole number, written `1 1/2` or `1` and a vulgar fraction.
     private static func mixedFraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
-        // A character stating a fraction runs into no digit of the number before it, so it
-        // needs nothing to separate the two.
         if let single = vulgarFraction(in: characters, at: start) { return (single, start + 1) }
 
         let afterSeparator = SourceText.run(in: characters, from: start, while: \.isWhitespace)
@@ -237,8 +179,7 @@ enum AmountParser {
         return fraction(in: characters, from: afterSeparator)
     }
 
-    /// Scans a fraction, a character stating one or a `/` between two numbers, returning its
-    /// value and the index just past it.
+    /// A fraction written `1/2`, or a single vulgar fraction character.
     private static func fraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         if let single = vulgarFraction(in: characters, at: start) { return (single, start + 1) }
 
@@ -249,12 +190,9 @@ enum AmountParser {
         return (numerator.value / denominator.value, denominator.end)
     }
 
-    /// The value a single character states as a fraction, or `nil` for a character stating
-    /// none.
+    /// The value of a character such as one-half, or `nil` for any other character.
     ///
-    /// A character states a fraction where Unicode gives it a numeric value that is not whole,
-    /// which is what tells the fractions apart from the digits, the superscripts, and the
-    /// numerals, each of which states a whole value.
+    /// A whole-valued numeric character such as a superscript digit is not a fraction.
     private static func vulgarFraction(in characters: [Character], at index: Int) -> Double? {
         guard let character = SourceText.character(in: characters, at: index),
               character.unicodeScalars.count == 1,
@@ -265,8 +203,7 @@ enum AmountParser {
         return value
     }
 
-    /// Scans a `/` and the number after it, whose value must be non-zero, so a fraction is
-    /// never divided by zero.
+    /// The denominator following a `/`, or `nil` when it is missing or zero.
     private static func denominator(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         guard start < characters.count,
               characters[start] == fractionSeparator,
@@ -277,9 +214,7 @@ enum AmountParser {
         return (run.value, run.end)
     }
 
-    /// Scans a number: a run of digits, optionally followed by a decimal point and another
-    /// run. The point belongs to the number only between digits, so `3.` stops at the `3`
-    /// and `3,2` stops at the comma.
+    /// A run of digits, optionally followed by a point and more digits.
     private static func decimal(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         guard let leading = digits(in: characters, from: start) else { return nil }
 
@@ -291,7 +226,7 @@ enum AmountParser {
         return (Double(String(characters[start..<decimals.end])) ?? leading.value, decimals.end)
     }
 
-    /// Scans a run of ASCII digits, returning its value and the index just past it.
+    /// A run of ASCII digits, or `nil` when there is none.
     private static func digits(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         let end = SourceText.run(in: characters, from: start, while: SourceText.isDigit)
         guard end > start else { return nil }

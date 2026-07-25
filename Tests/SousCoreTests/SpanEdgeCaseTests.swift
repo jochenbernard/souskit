@@ -10,14 +10,11 @@ struct SpanEdgeCaseTests {
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.isEmpty)
         #expect(step.segments.map(\.proseText) == ["Add @{200 g}@ now."])
-        // The amount would go with the text, so the span states something to report.
         #expect(parsed.diagnostics.map(\.kind) == [.unnamedAnnotation])
     }
 
     @Test
     func readsTheSpansOwnSigilInsideAnAmountFenceAsPartOfTheAmount() throws {
-        // Every sigil is inert between the braces, the span's own included, so the fence is
-        // read before the closing sigil is looked for.
         let parsed = SousParser().parseRecipe("Add @{2 @ g} flour@ now.")
 
         let ingredient = try #require(parsed.value.firstIngredient)
@@ -29,7 +26,6 @@ struct SpanEdgeCaseTests {
 
     @Test
     func doesNotReadAnAmountFenceInACookwareSpan() throws {
-        // Cookware carries a single value, so a brace is part of its name.
         let parsed = SousParser().parseRecipe("Use a #{200 g} pan#.")
 
         let cookware = try #require(parsed.value.firstCookware)
@@ -39,8 +35,6 @@ struct SpanEdgeCaseTests {
 
     @Test
     func closesASpanOnlyOnItsOwnSigil() throws {
-        // A span runs to its matching sigil, so another kind of sigil inside it is part of
-        // the name rather than a nested annotation.
         let parsed = SousParser().parseRecipe("Use a #pan @garlic@ style#.")
 
         let step = try #require(parsed.value.steps.first)
@@ -87,8 +81,6 @@ struct SpanEdgeCaseTests {
 
     @Test
     func keepsAnOrdinaryBackslashInProse() throws {
-        // Only a character this version gives a meaning to is escapable, so a backslash
-        // anywhere else is ordinary text and needs no doubling.
         let parsed = SousParser().parseRecipe("Note the path C:\\Users, then add @garlic@.")
 
         let step = try #require(parsed.value.steps.first)
@@ -117,8 +109,6 @@ struct SpanEdgeCaseTests {
 
     @Test
     func readsAnEscapedBackslashDirectlyBeforeAnAnnotation() throws {
-        // The backslash is escapable, so a literal one can sit directly before a sigil that
-        // opens a span.
         let parsed = SousParser().parseRecipe("Path C:\\\\@garlic@ now.")
 
         let step = try #require(parsed.value.steps.first)

@@ -3,16 +3,15 @@ import Testing
 
 @Suite("Serialization round-trip")
 struct SerializationTests {
-    /// The recipe a source reads as, and the recipe its serialized output re-reads as, which
-    /// is the pair a round-trip expectation is stated over.
+    /// The recipe a source describes, alongside that recipe serialized and read back.
     private func roundTrip(_ source: String) -> (recipe: Recipe, reRead: Recipe) {
         let recipe = Recipe.read(source)
 
         return (recipe, recipe.reRead())
     }
 
-    /// Expects a source to survive being written back and read again as the same recipe, which
-    /// is what the round-trip guarantee promises whatever a writer normalizes on the way out.
+    /// Expects a round trip to preserve the segments and the header, though not necessarily the
+    /// source text byte for byte.
     private func expectTheRecipeSurvivesARoundTrip(
         _ source: String,
         sourceLocation: Testing.SourceLocation = #_sourceLocation
@@ -86,9 +85,6 @@ struct SerializationTests {
         #expect(Recipe.read(source).serialized() == source)
     }
 
-    // A pair of identical sigils reads as ordinary text only while both stay unescaped: the
-    // reader closes the span the first one opens on the second one at once, and keeps both.
-
     @Test(arguments: [
         "Use @@ here.",
         "Use ## here.",
@@ -113,11 +109,6 @@ struct SerializationTests {
         #expect(reRead.ingredients == recipe.ingredients)
     }
 
-    // A flag chain is written in one canonical order: the named flags, then the unrecognized
-    // ones in document order, and last of all the optional shorthand. The shorthand goes last
-    // because a flag word runs on through letters, so a named flag written before prose that
-    // starts with one would read back as a single unrecognized flag.
-
     @Test(arguments: [
         (source: "Add @water@:non-food:staple now.", written: "Add @water@:staple:non-food now."),
         (source: "Add @salt@:optional now.", written: "Add @salt@? now."),
@@ -128,9 +119,6 @@ struct SerializationTests {
     func writesAFlagChainInItsCanonicalOrder(source: String, written: String) {
         #expect(Recipe.read(source).serialized() == written)
     }
-
-    // The inline form is the only one a list is written in, because escaping lets any item
-    // survive it.
 
     @Test
     func escapesASeparatorInAListItem() {
@@ -205,9 +193,6 @@ struct SerializationTests {
         #expect(Recipe.read(source).serialized() == source)
     }
 
-    // An escape that was not needed, such as a sigil already followed by whitespace, loses
-    // its backslash on the way out. The recipe it re-reads to is unchanged.
-
     @Test(arguments: [
         "Add a \\@ symbol here.",
         "Write a \\{ brace here.",
@@ -219,10 +204,6 @@ struct SerializationTests {
     func normalizesAnUnneededEscapeButPreservesTheRecipe(source: String) {
         expectTheRecipeSurvivesARoundTrip(source)
     }
-
-    // Incidental layout, such as repeated blank lines or a trailing newline, is normalized
-    // rather than preserved. What must hold is that the output re-reads to the same recipe,
-    // and that normalizing an already normalized file changes nothing further.
 
     @Test(arguments: TestSupport.normalizedLayouts)
     func normalizingLayoutIsStable(source: String) {
@@ -236,10 +217,6 @@ struct SerializationTests {
     func normalizingLayoutKeepsTheContent(source: String) {
         expectTheRecipeSurvivesARoundTrip(source)
     }
-
-    // A body step that opens with a fence line would read back as a metadata header, blank
-    // lines before one stating nothing, so the output states an empty header before the body
-    // rather than losing it.
 
     @Test(arguments: [
         "---\n---\n\n---",
@@ -257,9 +234,6 @@ struct SerializationTests {
     func writesAnEmptyHeaderBeforeABodyThatOpensWithAFenceLine() {
         #expect(Recipe.read("---\n---\n\n---\nBoil.").serialized() == "---\n---\n\n---\nBoil.")
     }
-
-    // A body that opens with a byte-order mark would have it stripped as the file's own on the
-    // way back in, so the output keeps it in the body rather than losing it.
 
     @Test(arguments: [
         "\u{FEFF}",

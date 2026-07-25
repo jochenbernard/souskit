@@ -1,16 +1,10 @@
 import SousCore
 import Testing
 
-// The complete files the Sous documentation works through, read back here so the outcomes it
-// states stay the outcomes this reader produces. Each also round-trips byte for byte, the
-// header keys later versions introduce included, which this reader preserves and warns about
-// rather than reading. The one exception is a `yield` line, whose key is a list field from v0.3
-// and so comes back in the inline form every list value is written in.
-
 @Suite("Specification examples")
 struct SpecificationExampleTests {
-    /// The source with its `yield` line rewritten to the inline form, which is the only
-    /// difference between a documented example and what writing it back produces.
+    /// The source with each `yield` value bracketed, which is the form serializing writes a
+    /// single-item list in.
     private func withYieldWritten(_ source: String) -> String {
         let key = "yield: "
 
@@ -72,7 +66,6 @@ struct SpecificationExampleTests {
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        // "Grated" sits outside the span, so the ingredient resolves as plain parmesan.
         #expect(recipe.ingredients.map(\.name)
             == ["spaghetti", "butter", "garlic", "chili flakes", "salt", "parmesan"])
         #expect(recipe.cookware.map(\.name) == ["large pot", "pan"])
@@ -82,7 +75,6 @@ struct SpecificationExampleTests {
         #expect(spaghetti.kind.preciseQuantity?.value == 200)
         #expect(spaghetti.unit == "g")
 
-        // Chili flakes are optional and salt is a staple; nothing else carries a flag.
         #expect(recipe.ingredients.map(\.flags.isOptional) == [false, false, false, true, false, false])
         #expect(recipe.ingredients.map(\.flags.isStaple) == [false, false, false, false, true, false])
         #expect(parsed.diagnostics.isEmpty)
@@ -125,8 +117,6 @@ struct SpecificationExampleTests {
         let staples = recipe.ingredients.filter(\.flags.isStaple)
         #expect(staples.map(\.name) == ["salt", "black pepper"])
 
-        // The three fields later versions introduce, `prep-time`, `cook-time`, and `diet`, are
-        // unknown here, so each is preserved and warned about rather than dropped.
         #expect(recipe.metadata["prep-time"] == "5 min")
         #expect(parsed.diagnostics.count == 3)
         #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey && $0.severity == .warning }))
@@ -183,19 +173,14 @@ struct SpecificationExampleTests {
         #expect(metadata.tags == ["comfort food", "italian", "make-ahead"])
         #expect(metadata.source == "https://example.com/veg-lasagna")
 
-        // The yield field is read from v0.3, as the list of amounts it is.
         #expect(metadata.yields.map(\.text) == ["3.2 kg"])
 
-        // A field a later version introduces is preserved as written, brackets included,
-        // because only a list field of this version reads them as a list.
         #expect(metadata["diet"] == "[vegetarian]")
         #expect(metadata["prep-time"] == "40 min")
         #expect(metadata["nutrition"]?.isEmpty == true)
         #expect(metadata.entries.contains(where: { $0.value == .raw("  calories: 3840 kcal") }))
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
 
-        // Every line comes back as written but the yield, which a list field writes in the
-        // inline form whatever it was read from.
         let written = parsed.value.serialized()
         #expect(written == withYieldWritten(source))
         #expect(Recipe.read(written).serialized() == written)
@@ -212,9 +197,6 @@ struct SpecificationExampleTests {
         #expect(parsed.diagnostics.isEmpty)
         #expect(parsed.value.serialized() == source)
     }
-
-    // The groups example, whose parts this version divides the body into, and whose references
-    // consume the intermediates those parts produce.
 
     @Test
     func readsTheGroupsExample() throws {
@@ -253,8 +235,6 @@ struct SpecificationExampleTests {
         #expect(recipe.timers.map(\.kind) == [.range, .precise])
         #expect(recipe.metadata.yields.map(\.text) == ["1 dish"])
 
-        // Each of the three groups attributes its own ingredients, and the last consumes what
-        // the first two produced, which is the dependency that puts it after both.
         #expect(recipe.groups.map(\.name) == ["Filling", "Crumble", "Assemble"])
         #expect(recipe.groups.map({ $0.ingredients.map(\.name) }) == [
             ["mixed berries", "sugar", "cornflour"],
@@ -267,12 +247,8 @@ struct SpecificationExampleTests {
         #expect(recipe.dependencies(of: assemble).map(\.name) == ["Filling", "Crumble"])
         #expect(recipe.validate().isEmpty)
 
-        // Three header keys later versions introduce are left to report, the yield having
-        // become one this version reads.
         #expect(parsed.diagnostics.map(\.kind) == Array(repeating: .unknownHeaderKey, count: 3))
 
-        // The body comes back untouched, group headings and references included; only the
-        // yield moves, into the inline form a list field writes.
         #expect(recipe.serialized() == withYieldWritten(source))
     }
 
@@ -296,8 +272,6 @@ struct SpecificationExampleTests {
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        // The reference and its consumption fence are read, and consuming an intermediate
-        // introduces no ingredient of its own.
         #expect(recipe.ingredients.map(\.name) == ["ziti", "mozzarella"])
         #expect(recipe.cookware.map(\.name) == ["large pot", "baking dish"])
         #expect(recipe.timers.map(\.kind) == [.range, .range])
@@ -306,8 +280,6 @@ struct SpecificationExampleTests {
         #expect(reference.target == "ragu")
         #expect(reference.amount?.text == "600 g")
 
-        // Resolving a bare name to a file of that name arrives in v0.5, so here the reference
-        // matches no group and the file is well-formed but not valid.
         #expect(recipe.validate().map(\.kind) == [.unresolvedReference])
         #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey }))
         #expect(recipe.serialized() == source)

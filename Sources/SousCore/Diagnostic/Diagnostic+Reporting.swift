@@ -1,10 +1,5 @@
 extension Diagnostic {
-    /// A recoverable problem: the construct is preserved, the file stays usable, and only a
-    /// request depending on it can fail. Every problem the reader reports is one of these.
-    ///
-    /// A problem the reader found carries the range of the text it was read from. One
-    /// validation found carries none, because validation reads a recipe rather than the text it
-    /// came from, and a recipe carries nothing that locates itself in that text.
+    /// A warning, which leaves the file usable.
     static func warning(
         _ kind: Kind,
         _ message: String,
@@ -18,8 +13,8 @@ extension Diagnostic {
         )
     }
 
-    /// A conditional requirement the file leaves unsatisfied, which leaves it well-formed but
-    /// not valid. Only validation reports one, so it carries no range.
+    /// An error, which carries no range because validation reads a recipe rather than source
+    /// text.
     static func error(_ kind: Kind, _ message: String) -> Diagnostic {
         Diagnostic(
             severity: .error,

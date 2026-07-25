@@ -81,15 +81,11 @@ struct ReadingRulesTests {
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.timers.isEmpty)
-        // The first sigil opens a span its own paragraph never closes, so it is warned about.
-        // The second is followed by a space, so it never opens one and has nothing to report.
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
 
     @Test
     func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
-        // A line-initial "## " opens a group heading, which is a line-level construct rather
-        // than an inline annotation, so no cookware is read from it.
         let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
 
         let step = try #require(parsed.value.steps.first)
@@ -109,9 +105,6 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // Forward compatibility: a construct a later version introduces is not understood here, so
-    // it stays ordinary text and survives unchanged. Nothing this version leaves unread carries
-    // a sigil of its own, so what remains is the block header form a later version adds.
     @Test(arguments: [
         "---\nnutrition:\n  calories: 3840 kcal\n---",
         "---\ntags:\n  - italian\n---"
@@ -130,8 +123,6 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // A line-initial markdown form carries a space, so the opener rule already leaves it as
-    // ordinary text. It is reserved for possible rich text after 1.0.
     @Test(arguments: ["- Chop the onion.", "> Chop the onion."])
     func treatsAReservedLineInitialMarkdownFormAsOrdinaryText(source: String) throws {
         let parsed = SousParser().parseRecipe(source)
@@ -142,10 +133,6 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
         #expect(parsed.value.serialized() == source)
     }
-
-    // A name holds no line break, so a span closes on the line it opens on or on no line at
-    // all. This is what keeps a wrapped line from stating a name of its own, since a name
-    // broken across one would state something other than the same name written on one line.
 
     @Test
     func doesNotCloseASpanAcrossALineBreak() {
@@ -158,8 +145,6 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotCloseAnAmountFenceAcrossALineBreak() {
-        // The fence leaves its own span literal, and the sigil the second line ends with then
-        // opens a span of its own that no sigil closes, so each is reported.
         let parsed = SousParser().parseRecipe("Add @{200 g\npasta} water@.")
 
         #expect(parsed.value.ingredients.isEmpty)
@@ -183,8 +168,6 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotCloseAnAmountFenceAcrossAParagraphBreak() {
-        // The brace a fence closes on is looked for in the span's own paragraph, so a "}"
-        // in a later paragraph leaves the fence unclosed.
         let source = """
         Add @{200 g
 
@@ -225,8 +208,6 @@ struct ReadingRulesTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // A backslash produces the literal character for each character this version gives a
-    // meaning to, and for nothing else.
     @Test(arguments: [
         (source: "Use \\@ here.", prose: "Use @ here."),
         (source: "Use \\# here.", prose: "Use # here."),
@@ -245,10 +226,6 @@ struct ReadingRulesTests {
         #expect(step.segments.first?.proseText == prose)
         #expect(parsed.diagnostics.isEmpty)
     }
-
-    // A reader resolves an escape only for the characters it gives a meaning to. This version
-    // reads the reference sigil, so it resolves the escape before one, and the writer puts that
-    // escape back wherever the sigil would otherwise open a span.
 
     @Test
     func resolvesAnEscapedReferenceSigilInProse() throws {
@@ -276,8 +253,6 @@ struct ReadingRulesTests {
 
     @Test
     func dropsAnEscapeTheProseDoesNotNeed() {
-        // A sigil no non-whitespace character follows opens no span, so it needs no escape,
-        // and a writer may drop one the text does not need.
         let written = Recipe.read("Spread the \\>sauce\\> on top.").serialized()
 
         #expect(written == "Spread the \\>sauce> on top.")

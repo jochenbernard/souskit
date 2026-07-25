@@ -1,18 +1,8 @@
 import SousCore
 import Testing
 
-// Version 0.4 brings the reference sigil. A ">...>" span names what a step consumes, which in
-// this version is the intermediate a named group of the same file produced.
-//
-// The span is read like every other: the sigil opens one only before a non-whitespace
-// character, it closes within its own paragraph, and a span naming nothing is ordinary text.
-// It composes with an amount fence, which takes a portion of the intermediate, and with the
-// flag chain an ingredient carries.
-
 @Suite("References")
 struct ReferenceTests {
-    // Reading
-
     @Test
     func readsAReferenceBetweenPairedSigils() throws {
         let parsed = SousParser().parseRecipe("Spread the >sauce> on top.")
@@ -39,8 +29,6 @@ struct ReferenceTests {
 
     @Test
     func opensAReferenceAtTheStartOfALine() {
-        // A line beginning "> " is the reserved markdown form, which the opener rule already
-        // leaves as text, so a line may still open a reference.
         #expect(Recipe.read(">sauce> goes in first.").references.map(\.target) == ["sauce"])
     }
 
@@ -69,8 +57,6 @@ struct ReferenceTests {
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
     }
 
-    // A target holds no line break, so a span closes on the line it opens on or on none.
-
     @Test(arguments: ["Spread the >sauce\nlayer> on top.", "Spread the >sauce\n\nlayer> on top."])
     func doesNotCloseAReferenceAcrossALineBreak(source: String) {
         let parsed = SousParser().parseRecipe(source)
@@ -94,13 +80,10 @@ struct ReferenceTests {
 
     @Test
     func contributesNoIngredient() {
-        // The intermediate's ingredients are those of its group's steps, already counted there.
         let value = Recipe.read("## Sauce\nBrown @{500 g} minced beef@.\n\n## Assemble\nLayer the >sauce>.")
 
         #expect(value.ingredients.map(\.name) == ["minced beef"])
     }
-
-    // The consumption fence
 
     @Test
     func readsTheConsumptionFence() throws {
@@ -116,9 +99,6 @@ struct ReferenceTests {
     func readsAFenceWithNoSeparatingSpace() throws {
         #expect(try #require(Recipe.read("Layer the >{300 g}sauce> in a dish.").firstReference).target == "sauce")
     }
-
-    // A target is trimmed, as every name is, so whatever whitespace separates it from the
-    // fence belongs to neither.
 
     @Test(arguments: ["Layer the >{300 g}  sauce> in a dish.", "Layer the >{300 g} sauce > in a dish."])
     func trimsTheWhitespaceAroundATarget(source: String) throws {
@@ -142,7 +122,6 @@ struct ReferenceTests {
 
     @Test
     func readsEverySigilInsideAFenceAsText() throws {
-        // Sigils are inert between the braces, the span's own included.
         let reference = try #require(Recipe.read("Spread the >{>300 g} sauce> over it.").firstReference)
 
         #expect(reference.target == "sauce")
@@ -156,8 +135,6 @@ struct ReferenceTests {
         #expect(parsed.value.references.isEmpty)
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
-
-    // Flags
 
     @Test
     func readsTheShorthandFlagAfterAReference() throws {
@@ -183,8 +160,6 @@ struct ReferenceTests {
         #expect(parsed.diagnostics.map(\.kind) == [.unknownFlag])
     }
 
-    // Projections
-
     @Test
     func listsItsReferencesOnTheStepTheGroupAndTheRecipe() throws {
         let value = Recipe.read("""
@@ -199,8 +174,6 @@ struct ReferenceTests {
         #expect(group.references.map(\.target) == ["sauce", "topping"])
         #expect(value.references.map(\.target) == ["sauce", "topping"])
     }
-
-    // Writing
 
     @Test(arguments: [
         "Spread the >sauce> on top.",
@@ -222,8 +195,6 @@ struct ReferenceTests {
 
     @Test
     func escapesProseThatWouldOpenAFlagAfterAReference() {
-        // A flag chain reads on from the closing sigil, so prose needing a literal flag
-        // character there escapes it, exactly as it does after an ingredient.
         #expect(Recipe.read("Is the >sauce>\\? Yes.").serialized() == "Is the >sauce>\\? Yes.")
     }
 

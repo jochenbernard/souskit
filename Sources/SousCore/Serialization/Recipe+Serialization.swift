@@ -1,8 +1,8 @@
 extension Recipe {
     /// Renders the recipe back to Sous source text.
     ///
-    /// Content is preserved, while incidental layout such as repeated blank lines is
-    /// normalized, so re-reading the result yields the same recipe.
+    /// Content is preserved and incidental layout such as repeated blank lines is normalized, so
+    /// re-reading the result yields the same recipe.
     ///
     /// - Returns: The recipe rendered as Sous source text.
     public func serialized() -> String {
@@ -21,19 +21,15 @@ extension Recipe {
         let text = blocks.joined(separator: "\n\n")
         guard !hasHeader else { return text }
 
-        // With no header block in front of it, a body that starts the file is read as whatever
-        // that position means. An empty header states where the body starts, which a blank line
-        // no longer does, since a reader steps over the blank lines before an opening fence. A
-        // byte-order mark is taken for the file's own only at the very start, so a blank line
-        // is what keeps one in the body.
+        // A recipe with no header whose body would open a fence or a byte order mark needs
+        // something in front, or re-reading would take that opening line as a header.
         if Self.opensAHeader(text) { return "\(metadata.serialized())\n\n\(text)" }
         if text.hasPrefix(SourceText.byteOrderMark) { return "\n\(text)" }
 
         return text
     }
 
-    /// Whether the text's first line stating anything would open a metadata header, the blank
-    /// lines before one being layout a reader steps over.
+    /// Whether the first non-blank line of the text is a header fence.
     private static func opensAHeader(_ text: String) -> Bool {
         SourceText.lines(of: text).first(where: { !SourceText.isBlank($0) }).map(SourceText.isFence) ?? false
     }

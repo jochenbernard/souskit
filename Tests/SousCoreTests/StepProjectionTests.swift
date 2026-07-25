@@ -1,9 +1,6 @@
 import SousCore
 import Testing
 
-// The annotation lists are views over the segments a step is built from, so editing the
-// segments moves them. Nothing is stored twice and nothing can drift.
-
 @Suite("Step projection")
 struct StepProjectionTests {
     @Test
@@ -47,10 +44,6 @@ struct StepProjectionTests {
         #expect(recipe.cookware.isEmpty)
     }
 
-    // A run of prose is one segment when a step is read, so only a mutation puts two of them
-    // side by side. The writer asks each what annotation it stands for, and a run of prose
-    // stands for none, so the two write as the one run they spell.
-
     @Test
     func writesTwoAdjacentProseSegmentsAsOneRun() {
         var recipe = Recipe.read("Add @salt@.")
@@ -59,9 +52,6 @@ struct StepProjectionTests {
         #expect(recipe.serialized() == "Season it? Yes.")
         #expect(Recipe.read(recipe.serialized()).steps.map(\.text) == ["Season it? Yes."])
     }
-
-    // The step list is a view over the groups, and each group's lists are views over its own
-    // steps, so editing a group's steps moves both.
 
     @Test
     func derivesTheStepsAndTheGroupListsFromTheGroups() {

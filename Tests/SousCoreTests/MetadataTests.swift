@@ -1,11 +1,6 @@
 import SousCore
 import Testing
 
-// The scalar fields: what a value reads as, and how an unrecognized or repeated key is
-// handled. Values are literal text with no type coercion, so "1.0" stays the string it was
-// written as. The header's shape is covered by the header suites, and list-valued fields
-// by the list suite.
-
 @Suite("Metadata header")
 struct MetadataTests {
     @Test
@@ -24,9 +19,6 @@ struct MetadataTests {
         #expect(metadata.source == "https://example.com/omelette")
     }
 
-    // The servings value reads as its leading numeric quantity, in every form an amount
-    // fence allows.
-
     @Test(arguments: [
         (value: "6", servings: 6.0),
         (value: "2.5", servings: 2.5),
@@ -43,11 +35,6 @@ struct MetadataTests {
         #expect(metadata.servings == nil)
         #expect(metadata["servings"] == "six")
     }
-
-    // A value states what stands between its ends, as every name does, so the whitespace
-    // around one belongs to neither the value nor the separator before it. An unknown key's
-    // value is trimmed like any other: the whitespace states nothing this reader would
-    // otherwise have to carry through.
 
     @Test(arguments: ["servings: 6 ", "servings:  6", "servings: \t6\t"])
     func readsAValueTrimmedOfTheWhitespaceAroundIt(header: String) {
@@ -76,9 +63,6 @@ struct MetadataTests {
         #expect(Metadata.read("title: Toast ").title == Metadata.read("title: Toast").title)
     }
 
-    // An amount-valued field is read as a fence is, so a number it states and cannot finish is
-    // reported there too. Every other field is literal text, which states no number to report.
-
     @Test(arguments: ["servings: 3,2", "yield: 3,2 kg", "yield: [1 L, 1/0 kg]", "servings: .5"])
     func warnsAboutANumberAnAmountFieldCannotFinish(header: String) {
         let parsed = SousParser().parseRecipe("---\n\(header)\n---")
@@ -91,8 +75,6 @@ struct MetadataTests {
     func reportsNothingForAValueStatingNoNumberItCannotFinish(header: String) {
         #expect(SousParser().parseRecipe("---\n\(header)\n---").diagnostics.isEmpty)
     }
-
-    // An unrecognized key is preserved and warned about, never dropped.
 
     @Test
     func warnsAboutAnUnrecognizedKeyAndPreservesIt() {
@@ -118,9 +100,6 @@ struct MetadataTests {
 
         #expect(SousParser().parseRecipe(source).diagnostics.isEmpty)
     }
-
-    // A repeated scalar key warns and keeps its last occurrence, while every occurrence
-    // survives in the raw store.
 
     @Test
     func warnsAboutARepeatedScalarKeyAndKeepsTheLastValue() {

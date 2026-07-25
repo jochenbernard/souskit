@@ -49,8 +49,6 @@ struct AmountTests {
         #expect(amount.unit == nil)
     }
 
-    // The quantity is built from the digits 0 to 9, so a numeral outside that set leaves the
-    // fence with no leading number.
     @Test(arguments: ["\u{0663}", "\u{FF13}"])
     func treatsANonAsciiNumeralAsImprecise(digit: String) throws {
         let amount = try #require(Recipe.read("Add @{\(digit) g} sugar@.").firstAmount)
@@ -103,7 +101,6 @@ struct AmountTests {
 
     @Test
     func readsAFractionAsAMixedNumberOnlyAfterAWholeNumber() throws {
-        // The mixed form follows a whole number, so a decimal one does not open one.
         let amount = try #require(Recipe.read("Add @{1.5 1/2 cups} flour@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
         #expect(quantity.value == 1.5)
@@ -153,9 +150,6 @@ struct AmountTests {
         #expect(amount.unit == "- tbsp")
     }
 
-    // The separator stands between the two ends of a range, so the whitespace around it
-    // separates each end from it and belongs to neither, as whitespace does everywhere.
-
     @Test(arguments: ["1 - 2 tbsp", "1- 2 tbsp", "1 -2 tbsp", "1 \t-\t 2 tbsp"])
     func readsARangeWhateverWhitespaceSurroundsItsSeparator(fence: String) throws {
         let amount = try #require(Recipe.read("Add @{\(fence)} olive oil@.").firstAmount)
@@ -165,10 +159,6 @@ struct AmountTests {
         #expect(range.high.value == 2.0)
         #expect(amount.unit == "tbsp")
     }
-
-    // The whitespace between the quantity and the unit separates them and belongs to neither,
-    // and a fence states what its content states, so the whitespace around that content is
-    // layout as well. A fence therefore reads exactly as the header value of the same text.
 
     @Test(arguments: [
         (fence: "200  g", unit: "g"),
@@ -183,10 +173,6 @@ struct AmountTests {
         #expect(amount.kind.preciseQuantity?.value == 200.0)
         #expect(amount.unit == unit)
     }
-
-    // A character Unicode gives a fractional value to is a quantity, so the fractions a recipe
-    // is written with need no spelling out. A whole number may stand before one, with or
-    // without the whitespace separating them.
 
     @Test(arguments: [
         (fence: "\u{00BD} cup", value: 0.5, unit: "cup"),
@@ -212,9 +198,6 @@ struct AmountTests {
         #expect(amount.unit == "cups")
     }
 
-    // A whole numeric value is a number rather than a fraction, so a superscript and a numeral
-    // stay unit text and no quantity is invented from them.
-
     @Test(arguments: ["\u{00B2} cups", "\u{216B} cups"])
     func readsNoQuantityFromACharacterStatingAWholeValue(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
@@ -239,10 +222,6 @@ struct AmountTests {
         #expect(amount.text == "1 tsp")
     }
 
-    // Whitespace separates whatever it stands between, whatever it is built from and however
-    // much of it there is, so the whole number and the fraction of a mixed number are no
-    // exception.
-
     @Test(arguments: ["1  1/2 cups", "1\t1/2 cups", "1 \t 1/2 cups"])
     func readsAMixedNumberAcrossAnyWhitespace(fence: String) throws {
         let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
@@ -259,10 +238,6 @@ struct AmountTests {
         #expect(amount.kind.impreciseText?.isEmpty == true)
         #expect(amount.unit == nil)
     }
-
-    // A quantity is a leading run of numeric characters, and an exponent is not one of them,
-    // so the mark and everything after it is unit text. This is what a writer producing an
-    // amount has to stay inside.
 
     @Test(arguments: [
         (fence: "1e5 g", quantity: 1.0, unit: "e5 g"),

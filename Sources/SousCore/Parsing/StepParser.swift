@@ -1,30 +1,20 @@
-// Scans one paragraph into a step: ordered prose and annotation segments.
-//
-// A sigil opens a span only when immediately followed by a non-whitespace character, and a
-// span closes on the line it opens on, a name holding no line break. A span that is never
-// closed, or an amount fence with no closing brace, degrades to literal text with a
-// warning, so the surrounding paragraph still reads.
-
+/// Reads one paragraph into a step of prose and annotation segments.
 enum StepParser {
-    /// The result of scanning a span: a well-formed annotation, or literal text recovered
-    /// from a span that is not well-formed.
+    /// The result of scanning a span.
     ///
-    /// Recovered text carries the warning the recovery earned rather than reporting it, so
-    /// every diagnostic a paragraph produces is recorded in the one place that reads them.
+    /// A span that is not well-formed becomes literal text carrying the warning it earned, so
+    /// every diagnostic a paragraph produces is appended in one place.
     private enum Span {
         case literal(String, next: Int, warnings: [Diagnostic] = [])
         case named(name: String, amount: Amount?, next: Int, warnings: [Diagnostic] = [])
     }
 
-    /// Finds the brace an amount fence closes on, remembering what it has already looked at.
+    /// Finds the brace an amount fence closes on, remembering the region already searched.
     ///
-    /// A fence closes on the first `}` on its own line, so a line holding none would have
-    /// every fence on it walk to the line's end. Remembering the region already found to hold
-    /// no brace keeps each character looked at once, however many fences ask. A question
-    /// starting outside that region simply starts over, so an answer never depends on the
-    /// order the questions arrive in.
+    /// Memoized: a line holding no closing brace would otherwise have every fence on it scan to
+    /// the line end, which is quadratic. A search starting outside the remembered region starts
+    /// over, so the answer never depends on the order the questions arrive in.
     private struct FenceSearch {
-        /// The bounds of the region known to hold no closing brace.
         private var searchedFrom = 0
         private var searchedTo = 0
 
@@ -37,8 +27,6 @@ enum StepParser {
                 searchedFrom = start
             }
 
-            // A line break bounds the search, so the region remembered as holding no brace
-            // ends there and a fence opening past it starts a search of its own line.
             let cursor = StepParser.firstUnescaped(AmountFence.closing, in: characters, from: from)
             searchedTo = cursor
 
@@ -48,30 +36,29 @@ enum StepParser {
 
     /// Where a paragraph sits in the source, so offsets within it can be reported.
     struct Origin {
-        /// The paragraph's own offset from the start of the source. An offset within the
-        /// paragraph adds to it, because a line break is one character in both.
+        /// The paragraph's offset from the start of the source.
         let start: Int
         let map: SourceMap
 
+        /// The range covering a length of characters at an offset within the paragraph.
         func range(offset: Int, length: Int) -> SourceRange {
             map.range(fromOffset: start + offset, length: length)
         }
     }
 
+    /// The step a paragraph describes. An unclosed span, or an amount fence with no closing
+    /// brace, is recovered as literal text with a warning, so the paragraph still reads.
     static func parse(_ text: String, origin: Origin, diagnostics: inout [Diagnostic]) -> Step {
         let characters = Array(text)
         var segments: [Segment] = []
         var prose = ""
         var cursor = 0
-        // One search serves the whole paragraph, which is the span a fence's brace is looked
-        // for in, so no two fences walk the same text.
+        // One search serves the whole paragraph, so no two fences scan the same text.
         var fences = FenceSearch()
 
         while cursor < characters.count {
             let character = characters[cursor]
 
-            // A backslash produces the literal character, so the escape is resolved and the
-            // backslash dropped. Serialization escapes the character again where needed.
             if opensEscape(characters, at: cursor) {
                 prose.append(characters[cursor + 1])
                 cursor += 2
@@ -88,8 +75,6 @@ enum StepParser {
                     diagnostics.append(contentsOf: warnings)
                     flush(&prose, into: &segments)
                     cursor = next
-                    // An annotation that takes flags reads the chain following its closing
-                    // sigil, so the cursor moves on past that chain too.
                     let flags = FlagParser.parse(
                         after: annotation,
                         in: characters,
@@ -111,8 +96,8 @@ enum StepParser {
         return Step(segments: segments, text: text)
     }
 
-    /// The segment a well-formed span stands for. Only the annotations that carry an amount or
-    /// flags are given them; the others read their content alone.
+    /// The segment a well-formed span becomes. Only annotations that take them receive an amount
+    /// and flags.
     private static func annotated(
         _ annotation: Annotation,
         name: String,
@@ -127,39 +112,37 @@ enum StepParser {
         }
     }
 
+    /// Appends the accumulated prose as a segment and clears it.
     private static func flush(_ prose: inout String, into segments: inout [Segment]) {
         guard !prose.isEmpty else { return }
         segments.append(.text(prose))
         prose = ""
     }
 
+    /// Whether a sigil at this index opens a span.
     private static func opensSpan(_ characters: [Character], at index: Int) -> Bool {
         Annotation.opensSpan(before: SourceText.character(in: characters, at: index + 1))
     }
 
-    /// Whether an escape begins at the given index. A trailing backslash escapes nothing, so it
-    /// is ordinary text.
+    /// Whether an escape begins at this index. A trailing backslash escapes nothing.
     private static func opensEscape(_ characters: [Character], at index: Int) -> Bool {
         characters[index] == SourceText.escape
             && index + 1 < characters.count
             && SourceText.isEscapable(characters[index + 1])
     }
 
-    /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays
-    /// part of the name rather than closing it.
+    /// The index of the span's closing sigil, or `nil` when the line holds none.
     private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
         let end = firstUnescaped(sigil, in: characters, from: start)
 
         return end < characters.count && characters[end] == sigil ? end : nil
     }
 
-    /// The index of the first occurrence of the character that no escape stands before, or the
-    /// index the line ends at when it holds none.
+    /// The index of the first unescaped occurrence of the character, or the index the line ends
+    /// at when it holds none.
     ///
-    /// An escape is stepped over whole, so the character it produces bounds nothing: `\@` inside
-    /// a name and `\}` inside an amount are each part of what they stand in. A name and an
-    /// amount hold no line break, so the search ends at one: each closes on the line it opens on
-    /// or on no line at all.
+    /// An escape is stepped over whole, so `\@` inside `@...@` stays part of the name. The search
+    /// stops at a line break, so a span closes on the line it opens on or not at all.
     private static func firstUnescaped(_ character: Character, in characters: [Character], from start: Int) -> Int {
         var cursor = start
 
@@ -175,9 +158,10 @@ enum StepParser {
         return cursor
     }
 
-    /// Scans one annotation span that opens at `start`. A well-formed span becomes a named
-    /// annotation; an unclosed span, or an amount fence with no closing brace, degrades to
-    /// literal text with a warning so the surrounding paragraph still reads.
+    /// Scans one annotation span opening at `start`.
+    ///
+    /// A span naming nothing is recovered as literal text rather than becoming an unnamed
+    /// annotation. Discarding an amount along with it is warned about.
     private static func scanSpan(
         _ characters: [Character],
         from start: Int,
@@ -191,15 +175,13 @@ enum StepParser {
         var amount: Amount?
         var warnings: [Diagnostic] = []
 
-        // Every sigil is inert between the braces, the span's own included, so the fence is
-        // read first and the closing sigil is looked for after it.
+        // Every sigil is inert between the braces, so the fence is read before the closing sigil
+        // is looked for.
         if annotation.allowsAmount, characters[contentStart] == AmountFence.opening {
             guard let closingBrace = fences.closingBrace(in: characters, from: contentStart + 1) else {
                 return degradedFence(characters, from: start, as: annotation, origin: origin)
             }
 
-            // The content states what it holds between the braces, so its escapes are resolved
-            // as a name's are, which is what lets an amount state a brace of its own.
             let fence = SourceText.unescaped(
                 characters[(contentStart + 1)..<closingBrace],
                 escaping: SourceText.isEscapable
@@ -214,8 +196,6 @@ enum StepParser {
                 ))
             }
 
-            // Whatever whitespace separates the fence from the name belongs to neither, and
-            // trimming the name is what removes it, so the name simply opens after the brace.
             nameStart = closingBrace + 1
         }
 
@@ -229,20 +209,15 @@ enum StepParser {
             return .literal(String(characters[start]), next: start + 1, warnings: [unclosed])
         }
 
-        // A name states what stands between its ends, so the whitespace around it is layout
-        // and is trimmed away, which is what leaves the fence needing no separator of its own.
         let name = SourceText.trimmed(
             SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
         )
 
-        // A span that names nothing is ordinary text, not an annotation of nothing. An amount
-        // it states would go with it, which is what the author is told about; a bare pair of
-        // sigils states nothing to lose and is prose an author wrote for its own sake.
         guard !name.isEmpty else {
             if amount != nil {
                 warnings.append(.warning(
                     .unnamedAnnotation,
-                    "\(annotation.noun) span states an amount and names nothing.",
+                    "\(annotation.noun) span has an amount but no name.",
                     at: origin.range(offset: start, length: closingSigil - start + 1)
                 ))
             }
@@ -257,9 +232,10 @@ enum StepParser {
         return .named(name: name, amount: amount, next: closingSigil + 1, warnings: warnings)
     }
 
-    /// Recovers from an amount fence that never closes, which makes the whole span not
-    /// well-formed. The span degrades to literal text, bounded by its closing sigil when it
-    /// has one and by the opening sigil alone when it has none.
+    /// Recovers a span whose amount fence never closes.
+    ///
+    /// The span becomes literal text bounded by its closing sigil when it has one, and by the
+    /// opening sigil alone when it has none.
     private static func degradedFence(
         _ characters: [Character],
         from start: Int,

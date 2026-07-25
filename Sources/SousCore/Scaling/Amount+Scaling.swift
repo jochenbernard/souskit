@@ -1,14 +1,9 @@
 extension Amount {
-    /// The amount some quantities and a unit state, read back from the text they are written
-    /// as, so a scaled amount states what a reader would read back from it.
+    /// An amount built from quantities and a unit, taken from reading the text they render to.
     ///
-    /// One space separates the quantity from the unit and belongs to neither, which is the
-    /// separation the reader trims away. A mixed number is written with that space too, though,
-    /// so a unit opening a fraction is read into a whole quantity. The text is therefore read
-    /// back before it is taken, rather than the writer second-guessing the reader.
-    ///
-    /// It is read as fence content, where a leading `=` would fix the amount. A quantity's text
-    /// is digits, so none can open with one and no rebuilt amount is ever fixed.
+    /// Building by reading back keeps ``Amount/text`` and ``Amount/kind`` in agreement. When the
+    /// round trip does not reproduce the values, the quantities are rewritten with an explicit
+    /// decimal point, which reads back unambiguously.
     init(_ quantities: [Quantity], unit: String) {
         let read = AmountParser.parse(Self.written(quantities, unit: unit))
         if read.kind.values == quantities.values, read.unit == unit {
@@ -16,20 +11,16 @@ extension Amount {
             return
         }
 
-        // The unit was read into the quantity, so the quantity is spelled with a decimal
-        // point, which no fraction can follow into a mixed number.
         let pointed = quantities.map({ Quantity(pointed: $0.value) })
 
         self = AmountParser.parse(Self.written(pointed, unit: unit))
     }
 
-    /// The amount multiplied by a factor, or `nil` when it states nothing that moves.
+    /// The amount scaled, or `nil` when it does not move.
     ///
-    /// A fixed amount is held constant, an imprecise one states no quantity to move, and a
-    /// quantity the factor leaves where it is has not moved either. An amount is rewritten
-    /// exactly where a value changed, which is what makes scaling by one rewrite nothing.
-    ///
-    /// - Throws: ``ScalingError/unwritableQuantity`` when a product cannot be written back.
+    /// A fixed amount and an imprecise one never move, and neither does one whose scaled values
+    /// equal its current ones. Throws ``ScalingError/unwritableQuantity`` when a scaled value is
+    /// no longer finite.
     func scaled(by factor: Double) throws -> Amount? {
         guard !isFixed else { return nil }
 
@@ -42,7 +33,7 @@ extension Amount {
         return Amount(scaled, unit: unit ?? "")
     }
 
-    /// A quantity with no unit is followed by nothing.
+    /// The text quantities and a unit render to, a range joined by its separator.
     private static func written(_ quantities: [Quantity], unit: String) -> String {
         let text = quantities.map(\.text).joined(separator: String(AmountParser.rangeSeparator))
 

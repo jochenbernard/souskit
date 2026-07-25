@@ -1,14 +1,9 @@
-// Divides a recipe body into its step groups: a heading opens a group, and the lines from it
-// up to the next heading are its steps. The lines before the first heading form the unnamed
-// default group.
-
+/// Splits a recipe body into groups and their steps.
 enum GroupParser {
-    /// The groups the body's lines form. A heading opens one, and the lines from it up to the
-    /// next heading are the steps of that group.
+    /// The groups of the body, in document order.
     ///
-    /// The lines before the first heading form the unnamed default group, which is left out
-    /// when it holds no step, so a body opening with a heading forms no default group and a
-    /// body of nothing forms no group at all.
+    /// Steps written before any heading form a group whose name is `nil`. A run holding neither a
+    /// heading nor a step contributes no group, so a body of only blank lines yields none.
     static func parse(
         _ lines: [Substring],
         map: SourceMap,
@@ -26,12 +21,10 @@ enum GroupParser {
         return groups
     }
 
-    /// The runs of body lines the headings divide the body into, each carrying the name of the
-    /// group it opens. The first run is the default group's and carries none.
+    /// The lines grouped under each heading.
     ///
-    /// A heading line belongs to no run. It opens a group only where no step line stands
-    /// directly before it, so a blank line, another heading, or the start of the body is what
-    /// lets one open, and a heading line a step continues is that step's prose.
+    /// A heading is only recognized on a line that starts a paragraph, so `## text` in the middle
+    /// of a step continues that step rather than opening a group.
     private static func runs(in lines: [Substring]) -> [(name: String?, lines: [Substring])] {
         var runs: [(name: String?, lines: [Substring])] = [(name: nil, lines: [])]
         var continuesAStep = false
@@ -48,7 +41,7 @@ enum GroupParser {
         return runs
     }
 
-    /// A step is one paragraph: a maximal run of consecutive non-blank lines.
+    /// The steps of a run, one per paragraph separated by blank lines.
     private static func steps(
         in lines: [Substring],
         map: SourceMap,

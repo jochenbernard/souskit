@@ -1,11 +1,6 @@
 import SousCore
 import Testing
 
-// Scaling by a factor, available since v0.3. Every amount either multiplies by the factor or
-// does not move at all, and the header states what the scaled recipe now makes.
-//
-// What a moved amount is written back as is `ScaledAmountTests`.
-
 @Suite("Scaling by a factor")
 struct ScalingTests {
     @Test
@@ -23,9 +18,6 @@ struct ScalingTests {
         #expect(amount.kind.rangeQuantities?.low.value == 2.0)
         #expect(amount.kind.rangeQuantities?.high.value == 4.0)
     }
-
-    // A fixed, imprecise, or absent amount states nothing to multiply, so a scaled recipe is
-    // not a strict multiple of the original.
 
     @Test
     func leavesAFixedAmountUnchanged() throws {
@@ -60,9 +52,6 @@ struct ScalingTests {
         #expect(timer.components.first?.kind.preciseQuantity?.value == 40.0)
     }
 
-    // The declared yield and servings scale with the amounts, so the header still states what
-    // the recipe makes.
-
     @Test
     func scalesTheDeclaredServings() throws {
         let source = "---\nservings: 4\n---\n\nMix @{200 g} flour@."
@@ -87,9 +76,6 @@ struct ScalingTests {
         #expect(recipe.metadata["servings"] == "12 people")
     }
 
-    // Every entry of a repeated key states the same field, so scaling moves them all rather
-    // than only the one the accessor reads.
-
     @Test
     func scalesEveryEntryOfARepeatedField() throws {
         let source = "---\nservings: 4\nservings: 6\nyield: 800 g\nyield: 12 muffins\n---"
@@ -100,9 +86,6 @@ struct ScalingTests {
             .scalar("8"), .scalar("12"), .list(["1600 g"]), .list(["24 muffins"])
         ])
     }
-
-    // Only the two fields stating how much the recipe makes move. A number anywhere else in
-    // the header states something scaling has no business multiplying.
 
     @Test
     func leavesEveryFieldButTheYieldAndTheServingsAlone() throws {
@@ -125,9 +108,6 @@ struct ScalingTests {
         #expect(recipe.metadata.title == "Stew")
     }
 
-    // A step is rewritten only where an amount actually moved, so untouched prose keeps the
-    // spacing it was read with.
-
     @Test
     func rewritesTheTextOfAStepItChanged() throws {
         let source = "Mix @{200 g} flour@ and @{a pinch} salt@."
@@ -143,9 +123,6 @@ struct ScalingTests {
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == source)
     }
-
-    // Rewriting a step writes every segment of it again, so what the reader resolved has to be
-    // escaped back, the flags have to survive, and a step of several lines stays several lines.
 
     @Test
     func reEscapesTheProseOfARewrittenStep() throws {
@@ -177,9 +154,6 @@ struct ScalingTests {
         #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == text)
     }
 
-    // A group states nothing of its own to multiply, so scaling it is scaling each of its
-    // steps, and its heading comes back as it was written.
-
     @Test
     func keepsTheGroupsOfAScaledRecipe() throws {
         let source = """
@@ -201,9 +175,6 @@ struct ScalingTests {
         """)
     }
 
-    // A consumption fence is an amount, and scaling is defined over amounts, so it moves with
-    // the rest and the fixed marker holds it still.
-
     @Test(arguments: [
         (source: "Layer the >{300 g} sauce> in a dish.", text: "Layer the >{600 g} sauce> in a dish."),
         (source: "Layer the >{=300 g} sauce> in a dish.", text: "Layer the >{=300 g} sauce> in a dish."),
@@ -213,9 +184,6 @@ struct ScalingTests {
     func scalesTheConsumptionFenceOfAReference(source: String, text: String) throws {
         #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == text)
     }
-
-    // A factor of one moves no value, so it rewrites nothing at all: the recipe that comes
-    // back is the recipe that went in, incidental spacing included.
 
     @Test
     func scalingByOneChangesNothing() throws {
@@ -231,10 +199,6 @@ struct ScalingTests {
         let recipe = Recipe.read(source)
         #expect(try recipe.scaled(by: 1.0) == recipe)
     }
-
-    // A factor a scaled amount could not be written back from is refused, so scaling never
-    // produces a recipe that fails to read as itself. Negative zero belongs among them: it
-    // compares equal to zero but writes the sign a negative factor does.
 
     @Test(arguments: [-1.0, -0.5, -0.0, Double.infinity, -Double.infinity, Double.nan])
     func refusesAFactorItCouldNotWriteBack(factor: Double) {

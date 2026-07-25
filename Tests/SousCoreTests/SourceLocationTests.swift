@@ -1,9 +1,6 @@
 import SousCore
 import Testing
 
-// Where diagnostics point, and in what order they arrive. Lines and columns are one-based
-// and counted in characters; the offset is a zero-based character offset.
-
 @Suite("Source locations")
 struct SourceLocationTests {
     @Test
@@ -28,7 +25,6 @@ struct SourceLocationTests {
 
     @Test
     func countsOffsetsFromAfterAByteOrderMark() throws {
-        // The mark is not part of the text, so it does not shift what follows it.
         let parsed = SousParser().parseRecipe("\u{FEFF}Fry @garlic now.")
 
         let range = try #require(parsed.diagnostics.first?.range)
@@ -39,7 +35,6 @@ struct SourceLocationTests {
 
     @Test
     func countsColumnsInCharactersRatherThanUnicodeScalars() throws {
-        // A letter with a combining accent is one character, as is the emoji.
         let parsed = SousParser().parseRecipe("Cafe\u{301} \u{1F642} @garlic now.")
 
         let range = try #require(parsed.diagnostics.first?.range)
@@ -83,7 +78,6 @@ struct SourceLocationTests {
 
     @Test
     func reportsEveryProblemAsAWarning() {
-        // This reader recovers from everything it can flag, so nothing is an error.
         let source = """
         ---
         chef: Alice

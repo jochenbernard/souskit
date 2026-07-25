@@ -1,10 +1,6 @@
 import SousCore
 import Testing
 
-// The header's shape: whether a file has one at all, where its fences may sit, and how a
-// line is split into a key and a value. What the values then mean is covered by the
-// metadata suites.
-
 @Suite("Header form")
 struct HeaderFormTests {
     @Test
@@ -33,15 +29,11 @@ struct HeaderFormTests {
 
     @Test
     func treatsAnIndentedOpeningFenceAsBodyText() {
-        // A fence line is three hyphens and nothing else, so an indented one is not one.
         let parsed = SousParser().parseRecipe(" ---\ntitle: Toast\n---")
 
         #expect(parsed.value.metadata.entries.isEmpty)
         #expect(parsed.value.steps.count == 1)
     }
-
-    // Blank lines before the opening fence state nothing, so the header still counts as
-    // starting the file and the first line stating anything is the one that opens it.
 
     @Test(arguments: [
         "\n---\ntitle: Toast\n---",
@@ -57,7 +49,6 @@ struct HeaderFormTests {
 
     @Test
     func ignoresALeadingByteOrderMark() {
-        // The mark is not content, so a header still counts as starting the file.
         let source = "\u{FEFF}---\ntitle: Buttered Toast\n---"
 
         #expect(Recipe.read(source).metadata.title == "Buttered Toast")
@@ -92,8 +83,6 @@ struct HeaderFormTests {
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unterminatedHeader }))
     }
 
-    // A key ends at the first colon followed by whitespace or the end of the line.
-
     @Test
     func splitsOnlyAtTheFirstSeparator() {
         #expect(Recipe.read("---\ntitle: a: b\n---").metadata.title == "a: b")
@@ -101,7 +90,6 @@ struct HeaderFormTests {
 
     @Test
     func splitsAtTheFirstColonFollowedByWhitespaceRatherThanTheFirstColon() {
-        // A colon with nothing after it is ordinary text, so the key runs on past it.
         let parsed = SousParser().parseRecipe("---\na:b: c\n---")
 
         #expect(parsed.value.metadata.entries.map(\.key) == ["a:b"])
@@ -131,16 +119,10 @@ struct HeaderFormTests {
         #expect(title.isEmpty)
     }
 
-    // The whitespace separating a value from its key belongs to neither, whatever it is built
-    // from and however much of it there is.
-
     @Test(arguments: ["title:  Toast", "title:\tToast", "title: \t Toast"])
     func removesTheWhitespaceSeparatingAValueFromItsKey(entry: String) {
         #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Toast")
     }
-
-    // The whitespace around a key belongs to neither it nor the separator, as whitespace
-    // does everywhere, so a key states what stands between its ends.
 
     @Test(arguments: ["title : Toast", "title\t: Toast", "title  :  Toast"])
     func trimsTheWhitespaceAroundAKey(entry: String) {
@@ -153,8 +135,6 @@ struct HeaderFormTests {
 
     @Test
     func readsALineThatOpensWithTheSeparatorAsAnEmptyKey() {
-        // A line naming no key is preserved like any other entry, and states its own report
-        // rather than standing as an unrecognized key of no name.
         let parsed = SousParser().parseRecipe("---\n: Alice\n---")
 
         #expect(parsed.value.metadata.entries.map(\.key) == [""])
@@ -164,7 +144,6 @@ struct HeaderFormTests {
 
     @Test
     func warnsAboutAKeyThatIsNotLowercase() {
-        // Keys are lowercase, so "Title" is a different key, and an unrecognized one.
         let parsed = SousParser().parseRecipe("---\nTitle: Toast\n---")
 
         #expect(parsed.value.metadata.title == nil)

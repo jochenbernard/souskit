@@ -18,8 +18,6 @@ struct TimerTests {
 
     @Test
     func trimsTheWhitespaceAroundADuration() throws {
-        // A duration is read as an amount fence is, and the content is trimmed as one, so the
-        // unit ends where the text does.
         let timer = try #require(Recipe.read("Simmer gently for ~40 min ~.").firstTimer)
 
         #expect(timer.kind == .precise)
@@ -48,9 +46,6 @@ struct TimerTests {
         #expect(timer.components.map(\.unit) == ["h", "min"])
         #expect(timer.components.map(\.text) == ["1 h", "30 min"])
     }
-
-    // A range is read before the parts of a compound are, so a separator whitespace stands
-    // around states one duration rather than opening a second part.
 
     @Test(arguments: ["8 - 10 min", "8- 10 min", "8 -10 min"])
     func parsesARangeWhateverWhitespaceSurroundsItsSeparator(content: String) throws {
@@ -91,8 +86,6 @@ struct TimerTests {
 
     @Test
     func treatsADurationWithNoLeadingNumberAsQualitative() throws {
-        // The quantity is a leading run, exactly as in an amount fence, so a word before the
-        // number leaves the duration with no numeric value at all.
         let timer = try #require(Recipe.read("Rest ~about 40 min~.").firstTimer)
         #expect(timer.kind == .qualitative)
         #expect(timer.components.isEmpty)
@@ -128,8 +121,6 @@ struct TimerTests {
 
     @Test
     func startsANewPartOnlyAtAWhitespaceSeparatedNumber() throws {
-        // A digit inside a unit belongs to that unit, so only a number that starts its own
-        // word opens the next part of a compound duration.
         let timer = try #require(Recipe.read("Chill ~2 8oz jars~ before filling.").firstTimer)
         #expect(timer.kind == .compound)
         #expect(timer.components.map(\.unit) == ["", "oz jars"])
@@ -137,8 +128,6 @@ struct TimerTests {
 
     @Test
     func doesNotReadAnAmountFenceInATimer() throws {
-        // A timer carries a single duration, so it takes no amount fence and the braces are
-        // ordinary characters of its text.
         let parsed = SousParser().parseRecipe("Wait ~{40 min}~ now.")
 
         let timer = try #require(parsed.value.firstTimer)
@@ -163,9 +152,6 @@ struct TimerTests {
         #expect(timer.kind == .qualitative)
         #expect(parsed.diagnostics.isEmpty)
     }
-
-    // The kind is a view over the components rather than a value of its own, so it always
-    // states what the components hold.
 
     @Test
     func classifiesTheKindFromTheComponents() throws {

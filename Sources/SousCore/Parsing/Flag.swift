@@ -1,25 +1,19 @@
-// The named flags version 0.2 reads, and the words they are written as.
-//
-// Reading and writing share this one table, so a word a reader recognizes is a word a
-// writer produces, and a flag a later version adds is added once.
-
+/// The flags an ingredient or reference may carry, written `:name` after the closing sigil.
 enum Flag: String, CaseIterable {
     case optional = "optional"
     case staple = "staple"
     case nonFood = "non-food"
 
-    /// The character a named flag opens with.
+    /// The character introducing a flag.
     static let separator: Character = ":"
 
-    /// The shorthand, a single character needing no flag word.
+    /// The single-character form standing for ``shorthanded``.
     static let shorthand: Character = "?"
 
-    /// The flag the shorthand stands for. Reading sets this flag's property and writing tests
-    /// it, so the two never disagree on which flag the character is short for.
+    /// The flag that ``shorthand`` sets.
     static let shorthanded: Flag = .optional
 
-    /// The property the flag states on a set of flags. Reading sets it and writing reads it,
-    /// so the two never disagree on which property a flag word stands for.
+    /// The property on ``Flags`` this flag sets.
     var property: WritableKeyPath<Flags, Bool> {
         switch self {
         case .optional: \.isOptional
@@ -28,27 +22,22 @@ enum Flag: String, CaseIterable {
         }
     }
 
-    /// The span a flag word is written as, recognized or not.
+    /// A flag word as it is written in source.
     static func written(_ word: String) -> String {
         "\(separator)\(word)"
     }
 
-    /// Whether the character opens a flag: the shorthand always does, and the separator does
-    /// when a flag word follows it. Reading and writing share this one rule, so a character
-    /// a reader would take for a flag is one a writer escapes.
+    /// Whether a flag begins here, given the character after it.
+    ///
+    /// A separator not followed by a word character is ordinary text, so prose such as
+    /// `@salt@: to taste` carries no flag.
     static func opens(_ character: Character, followedBy following: Character?) -> Bool {
         if character == shorthand { return true }
 
         return character == separator && (following.map(continuesWord) ?? false)
     }
 
-    /// Whether the character may appear in a flag word, which is a run of letters and
-    /// hyphens. A flag word ends at the first character outside that set, so punctuation and
-    /// numbers after a flag stay in the prose.
-    ///
-    /// No flag this language defines carries a number, and the set is narrowed here rather
-    /// than after the syntax freezes, because widening one costs a version and narrowing one
-    /// costs compatibility.
+    /// Whether a character continues a flag word.
     static func continuesWord(_ character: Character) -> Bool {
         character.isLetter || character == "-"
     }

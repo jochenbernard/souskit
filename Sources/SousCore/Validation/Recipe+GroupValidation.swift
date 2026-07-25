@@ -1,23 +1,14 @@
-// The three conditional requirements groups and references carry. Each leaves the file
-// well-formed but not valid, so each is an error, and each is reported once per problem, where
-// that problem is first stated.
-
 extension Recipe {
-    /// Reports each name more than one heading states.
+    /// One error per name carried by more than one heading, reported at the first occurrence.
     ///
-    /// Names are matched normalized, so two headings collide while they normalize to one name,
-    /// which leaves a reference to that name reaching only the first of them. The name is
-    /// reported as the first heading writes it, because the diagnostic carries no range.
+    /// Names are compared normalized, so two headings differing only in case or a leading
+    /// connective collide.
     func repeatedGroupNames() -> [Diagnostic] {
         Repetition.firstOfEachRepeated(in: groups.compactMap(\.name), by: Normalization.normalized)
-            .map({ .error(.repeatedGroupName, "Recipe states more than one group named '\($0)'.") })
+            .map({ .error(.repeatedGroupName, "Recipe has more than one group named '\($0)'.") })
     }
 
-    /// Reports each target that names no group of this recipe.
-    ///
-    /// A target is reported once however many references normalize to it, and is written as the
-    /// first of those references writes it, because the diagnostic carries no range and its
-    /// place in the list is the only position a reader gets.
+    /// One error per reference target matching no group, reported at its first occurrence.
     func unresolvedReferences() -> [Diagnostic] {
         var reported: Set<String> = []
 
@@ -31,11 +22,10 @@ extension Recipe {
         })
     }
 
-    /// Reports each set of groups that consume each other's intermediates.
+    /// One error per cycle of groups consuming each other, reported at the first group in it.
     ///
-    /// Groups that reach each other are one problem however many loops run through them, so the
-    /// set is reported once, under the first of them. The default group is consumed by nothing,
-    /// so it belongs to no such set.
+    /// Every group in a cycle reaches itself, so reporting each would repeat one problem. The
+    /// whole cycle is marked when its first member is reported.
     func referenceCycles() -> [Diagnostic] {
         let reaches = consumptionReach
         var reported: Set<Int> = []
@@ -52,9 +42,9 @@ extension Recipe {
         })
     }
 
-    /// Which groups each group reaches by consuming intermediates, through as many other groups
-    /// as the consumption runs. A group reaching itself is one consuming its own intermediate,
-    /// which is what a loop is.
+    /// Which groups each group reaches through its references, directly or through others.
+    ///
+    /// Transitive closure, so a group in a cycle reaches itself and the diagonal marks it.
     private var consumptionReach: [[Bool]] {
         var reaches = groups.map({ group in
             let dependencies = Set(dependencyIndices(of: group))

@@ -71,10 +71,6 @@ struct IngredientFlagTests {
         #expect(amount.unit == "g")
     }
 
-    // A chain is a set, so a flag written twice says no more than one written once. A
-    // recognized flag states a status, which is held once whatever states it, and an
-    // unrecognized one is kept once as well, so neither repeat is written back.
-
     @Test
     func readsARepeatedFlagOnce() throws {
         let ingredient = try #require(Recipe.read("Season with @salt@:staple:staple.").firstIngredient)
@@ -88,7 +84,6 @@ struct IngredientFlagTests {
 
         #expect(parsed.value.ingredients.map(\.flags.unrecognized) == [["homemade"]])
         #expect(parsed.value.serialized() == "Add @sauce@:homemade now.")
-        // Each occurrence is text the author wrote, so each is reported where it stands.
         #expect(parsed.diagnostics.map(\.kind) == [.unknownFlag, .unknownFlag])
     }
 
@@ -99,9 +94,6 @@ struct IngredientFlagTests {
         #expect(ingredients.map(\.flags.isStaple) == [true, false])
         #expect(ingredients.map(\.flags.isOptional) == [false, true])
     }
-
-    // A flag word runs from its colon through the following run of letters and hyphens, and
-    // ends at the first character outside that set.
 
     @Test
     func endsAFlagWordAtTheFirstCharacterOutsideItsSet() throws {
@@ -115,9 +107,6 @@ struct IngredientFlagTests {
         let ingredient = try #require(Recipe.read("Add @sauce@:home-made now.").firstIngredient)
         #expect(ingredient.flags.unrecognized == ["home-made"])
     }
-
-    // No flag this language defines carries a number, so a number is prose like any other
-    // character outside the set. It ends a flag word and opens none of its own.
 
     @Test
     func endsAFlagWordAtANumber() throws {
@@ -167,9 +156,6 @@ struct IngredientFlagTests {
         #expect(step.segments.last?.proseText == " :staple.")
     }
 
-    // A flag opens on the character right after the closing sigil, so prose that needs a
-    // literal `?` or `:` there escapes it, exactly as prose needs `\@` for a literal sigil.
-
     @Test
     func doesNotReadAnEscapedShorthandAsAFlag() throws {
         let parsed = SousParser().parseRecipe("Is it @salt@\\? Yes.")
@@ -200,7 +186,6 @@ struct IngredientFlagTests {
 
     @Test
     func doesNotAttachFlagsToCookware() throws {
-        // Cookware carries a single value, so a colon after it is ordinary prose.
         let parsed = SousParser().parseRecipe("Warm a #pan#:staple here.")
 
         let step = try #require(parsed.value.steps.first)
@@ -211,8 +196,6 @@ struct IngredientFlagTests {
 
     @Test
     func doesNotAttachFlagsToATimer() throws {
-        // A timer carries a single duration, so a colon after it is ordinary prose. Nothing
-        // opens a flag there, so the prose keeps its colon unescaped and reads back the same.
         let parsed = SousParser().parseRecipe("Wait ~40 min~:staple here.")
 
         let step = try #require(parsed.value.steps.first)
@@ -221,9 +204,6 @@ struct IngredientFlagTests {
         #expect(parsed.diagnostics.isEmpty)
         #expect(parsed.value.serialized() == "Wait ~40 min~:staple here.")
     }
-
-    // An unrecognized flag is never fatal: it is preserved as written and warned about, so a
-    // file using a flag from a later version still reads.
 
     @Test
     func preservesAnUnrecognizedFlag() throws {

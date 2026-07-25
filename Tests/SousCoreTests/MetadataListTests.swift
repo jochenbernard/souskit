@@ -1,9 +1,6 @@
 import SousCore
 import Testing
 
-// Whether a value is a list is decided by the field, not by its punctuation, so only a
-// list-valued field reads `[...]` as a list.
-
 @Suite("Metadata lists")
 struct MetadataListTests {
     @Test
@@ -41,9 +38,6 @@ struct MetadataListTests {
         #expect(Metadata.read("tags: italian ").tags == ["italian"])
     }
 
-    // Inside the brackets a backslash escapes the characters the list gives a meaning of its
-    // own, so an item can hold a separator or a bracket.
-
     @Test
     func readsAnEscapedSeparatorAsPartOfAnItem() {
         #expect(Metadata.read("tags: [comfort food\\, italian]").tags == ["comfort food, italian"])
@@ -67,8 +61,6 @@ struct MetadataListTests {
 
     @Test
     func doesNotCloseAnInlineListOnAnEscapedBracket() {
-        // The list never closes, so the value is not a well-formed inline list and reads as
-        // one literal item, escapes and all.
         #expect(Metadata.read("tags: [a\\]").tags == ["[a\\]"])
     }
 
@@ -78,8 +70,6 @@ struct MetadataListTests {
         "tags: [a], [b]"
     ])
     func doesNotReadAValueThatContinuesPastItsClosingBracketAsAList(header: String) {
-        // The list closes on the first unescaped "]", so anything after it leaves the value
-        // unclosed and the whole of it is one literal item.
         let value = Metadata.read(header).tags
 
         #expect(value.count == 1)
@@ -88,7 +78,6 @@ struct MetadataListTests {
 
     @Test
     func doesNotEscapeInsideABareListValue() {
-        // Escaping belongs to the inline form; a bare value is literal to the end of the line.
         #expect(Metadata.read("tags: a\\, b").tags == ["a\\, b"])
     }
 
@@ -111,9 +100,6 @@ struct MetadataListTests {
     func readsAListKeyWithNoValueAsNoItems() {
         #expect(Metadata.read("tags:").tags.isEmpty)
     }
-
-    // A list of nothing has no inline form, so it writes as the key alone whichever spelling
-    // it was read from.
 
     @Test(arguments: ["---\ntags:\n---", "---\ntags: []\n---"])
     func writesAListOfNoItemsAsTheKeyAlone(source: String) {
@@ -138,9 +124,6 @@ struct MetadataListTests {
     func dropsEmptyItemsFromAnInlineList() {
         #expect(Metadata.read("tags: [italian, , make-ahead,]").tags == ["italian", "make-ahead"])
     }
-
-    // A repeated list key combines its occurrences, rather than the last one overwriting
-    // the earlier ones as a repeated scalar key does.
 
     @Test
     func warnsAboutARepeatedListKeyAndMergesItsItems() {

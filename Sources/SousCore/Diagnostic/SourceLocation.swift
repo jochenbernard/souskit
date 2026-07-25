@@ -1,11 +1,11 @@
-/// A location in source text.
+/// A single position in the source.
 public struct SourceLocation: Equatable, Hashable, Sendable {
-    /// The one-based line number.
+    /// The line, counting from 1.
     public var line: Int
 
-    /// The one-based column number, in characters.
+    /// The character within the line, counting from 1.
     public var column: Int
 
-    /// The zero-based character offset from the start of the source.
+    /// The character offset from the start of the source, counting from 0.
     public var offset: Int
 }

@@ -1,21 +1,9 @@
-/// A part of a recipe's body: the steps a `## Name` heading opens, and what they annotate.
+/// A group of steps, introduced by a `## Name` heading.
 public struct StepGroup: Equatable, Hashable, Sendable {
-    /// The group's name, or `nil` for the default group the steps before the first heading form.
-    ///
-    /// The name is captured trimmed of the whitespace around it and with each escape resolved.
-    /// Only a named group produces an intermediate a reference can consume, so the default
-    /// group is consumed by nothing.
-    ///
-    /// Writing opens the group with a heading, so a name that is empty or that is nothing but
-    /// whitespace leaves a line a reader takes for prose rather than for a heading, and one
-    /// that holds a line break ends the heading at that break and leaves the rest to be read as
-    /// the body after it. Reading produces none of them, and a name the whitespace around it
-    /// survives writing reads back without it.
+    /// The heading name, or `nil` for steps written before any heading.
     public var name: String?
 
-    /// The group's steps, in document order.
-    ///
-    /// The steps are the store the annotation lists read, so editing them moves the lists with them.
+    /// The steps of the group, in document order.
     public var steps: [Step]
 
     /// The ingredients annotated across the group's steps, in document order.

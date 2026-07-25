@@ -129,8 +129,6 @@ struct RecipeStructureTests {
 
     @Test
     func normalizesEveryKindOfLineBreakWithinAStep() {
-        // A line separator and a vertical tab are line breaks too, so a step carries them
-        // as line feeds, exactly as it does a Windows line ending.
         let parsed = SousParser().parseRecipe("Toast the bread\u{2028}and butter it\u{0B}while warm.")
 
         #expect(parsed.value.steps.map(\.text) == ["Toast the bread\nand butter it\nwhile warm."])
@@ -138,8 +136,6 @@ struct RecipeStructureTests {
 
     @Test
     func normalizesALoneCarriageReturn() {
-        // The line ending an older editor writes is a line break like any other, so a step
-        // carries it as a line feed and a blank line built from one still separates steps.
         let parsed = SousParser().parseRecipe("Toast the bread.\rSpread it.\r\rServe warm.")
 
         #expect(parsed.value.steps.map(\.text) == ["Toast the bread.\nSpread it.", "Serve warm."])

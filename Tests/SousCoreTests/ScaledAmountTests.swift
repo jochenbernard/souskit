@@ -1,14 +1,9 @@
 import SousCore
 import Testing
 
-// What a scaled amount is written back as. Scaling produces amounts nobody wrote, so the text
-// they carry is built from the value rather than read from a source, and whatever it writes has
-// to read back as the amount it states.
-
 @Suite("Writing a scaled amount")
 struct ScaledAmountTests {
-    /// Whatever scaling writes has to read back as what it states, or the round-trip guarantee
-    /// holds only for recipes nobody scaled.
+    /// Expects a scaled recipe to serialize and read back unchanged, with no diagnostics.
     private func expectAScaledRecipeRoundTrips(
         _ source: String,
         by factor: Double,
@@ -27,9 +22,6 @@ struct ScaledAmountTests {
         )
         #expect(reRead.diagnostics.isEmpty, note, sourceLocation: sourceLocation)
     }
-
-    // The regenerated text holds the exact value. An integral one carries no decimal point,
-    // and nothing is ever rounded.
 
     @Test(arguments: [
         (fence: "200 g", factor: 1.5, text: "300 g"),
@@ -53,9 +45,6 @@ struct ScaledAmountTests {
         #expect(amount.text == "0.6666666666666666 cup")
     }
 
-    // Regenerating writes one space between the quantity and the unit, whatever separated the
-    // two where the amount was read, because the unit is trimmed of it.
-
     @Test(arguments: [
         (fence: "200g", text: "400 g"),
         (fence: "200  g", text: "400 g")
@@ -64,13 +53,9 @@ struct ScaledAmountTests {
         #expect(try SousParser().amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0).text == text)
     }
 
-    // A value is written positionally whatever its magnitude, because the exponent notation
-    // Swift reaches for at the extremes is not a quantity any reader reads back.
-
     @Test(arguments: [
         (factor: 0.00001, text: "0.00001 g"),
         (factor: 0.0000025, text: "0.0000025 g"),
-        // The magnitude Swift starts writing an exponent at, so the first one to be moved.
         (factor: 1e16, text: "10000000000000000 g"),
         (factor: 1e20, text: "100000000000000000000 g"),
         (factor: 1.5e20, text: "150000000000000000000 g")
@@ -83,9 +68,6 @@ struct ScaledAmountTests {
     func aRecipeScaledToAnExtremeStillRoundTrips(factor: Double) throws {
         try expectAScaledRecipeRoundTrips("Add @{1 g} water@.", by: factor)
     }
-
-    // A quantity holds as much as a number does, so a product that leaves that range is
-    // refused rather than written as the text no reader reads back.
 
     @Test(arguments: [
         (digits: 308, factor: 10.0),
@@ -108,18 +90,12 @@ struct ScaledAmountTests {
         }
     }
 
-    // A quantity already past that range states no product the factor moves it to, so scaling
-    // leaves it exactly where it was.
-
     @Test
     func leavesAQuantityAlreadyPastThatRangeAlone() throws {
         let source = "Add @{\(String.quantity(digits: 400)) g} water@."
 
         #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == source)
     }
-
-    // A whole quantity, one space, and a fraction is a mixed number, so an amount whose unit
-    // opens a fraction states its quantity with a point no fraction can follow.
 
     @Test(arguments: [
         (fence: "1.5 1/2-cup servings", text: "3.0 1/2-cup servings"),
@@ -134,9 +110,6 @@ struct ScaledAmountTests {
         #expect(amount.unit == String(fence.drop(while: { $0 != " " }).dropFirst()))
     }
 
-    // The reading has to agree on the unit as well as on the values. A zero numerator adds
-    // nothing, so the quantity still reads back as itself while the unit has moved into it.
-
     @Test
     func keepsAFractionUnitOutOfTheQuantityWhenTheValuesStillAgree() throws {
         let amount = try SousParser().amount(in: "Add @{1.5 0/2 cups} water@.", scaledBy: 2.0)
@@ -145,9 +118,6 @@ struct ScaledAmountTests {
         #expect(amount.unit == "0/2 cups")
     }
 
-    // The point is added to a value that carries none, which is every value Swift writes with
-    // an exponent, so an extreme factor and a fraction unit have to meet correctly.
-
     @Test
     func keepsAFractionUnitOutOfAQuantityAtAnExtremeMagnitude() throws {
         let amount = try SousParser().amount(in: "Add @{1.5 1/2-cup servings} water@.", scaledBy: 1e16)
@@ -155,9 +125,6 @@ struct ScaledAmountTests {
         #expect(amount.text == "15000000000000000.0 1/2-cup servings")
         #expect(amount.unit == "1/2-cup servings")
     }
-
-    // Both ends of a range are checked, so a range one end of which leaves the range a number
-    // holds is refused like any other product.
 
     @Test
     func refusesARangeWithOneEndItCouldNotWriteBack() {
@@ -178,9 +145,6 @@ struct ScaledAmountTests {
         #expect(recipe.metadata.yields.compactMap(\.unit) == ["2/3 cups"])
         #expect(recipe.metadata["servings"] == "1.0 1/2 batches")
     }
-
-    // Whatever scaling writes has to read back as what it states, over every amount form and
-    // every factor, or the round-trip guarantee holds only for recipes nobody scaled.
 
     @Test(arguments: [
         "200 g", "1-2 tbsp", "=1 tsp", "a pinch", "2", "1/2 tsp", "1 1/2 cups", "0.5 kg",

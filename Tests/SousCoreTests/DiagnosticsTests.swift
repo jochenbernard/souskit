@@ -23,9 +23,6 @@ struct DiagnosticsTests {
         #expect(parsed.value.metadata["chef"] == "Alice")
     }
 
-    // Every problem must carry enough information to find and fix it by hand, so each
-    // diagnostic describes itself and points at the construct it came from.
-
     @Test
     func describesAndLocatesEveryDiagnostic() {
         let sources = [
@@ -42,9 +39,6 @@ struct DiagnosticsTests {
         ]
 
         let diagnostics = sources.flatMap({ SousParser().parseRecipe($0).diagnostics })
-        // Every kind the reader can report, each describing itself and pointing at its
-        // construct. Naming them rather than counting them says which one a failure is missing.
-        // The three kinds validation reports carry no range, so they are stated there instead.
         #expect(Set(diagnostics.map(\.kind)) == [
             .unclosedSpan,
             .unterminatedHeader,

@@ -3,6 +3,7 @@ import Testing
 
 @Suite("Header preservation")
 struct HeaderPreservationTests {
+    /// A header holding one line that is not a `key: value` entry.
     private static let strayLineHeader = "---\ntitle: Toast\nstray line\n---"
 
     @Test

@@ -1,20 +1,10 @@
 import SousCore
 import Testing
 
-// Version 0.3 brings the first intra-file validation rule: a dimension states how much the
-// recipe makes, so the header states each one at most once, counting `servings` and every
-// `yield` entry together.
-//
-// Stating one twice is reported whether or not the two agree, because saying it twice says it
-// twice either way. It leaves the file usable, so it is a warning; only scaling on that
-// dimension has to divide by one value and fails while they disagree.
-//
-// A dimension is what a unit measures, and recognizing two spellings of one needs reference
-// data. So the rule reaches exactly as far as the unit written, with the whitespace around it
-// ignored, and `servings` counts as the unit `servings`.
-
 @Suite("Validation")
 struct ValidationTests {
+    /// The diagnostics validating a recipe with the given header and one flour ingredient
+    /// produces.
     private func validate(_ header: String) -> [Diagnostic] {
         Recipe.read(Recipe.flourRecipe(header)).validate()
     }
@@ -28,9 +18,6 @@ struct ValidationTests {
     func aProseOnlyRecipeValidatesWithoutDiagnostics() {
         #expect(Recipe.read("Toast the bread.").validate().isEmpty)
     }
-
-    // A yield of zero can divide no target, so the declaration is reported rather than only the
-    // request that later fails on it. The file stays usable: scaling by a factor never divides.
 
     @Test(arguments: ["yield: 0 g", "servings: 0", "yield: [0 g, 6 servings]"])
     func reportsAYieldOfZero(header: String) throws {
@@ -54,14 +41,9 @@ struct ValidationTests {
         #expect(diagnostics.count == 1)
         let diagnostic = try #require(diagnostics.first)
         #expect(diagnostic.kind == .repeatedYield)
-        // The file stays usable, so it is a warning rather than an error.
         #expect(diagnostic.severity == .warning)
-        // Validation reads a recipe, not the text it came from, so it can point at no range.
         #expect(diagnostic.range == nil)
     }
-
-    // Whether the two agree decides nothing here. It decides only whether scaling on that
-    // dimension can divide by one of them.
 
     @Test(arguments: [
         "yield: [6 servings, 8 servings]",
@@ -79,9 +61,6 @@ struct ValidationTests {
         #expect(validate(header).map(\.kind) == [.repeatedYield])
     }
 
-    // Different units are different dimensions as far as this version can tell, and telling
-    // that grams and kilograms measure the same thing is what reference data is for.
-
     @Test(arguments: [
         "yield: [6 servings, 3.2 kg]",
         "yield: [800 g, 1 kg]",
@@ -92,38 +71,29 @@ struct ValidationTests {
         #expect(validate(header).isEmpty)
     }
 
-    // A value with no quantity states no dimension, so it restates nothing.
-
     @Test(arguments: [
         "yield: [plenty, plenty]",
         "yield: [plenty, lots]",
         "servings: six\nyield: 4 servings",
         "servings: six\nservings: four",
-        // The fixed marker belongs to the fence, so a header value opening with one is text.
         "servings: =4\nyield: 6 servings"
     ])
     func ignoresAValueThatStatesNoQuantity(header: String) {
         #expect(validate(header).isEmpty)
     }
 
-    // A repeated scalar key is read from its last occurrence, so it states its dimension once
-    // however often it is written. The reader reports the repeat instead.
-
     @Test
     func ignoresARepeatedServingsKey() {
         #expect(validate("servings: 4\nservings: 6").isEmpty)
     }
-
-    // A dimension is reported where it is first stated, because the diagnostic carries no
-    // range and its place in the list is the only position a reader gets.
 
     @Test
     func reportsEachDimensionInDocumentOrder() {
         let diagnostics = validate("yield: [5 L, 4 L]\nservings: 4\nyield: [6 servings]")
 
         #expect(diagnostics.map(\.message) == [
-            "Header states more than one yield in 'L'.",
-            "Header states more than one yield in 'servings'."
+            "Header declares more than one yield in 'L'.",
+            "Header declares more than one yield in 'servings'."
         ])
     }
 
@@ -135,22 +105,17 @@ struct ValidationTests {
         ])
     }
 
-    // The message names the dimension, because the diagnostic carries no range to point with.
-
     @Test(arguments: [
-        (header: "yield: [800 g, 900 g]", message: "Header states more than one yield in 'g'."),
-        (header: "yield: [12, 18]", message: "Header states more than one yield with no unit."),
+        (header: "yield: [800 g, 900 g]", message: "Header declares more than one yield in 'g'."),
+        (header: "yield: [12, 18]", message: "Header declares more than one yield with no unit."),
         (
             header: "servings: 4\nyield: 6 servings",
-            message: "Header states more than one yield in 'servings'."
+            message: "Header declares more than one yield in 'servings'."
         )
     ])
     func namesTheDimensionItReports(header: String, message: String) {
         #expect(validate(header).map(\.message) == [message])
     }
-
-    // Validation is computed on demand and never stored, so a recipe scaled out of a clean one
-    // stays clean and one scaled out of a reported one keeps its report.
 
     @Test
     func scalingDoesNotChangeWhatValidationReports() throws {

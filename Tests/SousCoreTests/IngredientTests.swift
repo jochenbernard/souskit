@@ -34,9 +34,6 @@ struct IngredientTests {
         #expect(ingredient.name == "pasta")
     }
 
-    // A name is trimmed, so whatever whitespace separates it from the fence belongs to
-    // neither and the writer states the separation as the one space it writes.
-
     @Test(arguments: [
         "@{200 g}  pasta@",
         "@{200 g}\tpasta@",
@@ -55,9 +52,6 @@ struct IngredientTests {
         #expect(Recipe.read("Cook @{200 g}  pasta@.").serialized() == "Cook @{200 g} pasta@.")
     }
 
-    // A span stating an amount and naming nothing is ordinary text like any other span that
-    // names nothing, and the amount its author wrote would go with it, so it is reported.
-
     @Test(arguments: [
         "Cook @{200 g}@.",
         "Cook @{200 g}   @.",
@@ -75,8 +69,6 @@ struct IngredientTests {
 
     @Test(arguments: ["Rate it @@ out of five.", "Use ## here.", "Spread the >> now."])
     func reportsNothingForASpanStatingNoAmountAndNamingNothing(source: String) {
-        // A bare pair of sigils is prose an author wrote for its own sake, so it earns no
-        // report; only an amount states something a reader would otherwise drop.
         #expect(SousParser().parseRecipe(source).diagnostics.isEmpty)
     }
 
@@ -96,9 +88,6 @@ struct IngredientTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    // The brace that closes a fence is escapable, as the brace that opens one is, so an
-    // amount may hold one and the fence closes on the first brace no escape stands before.
-
     @Test
     func readsAnEscapedBraceAsPartOfTheAmount() throws {
         let parsed = SousParser().parseRecipe("Add @{a\\}b} salt@.")
@@ -112,8 +101,6 @@ struct IngredientTests {
 
     @Test
     func letsAnUnclosedFenceReachTheNextClosingBrace() throws {
-        // A sigil is inert between the braces, so the fence closes on the next "}" in the
-        // paragraph rather than on the sigil that comes before it.
         let parsed = SousParser().parseRecipe("Add @{200 g pasta@ and @{100 g} sauce@.")
 
         let step = try #require(parsed.value.steps.first)

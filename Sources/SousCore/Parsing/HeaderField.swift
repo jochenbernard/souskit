@@ -1,38 +1,28 @@
-// The header keys this version gives a meaning to, and how each reads its value.
-//
-// The reader, the typed accessors, and scaling all ask here, so a field is named once and a
-// field a later version recognizes joins them in one edit.
-
+/// The header keys this version recognizes, and how each is read.
 enum HeaderField {
     static let title = "title"
     static let language = "language"
     static let version = "version"
 
-    /// The number of portions the recipe makes. The key doubles as the unit of the portion
-    /// yield it aliases.
     static let servings = "servings"
 
     static let tags = "tags"
     static let source = "source"
     static let yield = "yield"
 
-    /// A list field reads `[...]` as a list and combines its repeats. Every other field keeps
-    /// the brackets as part of the literal value.
+    /// Keys whose value is read as a list, and whose repeats merge.
     static let lists: Set<String> = [tags, yield]
 
-    /// A scalar field reads its value as the one literal it states, the last occurrence winning.
+    /// Keys whose value is read as literal text, and whose repeats keep the last.
     static let scalars: Set<String> = [title, language, version, servings, source]
 
-    /// A scaling field states how much the recipe makes, so its value moves with the factor.
+    /// Keys a scaling target can be divided by.
     static let scaling: Set<String> = [servings, yield]
 
-    /// An amount field states its value as an amount fence states one, so a number it cannot
-    /// finish is reported there as it is in a fence. Every field that states an amount states
-    /// how much the recipe makes, so the two sets are one set.
+    /// Keys whose value is read as an amount, so a malformed quantity is reported.
     static let amounts = scaling
 
-    /// Whether this version gives the key a meaning. Everything else is preserved and reported
-    /// as unknown.
+    /// Whether this version reads the given key rather than only preserving it.
     static func isRecognized(_ key: String) -> Bool {
         lists.contains(key) || scalars.contains(key)
     }

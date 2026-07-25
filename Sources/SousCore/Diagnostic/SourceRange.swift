@@ -1,8 +1,8 @@
-/// A range of source text, from a start location to an end location.
+/// A span of the source, from its start up to but not including its end.
 public struct SourceRange: Equatable, Hashable, Sendable {
-    /// The location of the first character of the range.
+    /// The first position of the range.
     public var start: SourceLocation
 
-    /// The location just past the last character of the range.
+    /// The position just past the range.
     public var end: SourceLocation
 }

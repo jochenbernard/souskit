@@ -1,9 +1,6 @@
 import SousCore
 import Testing
 
-// The typed accessors are views over the raw entry store, so editing the entries moves
-// them and the subscript together. Nothing is stored twice and nothing can drift.
-
 @Suite("Metadata projection")
 struct MetadataProjectionTests {
     @Test
@@ -47,7 +44,6 @@ struct MetadataProjectionTests {
 
     @Test
     func returnsNilFromTheSubscriptForAListKey() {
-        // The subscript reports the last scalar value, and a list key holds no scalar.
         let metadata = Metadata.read("tags: [italian]")
         #expect(metadata["tags"] == nil)
         #expect(metadata.tags == ["italian"])
@@ -55,7 +51,6 @@ struct MetadataProjectionTests {
 
     @Test
     func returnsNilFromTheSubscriptForARawEntry() {
-        // A preserved line that is not a `key: value` entry holds no value to look up.
         let metadata = Metadata.read("stray line")
 
         #expect(metadata.entries.count == 1)
@@ -84,7 +79,6 @@ struct MetadataProjectionTests {
 
     @Test
     func leavesServingsUnsetForALeadingHyphen() {
-        // A leading "-" is not a number, exactly as in an amount fence.
         let metadata = Metadata.read("servings: -2")
         #expect(metadata.servings == nil)
         #expect(metadata["servings"] == "-2")
@@ -92,7 +86,6 @@ struct MetadataProjectionTests {
 
     @Test
     func doesNotDivideAServingsValueByAZeroDenominator() {
-        // The fraction states nothing to divide by, so the value states no number at all.
         #expect(Metadata.read("servings: 1/0").servings == nil)
     }
 }

@@ -1,17 +1,12 @@
 import SousCore
 import Testing
 
-// The escaping the writer produces has to undo exactly what the reader resolves, and the
-// two are easy to drift apart on inputs no hand-written example thinks of. These suites
-// check every string of a bounded length over the characters the reader gives a meaning
-// to, so a gap between them cannot survive unnoticed.
-//
-// The round-trip contract is semantic, so what must survive is the recipe: its header
-// entries and its step segments. Incidental layout may change, but only once, so writing
-// the re-read recipe must reproduce the same text.
-
 @Suite("Exhaustive round-trip")
 struct ExhaustiveRoundTripTests {
+    /// How a source fails to round-trip, or `nil` when it survives.
+    ///
+    /// Checks the header, the group names, the segments, that the result is well-formed, and
+    /// that writing it a second time is stable.
     private func roundTripFailure(_ source: String) -> String? {
         let parser = SousParser()
         let recipe = parser.parseRecipe(source).value
@@ -39,7 +34,10 @@ struct ExhaustiveRoundTripTests {
         return nil
     }
 
-    /// Every string of up to `length` pieces drawn from `alphabet`, the empty string included.
+    /// Every string of up to the given length over the alphabet, the empty string included.
+    ///
+    /// The count grows as the alphabet size to the power of the length, so raising either is
+    /// expensive.
     private func strings(over alphabet: [String], upTo length: Int) -> [String] {
         var all = [""]
         var longest = [""]
@@ -52,6 +50,7 @@ struct ExhaustiveRoundTripTests {
         return all
     }
 
+    /// Expects every string over the alphabet, wrapped in the prefix and suffix, to round-trip.
     private func expectRoundTrips(
         _ alphabet: [String],
         upTo length: Int,
@@ -82,13 +81,6 @@ struct ExhaustiveRoundTripTests {
         expectRoundTrips(["0", ".", "/", "-", "=", " ", "g", "}"], upTo: 4, prefix: "Add @{", suffix: "} water@.")
     }
 
-    // Scaling writes amounts nobody wrote, so what it writes has to read back as what it
-    // states. The quantity and the unit decide that together: a whole quantity, one space,
-    // and a fraction is a mixed number, whichever side of the space each character came from.
-
-    // One digit reaches every shape a quantity takes, so a second only multiplies the sweep.
-    // Seven characters is the shortest fence that scales into a mixed number, `1/1 1/1`.
-
     @Test(arguments: [0.5, 2.0, 4.0])
     func everyScaledAmountFence(factor: Double) {
         let parser = SousParser()
@@ -110,9 +102,6 @@ struct ExhaustiveRoundTripTests {
         expectRoundTrips([">", "{", "}", "\\", "a", " "], upTo: 4, prefix: "Spread the >", suffix: "> now.")
     }
 
-    // A heading is a line-level construct, so what decides it is the shape of the whole line:
-    // the two hashes, the one space after them, and whether a name follows.
-
     @Test(arguments: [
         ["#", " ", "\n", "\\", ">"],
         ["## a", "\n", "a", " ", "#"]
@@ -121,17 +110,10 @@ struct ExhaustiveRoundTripTests {
         expectRoundTrips(alphabet, upTo: 4)
     }
 
-    // A heading needs five characters to be written out of content, an escaped one included, so
-    // this is the shortest sweep that reaches content a reader would take for a heading.
-
     @Test(arguments: ["", "Add @", "Use a #", "Wait ~", "Spread the >"])
     func everyContentThatCouldOpenAHeading(prefix: String) {
         expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, prefix: prefix)
     }
-
-    // The line a run of content sits on is not the run. What follows the run continues its
-    // last line and can name a heading the run only opens, and what precedes it is already on
-    // that line, so both sides of a run have to be swept as well as the run itself.
 
     @Test(arguments: ["@a@", "#p#", ">a>", "~4 h~"])
     func everyContentThatCouldOpenAHeadingBeforeAnAnnotation(suffix: String) {
@@ -150,8 +132,6 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyFlagPunctuation() {
-        // A number ends a flag word without opening one, so it borders the chain from a side
-        // no other character does.
         expectRoundTrips([":", "?", "-", "a", "2", " ", "\\"], upTo: 4, prefix: "Add @salt@")
     }
 
@@ -171,8 +151,6 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyYieldValue() {
-        // The yield key is a list key like tags, so the same escaping has to survive it, and
-        // each item is additionally read as an amount.
         expectRoundTrips(["[", "]", ",", "\\", "2", " ", "g"], upTo: 4, prefix: "---\nyield: ", suffix: "\n---")
     }
 

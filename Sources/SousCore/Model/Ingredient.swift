@@ -1,18 +1,11 @@
-/// An ingredient annotated in a step with the `@...@` sigils.
+/// An ingredient annotated in a step, written `@name@` or `@{amount}name@`.
 public struct Ingredient: Equatable, Hashable, Sendable {
-    /// The ingredient's name, captured trimmed of the whitespace around it and with each escape
-    /// resolved.
-    ///
-    /// Writing wraps the name in its sigils, so a name that is empty or that holds a line break
-    /// writes text a reader takes for prose rather than for an ingredient, and reading produces
-    /// neither. A name opening with whitespace writes such text too, unless an amount fence
-    /// stands between it and the opening sigil. Where the text does bound a name, reading trims
-    /// the whitespace around it away.
+    /// The name, trimmed of surrounding whitespace.
     public var name: String
 
-    /// The ingredient's amount, or `nil` when no amount fence is present.
+    /// The amount from the annotation's fence, or `nil` when it has none.
     public var amount: Amount?
 
-    /// The flags attached after the ingredient's closing sigil.
+    /// The flags written after the closing sigil.
     public var flags: Flags
 }

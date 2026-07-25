@@ -1,13 +1,9 @@
 import SousCore
 import Testing
 
-// A reference names a group of the same file, matched normalized, and consuming that group's
-// intermediate is what makes the consumer depend on it. The dependency follows from the
-// consumption rather than from the position, so a group may be written before or after the
-// groups it depends on.
-
 @Suite("Group resolution")
 struct GroupResolutionTests {
+    /// A recipe of three groups where the last consumes the other two.
     private var pastaBake: Recipe {
         Recipe.read("""
         ## Sauce
@@ -21,8 +17,6 @@ struct GroupResolutionTests {
         """)
     }
 
-    // Resolving a name
-
     @Test
     func findsTheGroupANameRefersTo() {
         #expect(pastaBake.group(named: "Sauce")?.steps.map(\.text) == ["Brown the beef."])
@@ -32,9 +26,6 @@ struct GroupResolutionTests {
     func matchesANameNormalized(name: String) {
         #expect(pastaBake.group(named: name)?.name == "Sauce")
     }
-
-    // A path separator is ordinary text in a name, so it matches like any other character. From
-    // v0.5 a target holding one names a file instead, and reaches this group no longer.
 
     @Test
     func matchesANameHoldingAPathSeparator() throws {
@@ -57,7 +48,6 @@ struct GroupResolutionTests {
 
     @Test
     func refersToTheDefaultGroupByNothing() {
-        // The default group has no name, so no name reaches it, an empty one included.
         let value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown the beef.")
 
         #expect(value.group(named: "") == nil)
@@ -67,14 +57,10 @@ struct GroupResolutionTests {
 
     @Test
     func returnsTheFirstOfTwoGroupsThatShareAName() {
-        // The file is not valid, but a reference to that name still resolves to one group.
         let value = Recipe.read("## Sauce\nBrown the beef.\n\n## sauce\nGrate the cheese.")
 
         #expect(value.group(named: "sauce")?.steps.map(\.text) == ["Brown the beef."])
     }
-
-    // Resolving a name and normalizing it are the same question asked twice, so they are held
-    // to the same answer over every name these parts spell.
 
     @Test
     func findsAGroupExactlyWhenTheTwoNamesNormalizeTheSame() {
@@ -83,7 +69,6 @@ struct GroupResolutionTests {
         let failures = names.flatMap({ heading in
             names.compactMap({ target -> String? in
                 let value = Recipe.read("## \(heading)\nMix it.")
-                // A line naming nothing is not a heading, so it forms no group to find.
                 guard value.groups.first?.name != nil else { return nil }
 
                 let found = value.group(named: target) != nil
@@ -96,8 +81,6 @@ struct GroupResolutionTests {
 
         TestSupport.expectNoFailures(failures)
     }
-
-    // Dependencies
 
     @Test
     func listsTheGroupsAGroupDependsOn() throws {

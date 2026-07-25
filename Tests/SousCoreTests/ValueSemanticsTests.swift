@@ -1,13 +1,9 @@
 import SousCore
 import Testing
 
-// The public types are values: two parses of the same source are interchangeable, and the
-// conditional conformances on `Parsed` follow the value it carries.
-
 @Suite("Value semantics")
 struct ValueSemanticsTests {
-    /// A parser holds nothing, so one can back a whole application. Declaring it here is the
-    /// test: a type that is not sendable cannot be stored like this under strict concurrency.
+    /// One parser shared across tests, so its use from another isolation domain is exercised.
     private static let parser = SousParser()
 
     @Test
