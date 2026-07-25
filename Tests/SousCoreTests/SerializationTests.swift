@@ -237,19 +237,25 @@ struct SerializationTests {
         expectTheRecipeSurvivesARoundTrip(source)
     }
 
-    // A body step that opens with a fence line would read back as a metadata header, so the
-    // output keeps it in the body rather than losing it.
+    // A body step that opens with a fence line would read back as a metadata header, blank
+    // lines before one stating nothing, so the output states an empty header before the body
+    // rather than losing it.
 
     @Test(arguments: [
-        "\n---",
-        "\n---\nBring the water to a boil.",
-        "\n\n--- ",
-        "\n---\n\nSpread with butter."
+        "---\n---\n\n---",
+        "---\n---\n\n---\nBring the water to a boil.",
+        "---\n---\n\n--- ",
+        "---\n---\n\n---\n\nSpread with butter."
     ])
     func keepsABodyThatOpensWithAFenceLineInTheBody(source: String) {
         let (recipe, reRead) = roundTrip(source)
 
         #expect(reRead == recipe)
+    }
+
+    @Test
+    func writesAnEmptyHeaderBeforeABodyThatOpensWithAFenceLine() {
+        #expect(Recipe.read("---\n---\n\n---\nBoil.").serialized() == "---\n---\n\n---\nBoil.")
     }
 
     // A body that opens with a byte-order mark would have it stripped as the file's own on the

@@ -19,18 +19,22 @@ extension Recipe {
         }
 
         let text = blocks.joined(separator: "\n\n")
+        guard !hasHeader else { return text }
 
         // With no header block in front of it, a body that starts the file is read as whatever
-        // that position means, so a blank line keeps it in the body where it belongs.
-        guard !hasHeader, Self.opensAsAnotherConstruct(text) else { return text }
+        // that position means. An empty header states where the body starts, which a blank line
+        // no longer does, since a reader steps over the blank lines before an opening fence. A
+        // byte-order mark is taken for the file's own only at the very start, so a blank line
+        // is what keeps one in the body.
+        if Self.opensAHeader(text) { return "\(metadata.serialized())\n\n\(text)" }
+        if text.hasPrefix(SourceText.byteOrderMark) { return "\n\(text)" }
 
-        return "\n" + text
+        return text
     }
 
-    /// Whether text starting the file would be read as something other than body prose: a fence
-    /// line opens a header, and a byte-order mark is taken for the file's own and dropped.
-    private static func opensAsAnotherConstruct(_ text: String) -> Bool {
-        text.hasPrefix(SourceText.byteOrderMark)
-            || SourceText.isFence(text.prefix(while: { !$0.isNewline }))
+    /// Whether the text's first line stating anything would open a metadata header, the blank
+    /// lines before one being layout a reader steps over.
+    private static func opensAHeader(_ text: String) -> Bool {
+        SourceText.lines(of: text).first(where: { !SourceText.isBlank($0) }).map(SourceText.isFence) ?? false
     }
 }

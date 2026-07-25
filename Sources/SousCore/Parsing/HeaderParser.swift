@@ -11,22 +11,24 @@ enum HeaderParser {
         map: SourceMap,
         diagnostics: inout [Diagnostic]
     ) -> (header: [Substring], body: [Substring]) {
-        guard let first = lines.first, SourceText.isFence(first) else {
-            return (header: [], body: lines)
-        }
+        // A blank line states nothing, so one before the opening fence is layout the header
+        // still counts as starting the file through: the first line stating anything opens it.
+        guard let opening = lines.firstIndex(where: { !SourceText.isBlank($0) }),
+              SourceText.isFence(lines[opening])
+        else { return (header: [], body: lines) }
 
-        if let closing = lines.dropFirst().firstIndex(where: SourceText.isFence) {
-            return (header: Array(lines[1..<closing]), body: Array(lines[(closing + 1)...]))
+        if let closing = lines[(opening + 1)...].firstIndex(where: SourceText.isFence) {
+            return (header: Array(lines[(opening + 1)..<closing]), body: Array(lines[(closing + 1)...]))
         }
 
         // No closing fence: recover by reading to the end of the file so an obvious title is not lost.
         diagnostics.append(.warning(
             .unterminatedHeader,
             "Header is missing a closing fence.",
-            at: map.range(from: first.startIndex, length: first.count)
+            at: map.range(from: lines[opening].startIndex, length: lines[opening].count)
         ))
 
-        return (header: Array(lines.dropFirst()), body: [])
+        return (header: Array(lines[(opening + 1)...]), body: [])
     }
 
     /// The typed accessors are views over the raw store, so reading the header is reading
@@ -77,12 +79,20 @@ enum HeaderParser {
             return (Metadata.Entry(key: "", value: .raw(String(line))), [diagnostic])
         }
 
-        let keyRange = map.range(from: line.startIndex, length: field.key.count)
+        let keyRange = map.range(from: line.startIndex, length: max(field.key.count, 1))
         let isList = HeaderField.lists.contains(field.key)
         var diagnostics: [Diagnostic] = []
 
-        // An unknown key is preserved and warned about, whether scalar or repeated.
-        if !HeaderField.isRecognized(field.key) {
+        // A line opening with the separator names no key, which is what it is told rather than
+        // that a key of no name went unrecognized. Every other unknown key is preserved and
+        // warned about, whether scalar or repeated.
+        if field.key.isEmpty {
+            diagnostics.append(.warning(
+                .emptyHeaderKey,
+                "Header line states a value under no key.",
+                at: keyRange
+            ))
+        } else if !HeaderField.isRecognized(field.key) {
             diagnostics.append(.warning(
                 .unknownHeaderKey,
                 "Unrecognized header key '\(field.key)'.",
@@ -147,7 +157,9 @@ enum HeaderParser {
     private static func field(in line: Substring) -> (key: String, value: String)? {
         for colon in line.indices where line[colon] == ":" {
             let afterColon = line.index(after: colon)
-            let key = String(line[..<colon])
+            // The whitespace around a key belongs to neither the key nor the separator, so a
+            // key states what stands between its ends, as every name does.
+            let key = SourceText.trimmed(String(line[..<colon]))
 
             if afterColon == line.endIndex { return (key, "") }
             if line[afterColon].isWhitespace {

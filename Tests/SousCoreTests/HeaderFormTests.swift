@@ -33,11 +33,26 @@ struct HeaderFormTests {
 
     @Test
     func treatsAnIndentedOpeningFenceAsBodyText() {
-        // The opening fence must be the file's first line, with nothing before it.
+        // A fence line is three hyphens and nothing else, so an indented one is not one.
         let parsed = SousParser().parseRecipe(" ---\ntitle: Toast\n---")
 
         #expect(parsed.value.metadata.entries.isEmpty)
         #expect(parsed.value.steps.count == 1)
+    }
+
+    // Blank lines before the opening fence state nothing, so the header still counts as
+    // starting the file and the first line stating anything is the one that opens it.
+
+    @Test(arguments: [
+        "\n---\ntitle: Toast\n---",
+        "\n\n---\ntitle: Toast\n---",
+        "   \n\t\n---\ntitle: Toast\n---"
+    ])
+    func readsAHeaderBlankLinesStandBefore(source: String) {
+        let parsed = SousParser().parseRecipe(source)
+
+        #expect(parsed.value.metadata.title == "Toast")
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
@@ -124,13 +139,27 @@ struct HeaderFormTests {
         #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Toast")
     }
 
+    // The whitespace around a key belongs to neither it nor the separator, as whitespace
+    // does everywhere, so a key states what stands between its ends.
+
+    @Test(arguments: ["title : Toast", "title\t: Toast", "title  :  Toast"])
+    func trimsTheWhitespaceAroundAKey(entry: String) {
+        let parsed = SousParser().parseRecipe("---\n\(entry)\n---")
+
+        #expect(parsed.value.metadata.entries.map(\.key) == ["title"])
+        #expect(parsed.value.metadata.title == "Toast")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
     @Test
     func readsALineThatOpensWithTheSeparatorAsAnEmptyKey() {
+        // A line naming no key is preserved like any other entry, and states its own report
+        // rather than standing as an unrecognized key of no name.
         let parsed = SousParser().parseRecipe("---\n: Alice\n---")
 
         #expect(parsed.value.metadata.entries.map(\.key) == [""])
         #expect(parsed.value.metadata[""] == "Alice")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
+        #expect(parsed.diagnostics.map(\.kind) == [.emptyHeaderKey])
     }
 
     @Test

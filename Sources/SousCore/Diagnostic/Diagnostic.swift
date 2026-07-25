@@ -20,6 +20,9 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
         /// The metadata header used an unrecognized key.
         case unknownHeaderKey
 
+        /// A metadata header line opened with the separator, so its entry names no key.
+        case emptyHeaderKey
+
         /// The metadata header repeated a scalar key.
         case repeatedScalarKey
 
