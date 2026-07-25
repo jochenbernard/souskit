@@ -26,6 +26,11 @@ enum HeaderField {
     /// A scaling field states how much the recipe makes, so its value moves with the factor.
     static let scaling: Set<String> = [servings, yield]
 
+    /// An amount field states its value as an amount fence states one, so a number it cannot
+    /// finish is reported there as it is in a fence. Every field that states an amount states
+    /// how much the recipe makes, so the two sets are one set.
+    static let amounts = scaling
+
     /// Whether this version gives the key a meaning. Everything else is preserved and reported
     /// as unknown.
     static func isRecognized(_ key: String) -> Bool {

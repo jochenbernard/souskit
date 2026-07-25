@@ -10,7 +10,8 @@ struct SpanEdgeCaseTests {
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.isEmpty)
         #expect(step.segments.map(\.proseText) == ["Add @{200 g}@ now."])
-        #expect(parsed.diagnostics.isEmpty)
+        // The amount would go with the text, so the span states something to report.
+        #expect(parsed.diagnostics.map(\.kind) == [.unnamedAnnotation])
     }
 
     @Test

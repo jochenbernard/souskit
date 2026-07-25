@@ -54,6 +54,22 @@ struct MetadataTests {
         #expect(metadata["servings"] == value)
     }
 
+    // An amount-valued field is read as a fence is, so a number it states and cannot finish is
+    // reported there too. Every other field is literal text, which states no number to report.
+
+    @Test(arguments: ["servings: 3,2", "yield: 3,2 kg", "yield: [1 L, 1/0 kg]", "servings: .5"])
+    func warnsAboutANumberAnAmountFieldCannotFinish(header: String) {
+        let parsed = SousParser().parseRecipe("---\n\(header)\n---")
+
+        #expect(parsed.diagnostics.map(\.kind) == [.malformedQuantity])
+        #expect(parsed.value.metadata.entries.count == 1)
+    }
+
+    @Test(arguments: ["title: 3,2 kg", "source: 1/0", "servings: six", "servings: 6 people"])
+    func reportsNothingForAValueStatingNoNumberItCannotFinish(header: String) {
+        #expect(SousParser().parseRecipe("---\n\(header)\n---").diagnostics.isEmpty)
+    }
+
     // An unrecognized key is preserved and warned about, never dropped.
 
     @Test

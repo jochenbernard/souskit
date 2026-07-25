@@ -11,6 +11,24 @@ extension Metadata {
             .map({ .warning(.repeatedYield, Self.repeatedMessage(in: $0.unit)) })
     }
 
+    /// Reports each yield the header declares as zero, which can divide no target.
+    ///
+    /// Scaling to a target divides by the yield of the target's unit, so a zero one leaves every
+    /// such request failing. The declaration is where an author can act on it, and the request
+    /// reports on its own terms as well. Scaling by a factor divides by nothing, so the file
+    /// stays usable and this is a warning.
+    func zeroYields() -> [Diagnostic] {
+        declaredYields.filter({ $0.kind.soleValue == 0 }).map({ yield in
+            .warning(.zeroYield, Self.zeroMessage(in: yield.unit))
+        })
+    }
+
+    private static func zeroMessage(in unit: String) -> String {
+        unit.isEmpty
+            ? "Header declares a yield of zero, which can divide no target."
+            : "Header declares a yield of zero in '\(unit)', which can divide no target."
+    }
+
     private static func repeatedMessage(in unit: String) -> String {
         unit.isEmpty
             ? "Header states more than one yield with no unit."

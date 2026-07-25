@@ -34,8 +34,10 @@ public struct SousParser: Sendable {
     /// it states, so it is trimmed away and a target states what the header value of the same
     /// text states.
     ///
-    /// Reading an amount reports nothing, because text with no leading number is an imprecise
-    /// amount rather than a defect, so the amount is returned on its own.
+    /// The amount is returned on its own, because a target is stated by a caller rather than
+    /// written in a file, so there is nothing for a diagnostic to point at. Text with no leading
+    /// number is an imprecise amount rather than a defect, and text opening as a number it
+    /// cannot finish states an imprecise amount too, which no scaling request can divide by.
     ///
     /// - Parameter text: The fence content to parse.
     /// - Returns: The parsed amount.

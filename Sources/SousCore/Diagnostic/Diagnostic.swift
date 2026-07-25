@@ -32,6 +32,17 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
         /// An annotation carried a flag name that is not recognized.
         case unknownFlag
 
+        /// An amount opened as a number it could not finish, such as a decimal written with a
+        /// comma or a fraction over zero, so it states no quantity at all.
+        case malformedQuantity
+
+        /// A span stated an amount and named nothing, so it is ordinary text and the amount
+        /// goes with it.
+        case unnamedAnnotation
+
+        /// The header declared a yield of zero, which can divide no target.
+        case zeroYield
+
         /// The metadata header stated a yield in one unit more than once, counting a
         /// `servings` value as a yield in `servings`.
         ///

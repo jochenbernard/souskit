@@ -8,7 +8,9 @@ public struct Amount: Equatable, Hashable, Sendable {
         /// A range between a low and a high quantity.
         case range(Quantity, Quantity)
 
-        /// A textual amount with no leading number, captured as the trimmed text states it.
+        /// A textual amount, captured as the trimmed text states it: one with no leading
+        /// number, or one opening as a number it cannot finish, such as a decimal written with
+        /// a comma. Reading the second reports it, so a number nobody wrote never scales.
         case imprecise(String)
     }
 

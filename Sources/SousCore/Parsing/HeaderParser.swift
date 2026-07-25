@@ -100,13 +100,45 @@ enum HeaderParser {
             ))
         }
 
-        return (
-            Metadata.Entry(
-                key: field.key,
-                value: isList ? .list(list(in: field.value)) : .scalar(field.value)
-            ),
-            diagnostics
+        let value: Metadata.Entry.Value = isList ? .list(list(in: field.value)) : .scalar(field.value)
+        diagnostics += malformedQuantities(
+            of: value,
+            under: field.key,
+            at: map.range(from: valueStart(of: field.value, in: line), length: field.value.count)
         )
+
+        return (Metadata.Entry(key: field.key, value: value), diagnostics)
+    }
+
+    /// Where a value stands in its line, which is at the line's end, the key and the whitespace
+    /// separating the two standing before it.
+    private static func valueStart(of value: String, in line: Substring) -> Substring.Index {
+        line.index(line.endIndex, offsetBy: -value.count)
+    }
+
+    /// Reports each amount an amount-valued field states as a number it cannot finish. Every
+    /// other field states literal text, which states no number to report.
+    private static func malformedQuantities(
+        of value: Metadata.Entry.Value,
+        under key: String,
+        at range: SourceRange?
+    ) -> [Diagnostic] {
+        guard HeaderField.amounts.contains(key) else { return [] }
+
+        // A fence gives a leading `=` its meaning, and a header value has no fence, so the
+        // marker is ordinary text here and states no amount to report.
+        return amounts(of: value).compactMap({ AmountParser.defect(in: $0, fenced: false) })
+            .map({ Diagnostic.warning(.malformedQuantity, $0.message, at: range) })
+    }
+
+    /// The amounts a value states: the one a scalar holds, or each item of a list. A preserved
+    /// line states no entry, so it states no amount either.
+    private static func amounts(of value: Metadata.Entry.Value) -> [String] {
+        switch value {
+        case let .scalar(text): [text]
+        case let .list(items): items
+        case .raw: []
+        }
     }
 
     /// A key ends at the first colon followed by whitespace or the end of the line, so a

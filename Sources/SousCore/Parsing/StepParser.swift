@@ -12,8 +12,8 @@ enum StepParser {
     /// Recovered text carries the warning the recovery earned rather than reporting it, so
     /// every diagnostic a paragraph produces is recorded in the one place that reads them.
     private enum Span {
-        case literal(String, next: Int, warning: Diagnostic? = nil)
-        case named(name: String, amount: Amount?, next: Int)
+        case literal(String, next: Int, warnings: [Diagnostic] = [])
+        case named(name: String, amount: Amount?, next: Int, warnings: [Diagnostic] = [])
     }
 
     /// Finds the brace an amount fence closes on, remembering what it has already looked at.
@@ -82,11 +82,12 @@ enum StepParser {
 
             if let annotation = Annotation(rawValue: character), opensSpan(characters, at: cursor) {
                 switch scanSpan(characters, from: cursor, as: annotation, fences: &fences, origin: origin) {
-                case let .literal(literal, next, warning):
-                    if let warning { diagnostics.append(warning) }
+                case let .literal(literal, next, warnings):
+                    diagnostics.append(contentsOf: warnings)
                     prose += literal
                     cursor = next
-                case let .named(name, amount, next):
+                case let .named(name, amount, next, warnings):
+                    diagnostics.append(contentsOf: warnings)
                     flush(&prose, into: &segments)
                     cursor = next
                     // An annotation that takes flags reads the chain following its closing
@@ -178,6 +179,7 @@ enum StepParser {
         let contentStart = start + 1
         var nameStart = contentStart
         var amount: Amount?
+        var warnings: [Diagnostic] = []
 
         // Every sigil is inert between the braces, the span's own included, so the fence is
         // read first and the closing sigil is looked for after it.
@@ -186,22 +188,30 @@ enum StepParser {
                 return degradedFence(characters, from: start, as: annotation, origin: origin)
             }
 
-            amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
+            let fence = String(characters[(contentStart + 1)..<closingBrace])
+            amount = AmountParser.parse(fence)
+
+            if let defect = AmountParser.defect(in: fence) {
+                warnings.append(.warning(
+                    .malformedQuantity,
+                    defect.message,
+                    at: origin.range(offset: contentStart, length: closingBrace - contentStart + 1)
+                ))
+            }
+
             // Whatever whitespace separates the fence from the name belongs to neither, and
             // trimming the name is what removes it, so the name simply opens after the brace.
             nameStart = closingBrace + 1
         }
 
         guard let closingSigil = closingSigil(sigil, in: characters, from: nameStart) else {
-            return .literal(
-                String(characters[start]),
-                next: start + 1,
-                warning: .warning(
-                    .unclosedSpan,
-                    "\(annotation.noun) span is missing a closing sigil.",
-                    at: origin.range(offset: start, length: 1)
-                )
+            let unclosed = Diagnostic.warning(
+                .unclosedSpan,
+                "\(annotation.noun) span is missing a closing sigil.",
+                at: origin.range(offset: start, length: 1)
             )
+
+            return .literal(String(characters[start]), next: start + 1, warnings: [unclosed])
         }
 
         // A name states what stands between its ends, so the whitespace around it is layout
@@ -210,12 +220,26 @@ enum StepParser {
             SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
         )
 
-        // A span that names nothing is ordinary text, not an annotation of nothing.
+        // A span that names nothing is ordinary text, not an annotation of nothing. An amount
+        // it states would go with it, which is what the author is told about; a bare pair of
+        // sigils states nothing to lose and is prose an author wrote for its own sake.
         guard !name.isEmpty else {
-            return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
+            if amount != nil {
+                warnings.append(.warning(
+                    .unnamedAnnotation,
+                    "\(annotation.noun) span states an amount and names nothing.",
+                    at: origin.range(offset: start, length: closingSigil - start + 1)
+                ))
+            }
+
+            return .literal(
+                String(characters[start...closingSigil]),
+                next: closingSigil + 1,
+                warnings: warnings
+            )
         }
 
-        return .named(name: name, amount: amount, next: closingSigil + 1)
+        return .named(name: name, amount: amount, next: closingSigil + 1, warnings: warnings)
     }
 
     /// Recovers from an amount fence that never closes, which makes the whole span not
@@ -229,14 +253,12 @@ enum StepParser {
     ) -> Span {
         let end = closingSigil(annotation.sigil, in: characters, from: start + 1) ?? start
 
-        return .literal(
-            String(characters[start...end]),
-            next: end + 1,
-            warning: .warning(
-                .unclosedSpan,
-                "Amount fence is missing a closing brace.",
-                at: origin.range(offset: start, length: end - start + 1)
-            )
+        let unclosed = Diagnostic.warning(
+            .unclosedSpan,
+            "Amount fence is missing a closing brace.",
+            at: origin.range(offset: start, length: end - start + 1)
         )
+
+        return .literal(String(characters[start...end]), next: end + 1, warnings: [unclosed])
     }
 }

@@ -29,6 +29,24 @@ struct ValidationTests {
         #expect(Recipe.read("Toast the bread.").validate().isEmpty)
     }
 
+    // A yield of zero can divide no target, so the declaration is reported rather than only the
+    // request that later fails on it. The file stays usable: scaling by a factor never divides.
+
+    @Test(arguments: ["yield: 0 g", "servings: 0", "yield: [0 g, 6 servings]"])
+    func reportsAYieldOfZero(header: String) throws {
+        let diagnostics = validate(header)
+
+        let diagnostic = try #require(diagnostics.first)
+        #expect(diagnostics.count == 1)
+        #expect(diagnostic.kind == .zeroYield)
+        #expect(diagnostic.severity == .warning)
+    }
+
+    @Test(arguments: ["yield: 0.5 kg", "servings: 4", "yield: a pinch"])
+    func reportsNoYieldOfZeroWhereNoneIsStated(header: String) {
+        #expect(validate(header).isEmpty)
+    }
+
     @Test
     func reportsAPortionYieldStatedAlongsideServings() throws {
         let diagnostics = validate("servings: 4\nyield: 6 servings")

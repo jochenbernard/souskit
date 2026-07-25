@@ -34,7 +34,10 @@ struct DiagnosticsTests {
             "Fry @garlic and warm a #pan.",
             "Cook @{200 g pasta",
             "Add @sauce@:homemade now.",
-            "Spread the >sauce on top."
+            "Spread the >sauce on top.",
+            "Add @{3,2 kg} flour@.",
+            "Add @{200 g}@ now.",
+            "---\nservings: 3,2\n---"
         ]
 
         let diagnostics = sources.flatMap({ SousParser().parseRecipe($0).diagnostics })
@@ -48,7 +51,9 @@ struct DiagnosticsTests {
             .repeatedScalarKey,
             .repeatedListKey,
             .malformedHeaderLine,
-            .unknownFlag
+            .unknownFlag,
+            .malformedQuantity,
+            .unnamedAnnotation
         ])
         #expect(diagnostics.allSatisfy({ !$0.message.isEmpty }))
         #expect(diagnostics.allSatisfy({ $0.range != nil }))

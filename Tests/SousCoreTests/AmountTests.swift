@@ -60,11 +60,12 @@ struct AmountTests {
 
     @Test
     func usesOnlyADotAsTheDecimalPoint() throws {
+        // A comma states no decimal point, and the number before it is not what the author
+        // meant either, so the amount states no quantity at all.
         let amount = try #require(Recipe.read("Add @{3,2 kg} flour@.").firstAmount)
-        let quantity = try #require(amount.kind.preciseQuantity)
-        #expect(quantity.value == 3.0)
-        #expect(quantity.text == "3")
-        #expect(amount.unit == ",2 kg")
+
+        #expect(amount.kind.impreciseText == "3,2 kg")
+        #expect(amount.unit == nil)
     }
 
     @Test
@@ -92,17 +93,24 @@ struct AmountTests {
         #expect(amount.unit == nil)
     }
 
-    @Test(arguments: [
-        (fence: "1/0 cup", unit: "/0 cup"),
-        (fence: "1 1/0 cup", unit: "1/0 cup"),
-        (fence: "1/0.0 cup", unit: "/0.0 cup")
-    ])
-    func doesNotDivideByAZeroDenominator(fence: String, unit: String) throws {
+    @Test(arguments: ["1/0 cup", "1/0.0 cup"])
+    func doesNotDivideByAZeroDenominator(fence: String) throws {
+        // The fraction states nothing to divide by, so the number before it states no quantity
+        // either, rather than standing as one the author never wrote.
         let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
-        let quantity = try #require(amount.kind.preciseQuantity)
-        #expect(quantity.value == 1.0)
-        #expect(quantity.text == "1")
-        #expect(amount.unit == unit)
+
+        #expect(amount.kind.impreciseText == fence)
+        #expect(amount.unit == nil)
+    }
+
+    @Test
+    func readsAMixedNumberWhoseFractionDividesByZeroAsTheWholeNumberAndItsUnit() throws {
+        // The mixed form is optional, so the whole number stands on its own and the fraction
+        // it could not use opens the unit, no number running into a defect of its own.
+        let amount = try #require(Recipe.read("Add @{1 1/0 cup} flour@.").firstAmount)
+
+        #expect(amount.kind.preciseQuantity?.value == 1.0)
+        #expect(amount.unit == "1/0 cup")
     }
 
     @Test
@@ -175,16 +183,12 @@ struct AmountTests {
         #expect(amount.unit == "- 2 tbsp")
     }
 
-    @Test(arguments: [
-        (source: "Add @{3. kg} flour@.", unit: ". kg"),
-        (source: "Add @{3.x} flour@.", unit: ".x")
-    ])
-    func stopsTheQuantityAtADecimalPointWithNoDigitsAfterIt(source: String, unit: String) throws {
-        let amount = try #require(Recipe.read(source).firstAmount)
-        let quantity = try #require(amount.kind.preciseQuantity)
-        #expect(quantity.value == 3.0)
-        #expect(quantity.text == "3")
-        #expect(amount.unit == unit)
+    @Test(arguments: ["3. kg", "3.x"])
+    func statesNoQuantityWhereADecimalPointHasNoDigitsAfterIt(fence: String) throws {
+        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
+
+        #expect(amount.kind.impreciseText == fence)
+        #expect(amount.unit == nil)
     }
 
     // The whitespace between the quantity and the unit separates them and belongs to neither,
@@ -203,6 +207,68 @@ struct AmountTests {
 
         #expect(amount.kind.preciseQuantity?.value == 200.0)
         #expect(amount.unit == unit)
+    }
+
+    // A quantity that runs into a decimal point it cannot use, or a fraction it cannot finish,
+    // states no number at all rather than the number before it, so a wrong quantity never
+    // scales. A text with no leading digit states none either, which is no defect in itself,
+    // and one opening as a number nonetheless states a number nowhere else. Each is reported,
+    // and each keeps its text as written.
+
+    @Test(arguments: ["3,2 kg", "1,000 g", "3. kg", "1/0 cup", "1/x cup", "=3,2 kg", ".5", ",5", "-2 tbsp"])
+    func warnsAboutANumberAnAmountCannotFinish(fence: String) {
+        let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
+
+        #expect(parsed.value.firstAmount?.kind.impreciseText == fence)
+        #expect(parsed.value.firstAmount?.isFixed == false)
+        #expect(parsed.diagnostics.map(\.kind) == [.malformedQuantity])
+    }
+
+    @Test(arguments: ["a pinch", "half", "to taste", "=a pinch", "-", "."])
+    func readsAnImpreciseAmountStatingNoNumberWithoutReporting(fence: String) {
+        let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
+
+        #expect(parsed.value.firstAmount?.kind.impreciseText == fence)
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    // A character Unicode gives a fractional value to is a quantity, so the fractions a recipe
+    // is written with need no spelling out. A whole number may stand before one, with or
+    // without the whitespace separating them.
+
+    @Test(arguments: [
+        (fence: "\u{00BD} cup", value: 0.5, unit: "cup"),
+        (fence: "1\u{00BD} cups", value: 1.5, unit: "cups"),
+        (fence: "1 \u{00BD} cups", value: 1.5, unit: "cups"),
+        (fence: "2\u{00BE}", value: 2.75, unit: ""),
+        (fence: "\u{2153} cup", value: 1.0 / 3.0, unit: "cup")
+    ])
+    func readsAVulgarFractionAsAQuantity(fence: String, value: Double, unit: String) throws {
+        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
+
+        #expect(amount.kind.preciseQuantity?.value == value)
+        #expect(amount.unit == unit)
+    }
+
+    @Test
+    func readsARangeBetweenVulgarFractions() throws {
+        let amount = try #require(Recipe.read("Add @{\u{00BD}-1\u{00BC} cups} flour@.").firstAmount)
+
+        let range = try #require(amount.kind.rangeQuantities)
+        #expect(range.low.value == 0.5)
+        #expect(range.high.value == 1.25)
+        #expect(amount.unit == "cups")
+    }
+
+    // A whole numeric value is a number rather than a fraction, so a superscript and a numeral
+    // stay unit text and no quantity is invented from them.
+
+    @Test(arguments: ["\u{00B2} cups", "\u{216B} cups"])
+    func readsNoQuantityFromACharacterStatingAWholeValue(fence: String) {
+        let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
+
+        #expect(parsed.value.firstAmount?.kind.impreciseText == fence)
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

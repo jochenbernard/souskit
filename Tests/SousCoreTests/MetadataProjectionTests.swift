@@ -92,6 +92,7 @@ struct MetadataProjectionTests {
 
     @Test
     func doesNotDivideAServingsValueByAZeroDenominator() {
-        #expect(Metadata.read("servings: 1/0").servings == 1)
+        // The fraction states nothing to divide by, so the value states no number at all.
+        #expect(Metadata.read("servings: 1/0").servings == nil)
     }
 }

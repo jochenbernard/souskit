@@ -55,15 +55,29 @@ struct IngredientTests {
         #expect(Recipe.read("Cook @{200 g}  pasta@.").serialized() == "Cook @{200 g} pasta@.")
     }
 
-    @Test
-    func readsASpanNamingOnlyWhitespaceAsText() {
-        // Trimming leaves the span naming nothing, which is ordinary text like any other span
-        // that names nothing.
-        let parsed = SousParser().parseRecipe("Cook @{200 g}   @.")
+    // A span stating an amount and naming nothing is ordinary text like any other span that
+    // names nothing, and the amount its author wrote would go with it, so it is reported.
+
+    @Test(arguments: [
+        "Cook @{200 g}@.",
+        "Cook @{200 g}   @.",
+        "Cook @{2 cloves garlic}@.",
+        "Spread the >{2}> now."
+    ])
+    func warnsAboutASpanStatingAnAmountAndNamingNothing(source: String) {
+        let parsed = SousParser().parseRecipe(source)
 
         #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Cook @{200 g}   @."])
-        #expect(parsed.diagnostics.isEmpty)
+        #expect(parsed.value.references.isEmpty)
+        #expect(parsed.value.steps.map(\.text) == [source])
+        #expect(parsed.diagnostics.map(\.kind) == [.unnamedAnnotation])
+    }
+
+    @Test(arguments: ["Rate it @@ out of five.", "Use ## here.", "Spread the >> now."])
+    func reportsNothingForASpanStatingNoAmountAndNamingNothing(source: String) {
+        // A bare pair of sigils is prose an author wrote for its own sake, so it earns no
+        // report; only an amount states something a reader would otherwise drop.
+        #expect(SousParser().parseRecipe(source).diagnostics.isEmpty)
     }
 
     @Test
