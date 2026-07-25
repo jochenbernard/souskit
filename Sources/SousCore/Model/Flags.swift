@@ -12,7 +12,12 @@ public struct Flags: Equatable, Hashable, Sendable {
     /// Whether a `:non-food` flag marks what it is attached to as not a food or shopping item.
     public var isNonFood: Bool
 
-    /// The flag names that are not recognized, in document order. They are preserved rather than dropped.
+    /// The flag names that are not recognized, in document order. They are preserved rather
+    /// than dropped.
+    ///
+    /// A chain is a set, so reading holds each name once however many times it is written, as
+    /// a recognized flag's status is held once. A repeat a caller states is written back,
+    /// where it reads as the one flag it states.
     public var unrecognized: [String]
 
     /// No flags at all: what an annotation carrying none reads, and what one that takes none

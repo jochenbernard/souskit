@@ -33,7 +33,9 @@ enum FlagParser {
             if let flag = Flag(rawValue: word) {
                 flags[keyPath: flag.property] = true
             } else {
-                flags.unrecognized.append(word)
+                // A chain is a set, so a name already held says no more a second time. Each
+                // occurrence is text the author wrote, so each is still reported.
+                if !flags.unrecognized.contains(word) { flags.unrecognized.append(word) }
                 diagnostics.append(.warning(
                     .unknownFlag,
                     "Unrecognized flag '\(word)'.",

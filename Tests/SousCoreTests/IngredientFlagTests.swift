@@ -71,11 +71,25 @@ struct IngredientFlagTests {
         #expect(amount.unit == "g")
     }
 
+    // A chain is a set, so a flag written twice says no more than one written once. A
+    // recognized flag states a status, which is held once whatever states it, and an
+    // unrecognized one is kept once as well, so neither repeat is written back.
+
     @Test
     func readsARepeatedFlagOnce() throws {
         let ingredient = try #require(Recipe.read("Season with @salt@:staple:staple.").firstIngredient)
         #expect(ingredient.flags.isStaple)
         #expect(ingredient.flags.unrecognized.isEmpty)
+    }
+
+    @Test
+    func readsARepeatedUnrecognizedFlagOnce() {
+        let parsed = SousParser().parseRecipe("Add @sauce@:homemade:homemade now.")
+
+        #expect(parsed.value.ingredients.map(\.flags.unrecognized) == [["homemade"]])
+        #expect(parsed.value.serialized() == "Add @sauce@:homemade now.")
+        // Each occurrence is text the author wrote, so each is reported where it stands.
+        #expect(parsed.diagnostics.map(\.kind) == [.unknownFlag, .unknownFlag])
     }
 
     @Test
