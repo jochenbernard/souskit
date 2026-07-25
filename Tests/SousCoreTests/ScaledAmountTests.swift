@@ -53,12 +53,12 @@ struct ScaledAmountTests {
         #expect(amount.text == "0.6666666666666666 cup")
     }
 
-    // Regenerating writes one space between the quantity and the unit, and the unit itself is
-    // whatever followed that one space, so spacing beyond it survives.
+    // Regenerating writes one space between the quantity and the unit, whatever separated the
+    // two where the amount was read, because the unit is trimmed of it.
 
     @Test(arguments: [
         (fence: "200g", text: "400 g"),
-        (fence: "200  g", text: "400  g")
+        (fence: "200  g", text: "400 g")
     ])
     func regeneratesTheSeparatorButNotTheUnit(fence: String, text: String) throws {
         #expect(try SousParser().amount(in: "Add @{\(fence)} water@.", scaledBy: 2.0).text == text)

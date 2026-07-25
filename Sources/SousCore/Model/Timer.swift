@@ -20,7 +20,8 @@ public struct Timer: Equatable, Hashable, Sendable {
     /// A qualitative duration has none, a precise or range duration has one, and a compound duration has two or more.
     public var components: [Amount]
 
-    /// The timer's content, captured with nothing stripped and each escape resolved.
+    /// The timer's content, captured trimmed of the whitespace around it and with each escape
+    /// resolved.
     ///
     /// It is the text a qualitative duration displays, and the only property writing a timer
     /// emits. ``components`` were read from it, so changing them states something the written
@@ -28,7 +29,8 @@ public struct Timer: Equatable, Hashable, Sendable {
     ///
     /// Writing wraps the text in its sigils, so text that is empty, that opens with
     /// whitespace, or that holds a blank line writes text a reader takes for prose rather than
-    /// for a timer, and reading produces none of them.
+    /// for a timer, and reading produces none of them. Text ending in whitespace reads back
+    /// without it.
     public var text: String
 
     /// The form this duration takes, classified from the components.

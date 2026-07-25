@@ -179,10 +179,9 @@ enum StepParser {
             }
 
             amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
+            // Whatever whitespace separates the fence from the name belongs to neither, and
+            // trimming the name is what removes it, so the name simply opens after the brace.
             nameStart = closingBrace + 1
-
-            // One space usually separates the fence from the name, but it is optional.
-            if nameStart < characters.count, characters[nameStart] == " " { nameStart += 1 }
         }
 
         guard let closingSigil = closingSigil(sigil, in: characters, from: nameStart) else {
@@ -197,7 +196,11 @@ enum StepParser {
             )
         }
 
-        let name = SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
+        // A name states what stands between its ends, so the whitespace around it is layout
+        // and is trimmed away, which is what leaves the fence needing no separator of its own.
+        let name = SourceText.trimmed(
+            SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
+        )
 
         // A span that names nothing is ordinary text, not an annotation of nothing.
         guard !name.isEmpty else {

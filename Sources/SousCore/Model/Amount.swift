@@ -8,21 +8,22 @@ public struct Amount: Equatable, Hashable, Sendable {
         /// A range between a low and a high quantity.
         case range(Quantity, Quantity)
 
-        /// A textual amount with no leading number, captured verbatim.
+        /// A textual amount with no leading number, captured as the trimmed text states it.
         case imprecise(String)
     }
 
     /// The form this amount takes.
     public var kind: Kind
 
-    /// The unit, captured verbatim. It is `nil` for an imprecise amount and may be empty when a quantity has no unit.
+    /// The unit, captured trimmed of the whitespace separating it from the quantity. It is
+    /// `nil` for an imprecise amount and may be empty when a quantity has no unit.
     public var unit: String?
 
     /// Whether an `=` before the quantity marks the amount as fixed, holding it constant when the recipe is scaled.
     public var isFixed: Bool
 
-    /// The verbatim text the amount was read from: the content of an amount fence, without its
-    /// braces, or the one part of a timer it states.
+    /// The text the amount was read from, trimmed of the whitespace around it: the content of
+    /// an amount fence, without its braces, or the one part of a timer it states.
     ///
     /// It is the only property writing an amount emits. ``kind``, ``unit``, and ``isFixed`` were
     /// read from it, so changing one of them states something the written amount does not.

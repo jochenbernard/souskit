@@ -46,7 +46,7 @@ struct MetadataTests {
 
     @Test(arguments: [
         (header: "servings: 6 ", value: "6 "),
-        (header: "servings:  6", value: " 6")
+        (header: "servings:  6", value: "6")
     ])
     func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim(header: String, value: String) {
         let metadata = Metadata.read(header)

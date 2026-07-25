@@ -3,7 +3,7 @@ extension Amount {
     /// as, so a scaled amount states what a reader would read back from it.
     ///
     /// One space separates the quantity from the unit and belongs to neither, which is the
-    /// same one the reader steps over. A mixed number is written with that space too, though,
+    /// separation the reader trims away. A mixed number is written with that space too, though,
     /// so a unit opening a fraction is read into a whole quantity. The text is therefore read
     /// back before it is taken, rather than the writer second-guessing the reader.
     ///

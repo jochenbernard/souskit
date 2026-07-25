@@ -187,11 +187,50 @@ struct AmountTests {
         #expect(amount.unit == unit)
     }
 
+    // The whitespace between the quantity and the unit separates them and belongs to neither,
+    // and a fence states what its content states, so the whitespace around that content is
+    // layout as well. A fence therefore reads exactly as the header value of the same text.
+
+    @Test(arguments: [
+        (fence: "200  g", unit: "g"),
+        (fence: "200\tg", unit: "g"),
+        (fence: "200 g ", unit: "g"),
+        (fence: " 200 g", unit: "g"),
+        (fence: " 200 fl oz ", unit: "fl oz")
+    ])
+    func trimsTheWhitespaceAroundTheContentAndTheUnit(fence: String, unit: String) throws {
+        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
+
+        #expect(amount.kind.preciseQuantity?.value == 200.0)
+        #expect(amount.unit == unit)
+    }
+
     @Test
-    func keepsAnyExtraSpaceBeforeTheUnitInTheUnit() throws {
-        // A single space separates the quantity from the unit; a second one is unit text.
-        let amount = try #require(Recipe.read("Add @{200  g} flour@.").firstAmount)
-        #expect(amount.unit == " g")
+    func readsAFenceOfOnlyWhitespaceAsAnEmptyImpreciseAmount() throws {
+        let amount = try #require(Recipe.read("Add @{   } salt@.").firstAmount)
+
+        #expect(amount.kind.impreciseText?.isEmpty == true)
+        #expect(amount.text.isEmpty)
+    }
+
+    @Test
+    func readsTheFixedMarkerTheTrimmedContentOpensWith() throws {
+        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} baking soda@.").firstAmount)
+
+        #expect(amount.isFixed)
+        #expect(amount.text == "=1 tsp")
+    }
+
+    // Whitespace separates whatever it stands between, whatever it is built from and however
+    // much of it there is, so the whole number and the fraction of a mixed number are no
+    // exception.
+
+    @Test(arguments: ["1  1/2 cups", "1\t1/2 cups", "1 \t 1/2 cups"])
+    func readsAMixedNumberAcrossAnyWhitespace(fence: String) throws {
+        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
+
+        #expect(amount.kind.preciseQuantity?.value == 1.5)
+        #expect(amount.unit == "cups")
     }
 
     @Test

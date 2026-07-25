@@ -23,25 +23,6 @@ struct SerializationTests {
         #expect(reRead.metadata == recipe.metadata, sourceLocation: sourceLocation)
     }
 
-    /// Layout a writer is free to normalize: a trailing newline, a run of blank lines, a
-    /// whitespace-only line, a fence line with trailing space, and the space an amount fence
-    /// is set off from its name by.
-    private static let normalizedLayouts = [
-        "Toast the bread.\n",
-        "Toast the bread.\n\n",
-        "\nToast the bread.",
-        "First step.\n\n\nSecond step.",
-        "---\n---",
-        "---\ntitle: Toast\n---\nBody line.",
-        "Cook @{200 g}pasta@.",
-        "Toast the bread.\n   \nSpread with butter.",
-        "--- \ntitle: Toast\n--- ",
-        "Add @{200 g}@ now.",
-        "Toast the bread\u{2028}and butter it.",
-        "---\ntags: [italian, quick] \n---",
-        "---\ntags:  [italian, quick]\n---"
-    ]
-
     @Test(arguments: [
         "Toast the bread and spread it with butter.",
         "Fry @garlic@ until fragrant, then add @baby spinach@.",
@@ -93,7 +74,6 @@ struct SerializationTests {
         "Add @flour\\\\@ now.",
         "  Toast the bread.  ",
         "---\n: Alice\n---",
-        "---\ntitle:  Toast\n---",
         "---\ntitle: a: b\n---",
         "---\nprep-time: 15 min\n---",
         "---\ntitle:\n---",
@@ -244,7 +224,7 @@ struct SerializationTests {
     // rather than preserved. What must hold is that the output re-reads to the same recipe,
     // and that normalizing an already normalized file changes nothing further.
 
-    @Test(arguments: normalizedLayouts)
+    @Test(arguments: TestSupport.normalizedLayouts)
     func normalizingLayoutIsStable(source: String) {
         let parser = SousParser()
         let normalized = parser.parseRecipe(source).value.serialized()
@@ -252,7 +232,7 @@ struct SerializationTests {
         #expect(parser.parseRecipe(normalized).value.serialized() == normalized)
     }
 
-    @Test(arguments: normalizedLayouts)
+    @Test(arguments: TestSupport.normalizedLayouts)
     func normalizingLayoutKeepsTheContent(source: String) {
         expectTheRecipeSurvivesARoundTrip(source)
     }

@@ -30,8 +30,9 @@ public struct SousParser: Sendable {
     /// Parses the content of an amount fence into an amount.
     ///
     /// The text is what a fence holds without its braces, such as `200 g` or `18 pancakes`, and
-    /// it is read exactly as one, with nothing trimmed. So a target opening with whitespace is
-    /// imprecise, where the same header value would not be.
+    /// it is read exactly as one. The whitespace around it is layout rather than part of what
+    /// it states, so it is trimmed away and a target states what the header value of the same
+    /// text states.
     ///
     /// Reading an amount reports nothing, because text with no leading number is an imprecise
     /// amount rather than a defect, so the amount is returned on its own.

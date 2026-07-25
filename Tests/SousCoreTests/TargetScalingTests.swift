@@ -21,15 +21,16 @@ struct TargetScalingTests {
         #expect(target.text == "18 pancakes")
     }
 
-    // A target is read exactly as fence content, with nothing trimmed, so it differs from the
-    // header value of the same text in both directions the fence rules allow.
+    // A target is read exactly as fence content, which is trimmed, so it states what the
+    // header value of the same text states.
 
     @Test
-    func readsATargetOpeningWithWhitespaceAsImprecise() {
-        let target = SousParser().parseAmount(" 800 g")
+    func readsATargetTheWhitespaceAroundItStatesNothingOf() {
+        let target = SousParser().parseAmount(" 800 g ")
 
-        #expect(target.kind.impreciseText == " 800 g")
-        #expect(target.unit == nil)
+        #expect(target.kind.preciseQuantity?.value == 800.0)
+        #expect(target.unit == "g")
+        #expect(target.text == "800 g")
     }
 
     @Test

@@ -120,15 +120,13 @@ struct ReferenceTests {
         #expect(try #require(Recipe.read("Layer the >{300 g}sauce> in a dish.").firstReference).target == "sauce")
     }
 
-    // Only the one space after the fence separates it from the target, so a second begins the
-    // target. It is the one place reading produces a target opening with whitespace.
+    // A target is trimmed, as every name is, so whatever whitespace separates it from the
+    // fence belongs to neither.
 
-    @Test
-    func keepsWhitespaceBeyondTheOneSeparatingSpaceInTheTarget() throws {
-        let source = "Layer the >{300 g}  sauce> in a dish."
-
-        #expect(try #require(Recipe.read(source).firstReference).target == " sauce")
-        #expect(Recipe.read(source).serialized() == source)
+    @Test(arguments: ["Layer the >{300 g}  sauce> in a dish.", "Layer the >{300 g} sauce > in a dish."])
+    func trimsTheWhitespaceAroundATarget(source: String) throws {
+        #expect(try #require(Recipe.read(source).firstReference).target == "sauce")
+        #expect(Recipe.read(source).serialized() == "Layer the >{300 g} sauce> in a dish.")
     }
 
     @Test

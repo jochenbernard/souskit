@@ -17,6 +17,17 @@ struct TimerTests {
     }
 
     @Test
+    func trimsTheWhitespaceAroundADuration() throws {
+        // A duration is read as an amount fence is, and the content is trimmed as one, so the
+        // unit ends where the text does.
+        let timer = try #require(Recipe.read("Simmer gently for ~40 min ~.").firstTimer)
+
+        #expect(timer.kind == .precise)
+        #expect(timer.text == "40 min")
+        #expect(timer.components.map(\.unit) == ["min"])
+    }
+
+    @Test
     func parsesARangeDuration() throws {
         let timer = try #require(Recipe.read("Bake for ~8-10 min~.").firstTimer)
         #expect(timer.kind == .range)

@@ -9,8 +9,9 @@ enum AmountParser {
     /// a reader recognizes is a range a writer produces.
     static let rangeSeparator: Character = "-"
 
-    /// The one space that may separate a quantity from its unit, belonging to neither. Reading
-    /// and writing share it, so the unit a writer sets apart is the unit a reader reads.
+    /// The one space a writer separates a unit from its quantity with. A reader takes any run
+    /// of whitespace for that separation and trims it away, so what a writer produces is the
+    /// one form of it that states nothing extra.
     static let unitSeparator: Character = " "
 
     /// The character between a number's whole and fractional parts. Reading and writing share
@@ -27,14 +28,15 @@ enum AmountParser {
     /// part of a timer.
     ///
     /// The fixed marker belongs to the fence, so a leading `=` is ordinary text here, which
-    /// leaves the amount imprecise as any other content with no leading number is. The
-    /// whitespace around such a value is layout rather than part of what it states, so it is
-    /// removed before reading, which a fence's own content never is.
+    /// leaves the amount imprecise as any other content with no leading number is.
     static func parse(unfenced text: String) -> Amount {
-        parse(SourceText.trimmed(text), fenced: false)
+        parse(text, fenced: false)
     }
 
-    private static func parse(_ text: String, fenced: Bool) -> Amount {
+    /// The whitespace around a value is layout rather than part of what it states, so it is
+    /// removed before reading and a fence states what the header value of the same text does.
+    private static func parse(_ value: String, fenced: Bool) -> Amount {
+        let text = SourceText.trimmed(value)
         let characters = Array(text)
         // The marker fixes an amount only immediately before a numeric quantity. Anywhere
         // else it is ordinary text, and the amount it opens is imprecise like any other,
@@ -50,11 +52,9 @@ enum AmountParser {
             )
         }
 
-        // A single space separates the quantity from the unit; anything else belongs to the unit.
-        var cursor = quantity.end
-        if cursor < characters.count, characters[cursor] == unitSeparator {
-            cursor += 1
-        }
+        // The whitespace between the quantity and the unit separates the two and belongs to
+        // neither, so the unit opens where that run ends.
+        let cursor = SourceText.run(in: characters, from: quantity.end, while: \.isWhitespace)
 
         return Amount(
             kind: quantity.kind,
@@ -94,16 +94,22 @@ enum AmountParser {
             // A bare fraction, whose numerator is the number just scanned.
             value /= bare.value
             end = bare.end
-        } else if isWhole,
-                  end < characters.count,
-                  characters[end] == unitSeparator,
-                  let mixed = fraction(in: characters, from: end + 1) {
-            // A mixed number: a whole number, a single space, then a fraction.
+        } else if isWhole, let mixed = mixedFraction(in: characters, from: end) {
+            // A mixed number: a whole number, whitespace, then a fraction.
             value += mixed.value
             end = mixed.end
         }
 
         return (Quantity(value: value, text: String(characters[start..<end])), end)
+    }
+
+    /// Scans the fraction a mixed number states after its whole number: the whitespace
+    /// separating the two, which belongs to neither, and then the fraction itself.
+    private static func mixedFraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
+        let afterSeparator = SourceText.run(in: characters, from: start, while: \.isWhitespace)
+        guard afterSeparator > start else { return nil }
+
+        return fraction(in: characters, from: afterSeparator)
     }
 
     /// Scans a fraction, a `/` between two numbers, returning its value and the index just

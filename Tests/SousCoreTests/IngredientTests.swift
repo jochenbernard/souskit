@@ -34,22 +34,37 @@ struct IngredientTests {
         #expect(ingredient.name == "pasta")
     }
 
-    // A single space separates the fence from the name and belongs to neither. Nothing else
-    // is stripped, so any further whitespace is part of the name.
+    // A name is trimmed, so whatever whitespace separates it from the fence belongs to
+    // neither and the writer states the separation as the one space it writes.
 
-    @Test
-    func keepsWhitespaceBeyondTheOneSeparatingSpaceInTheName() throws {
-        let parsed = SousParser().parseRecipe("Cook @{200 g}  pasta@.")
+    @Test(arguments: [
+        "@{200 g}  pasta@",
+        "@{200 g}\tpasta@",
+        "@{200 g} pasta @",
+        "@{200 g}\npasta@",
+        "@pasta @"
+    ])
+    func trimsTheWhitespaceAroundAName(span: String) {
+        let parsed = SousParser().parseRecipe("Cook \(span).")
 
-        let ingredient = try #require(parsed.value.firstIngredient)
-        #expect(ingredient.name == " pasta")
-        #expect(parsed.value.serialized() == "Cook @{200 g}  pasta@.")
+        #expect(parsed.value.ingredients.map(\.name) == ["pasta"])
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
-    func doesNotTakeAWhitespaceOtherThanASpaceAsTheSeparator() throws {
-        let ingredient = try #require(Recipe.read("Cook @{200 g}\tpasta@.").firstIngredient)
-        #expect(ingredient.name == "\tpasta")
+    func writesTheSeparationTheNameNoLongerCarries() {
+        #expect(Recipe.read("Cook @{200 g}  pasta@.").serialized() == "Cook @{200 g} pasta@.")
+    }
+
+    @Test
+    func readsASpanNamingOnlyWhitespaceAsText() {
+        // Trimming leaves the span naming nothing, which is ordinary text like any other span
+        // that names nothing.
+        let parsed = SousParser().parseRecipe("Cook @{200 g}   @.")
+
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.value.steps.map(\.text) == ["Cook @{200 g}   @."])
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

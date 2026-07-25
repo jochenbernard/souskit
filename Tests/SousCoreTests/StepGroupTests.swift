@@ -153,15 +153,16 @@ struct StepGroupTests {
     @Test(arguments: [
         (source: "## Sauce", name: "Sauce"),
         (source: "## Rich Tomato Sauce", name: "Rich Tomato Sauce"),
-        // One space separates the name from the "##" and belongs to neither, exactly as the
-        // one space after an amount fence does; a second begins the name.
-        (source: "##  Sauce", name: " Sauce"),
-        (source: "## Sauce ", name: "Sauce "),
+        // The name is trimmed, exactly as a fenced name is, so the whitespace separating it
+        // from the "##" belongs to neither, whatever it is built from.
+        (source: "##  Sauce", name: "Sauce"),
+        (source: "## \tSauce ", name: "Sauce"),
+        (source: "##\tSauce", name: "Sauce"),
         (source: "## 2", name: "2"),
         // A name is a single-segment label, so a path separator in one is ordinary text.
         (source: "## sauces/red", name: "sauces/red")
     ])
-    func readsTheNameAfterOneSeparatingSpace(source: String, name: String) {
+    func readsTheTrimmedNameAfterTheMarker(source: String, name: String) {
         #expect(Recipe.read(source).groups.map(\.name) == [name])
     }
 
@@ -172,6 +173,9 @@ struct StepGroupTests {
         "##Sauce",
         "## ",
         "##",
+        // A name trimmed away leaves the line naming nothing, as an empty one does.
+        "##   ",
+        "## \t",
         " ## Sauce",
         "### Sauce",
         "#Sauce#",
@@ -323,20 +327,13 @@ struct StepGroupTests {
         "\\## #p#",
         "\\## ~4 h~",
         "\\## >a>",
-        // A line inside a step, which no longer opens a group and so needs no escape.
+        // A line inside a step, which opens no group and so needs no escape. The exhaustive
+        // sweeps cover the rest of the shapes such a line takes.
         "Mix it,\n## then rest it.",
         "Add @a\n## b@ now.",
-        "Use a #a\n## b# now.",
-        "Wait ~4\n## h~ now.",
-        "Spread the >a\n## b> now.",
-        "Mix it,\n##  rest it.",
         "## Sauce\nMix it,\n## then rest it.",
         "Mix.\n## @salt@ in.",
-        "Add @x\n## @ now.",
-        "Add @{2 g} x\n## @ now.",
-        "Add @x\n## @? now.",
-        "Use a #x\n## # now.",
-        "Use a #x\n##  now."
+        "Use a #x\n## # now."
     ])
     func preservesContentThatCouldBeReadAsAHeading(source: String) {
         let recipe = Recipe.read(source)

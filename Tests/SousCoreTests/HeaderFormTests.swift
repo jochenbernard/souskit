@@ -77,7 +77,7 @@ struct HeaderFormTests {
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unterminatedHeader }))
     }
 
-    // A key ends at the first colon followed by a space or the end of the line.
+    // A key ends at the first colon followed by whitespace or the end of the line.
 
     @Test
     func splitsOnlyAtTheFirstSeparator() {
@@ -85,7 +85,7 @@ struct HeaderFormTests {
     }
 
     @Test
-    func splitsAtTheFirstColonFollowedByASpaceRatherThanTheFirstColon() {
+    func splitsAtTheFirstColonFollowedByWhitespaceRatherThanTheFirstColon() {
         // A colon with nothing after it is ordinary text, so the key runs on past it.
         let parsed = SousParser().parseRecipe("---\na:b: c\n---")
 
@@ -94,7 +94,7 @@ struct HeaderFormTests {
     }
 
     @Test
-    func doesNotSplitAtAColonThatIsNotFollowedByASpace() {
+    func doesNotSplitAtAColonThatIsNotFollowedByWhitespace() {
         let source = """
         ---
         source: https://example.com/recipes/1
@@ -116,9 +116,12 @@ struct HeaderFormTests {
         #expect(title.isEmpty)
     }
 
-    @Test
-    func removesExactlyOneSpaceAfterTheSeparator() {
-        #expect(Recipe.read("---\ntitle:  Toast\n---").metadata.title == " Toast")
+    // The whitespace separating a value from its key belongs to neither, whatever it is built
+    // from and however much of it there is.
+
+    @Test(arguments: ["title:  Toast", "title:\tToast", "title: \t Toast"])
+    func removesTheWhitespaceSeparatingAValueFromItsKey(entry: String) {
+        #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Toast")
     }
 
     @Test

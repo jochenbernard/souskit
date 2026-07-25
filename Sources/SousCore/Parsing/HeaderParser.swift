@@ -109,15 +109,18 @@ enum HeaderParser {
         )
     }
 
-    /// A key ends at the first colon followed by a space or the end of the line, so a
-    /// colon inside a value such as a URL does not split it.
+    /// A key ends at the first colon followed by whitespace or the end of the line, so a
+    /// colon inside a value such as a URL does not split it. The whitespace separating the
+    /// two belongs to neither, so any run of it states the separation.
     private static func field(in line: Substring) -> (key: String, value: String)? {
         for colon in line.indices where line[colon] == ":" {
             let afterColon = line.index(after: colon)
             let key = String(line[..<colon])
 
             if afterColon == line.endIndex { return (key, "") }
-            if line[afterColon] == " " { return (key, String(line[line.index(after: afterColon)...])) }
+            if line[afterColon].isWhitespace {
+                return (key, String(line[afterColon...].drop(while: \.isWhitespace)))
+            }
         }
 
         return nil

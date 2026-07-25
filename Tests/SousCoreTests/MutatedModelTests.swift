@@ -51,24 +51,35 @@ struct MutatedModelTests {
         #expect(value.reRead().references.isEmpty)
     }
 
-    // A fence stands between the opening sigil and the target, so it is the one place a target
-    // opening with whitespace still reads back as one.
+    // The values that stay an annotation but state less of themselves, because a reader trims
+    // the whitespace around every name. A fence stands between the opening sigil and the
+    // target, so it is the one place a name opening with whitespace still bounds one at all.
 
-    @Test
-    func writesAWhitespaceLeadingTargetBackWhenAFencePrecedesIt() throws {
-        var value = Recipe.read("Layer the >{2 g} sauce> in a dish.")
-        var reference = try #require(value.references.first)
-        reference.target = " sauce"
-        value.groups[0].steps[0].segments[1] = .reference(reference)
+    @Test(arguments: ["salt ", "salt\t", "salt\n"])
+    func writesAnIngredientNameThatReadsBackTrimmed(name: String) throws {
+        var value = Recipe.read("Add @salt@ now.")
+        var ingredient = try #require(value.ingredients.first)
+        ingredient.name = name
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
-        #expect(value.reRead().references.map(\.target) == [" sauce"])
+        #expect(value.reRead().ingredients.map(\.name) == ["salt"])
     }
 
-    // The values that stay an annotation, which is what makes the list above a real boundary
-    // rather than a blanket warning: only leading whitespace, emptiness, and a blank line cost
-    // the annotation its sigils.
+    @Test(arguments: [" sauce", "sauce "])
+    func writesAReferenceTargetTheFenceBeforeItLeavesTrimmed(target: String) throws {
+        var value = Recipe.read("Layer the >{2 g} sauce> in a dish.")
+        var reference = try #require(value.references.first)
+        reference.target = target
+        value.groups[0].steps[0].segments[1] = .reference(reference)
 
-    @Test(arguments: ["sauce ", "sa uce", "a\nb", "sauces/red"])
+        #expect(value.reRead().references.map(\.target) == ["sauce"])
+    }
+
+    // The values that stay an annotation stating themselves, which is what makes the lists
+    // above real boundaries rather than a blanket warning: only the whitespace around a name,
+    // emptiness, and a blank line cost a name anything.
+
+    @Test(arguments: ["sa uce", "a\nb", "sauces/red"])
     func writesAReferenceTargetThatStillReadsBack(target: String) throws {
         var value = Recipe.read("Layer the >sauce> in a dish.")
         var reference = try #require(value.references.first)
@@ -78,7 +89,7 @@ struct MutatedModelTests {
         #expect(value.reRead().references.map(\.target) == [target])
     }
 
-    @Test(arguments: ["salt ", "sa lt", "a\nb"])
+    @Test(arguments: ["sa lt", "a\nb"])
     func writesAnIngredientNameThatStillReadsBack(name: String) throws {
         var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
@@ -134,7 +145,13 @@ struct MutatedModelTests {
         (name: "", groups: [nil], steps: ["## \nBrown the beef."]),
         (name: "Sauce\nMore", groups: ["Sauce"], steps: ["More\nBrown the beef."]),
         // A break before a second marker ends the heading and opens another group.
-        (name: "Sauce\n## Other", groups: ["Sauce", "Other"], steps: ["Brown the beef."])
+        (name: "Sauce\n## Other", groups: ["Sauce", "Other"], steps: ["Brown the beef."]),
+        // A name is trimmed as it is read, so the whitespace around one does not survive, and
+        // a name of nothing but whitespace leaves the line naming nothing at all.
+        (name: " Sauce", groups: ["Sauce"], steps: ["Brown the beef."]),
+        (name: "Sauce ", groups: ["Sauce"], steps: ["Brown the beef."]),
+        (name: "\tSauce", groups: ["Sauce"], steps: ["Brown the beef."]),
+        (name: " ", groups: [nil], steps: ["##  \nBrown the beef."])
     ])
     func writesAGroupNameThatNoLongerReadsBackAsOne(name: String, groups: [String?], steps: [String]) {
         var value = Recipe.read("## Sauce\nBrown the beef.")
@@ -145,10 +162,9 @@ struct MutatedModelTests {
         #expect(written.steps.map(\.text) == steps)
     }
 
-    // Whitespace around a name costs it nothing, because the one space after the "##" belongs
-    // to neither side and a second begins the name.
+    // A name states what it holds between its ends, so everything a reader produces reads back.
 
-    @Test(arguments: [" Sauce", "\tSauce", "Sauce ", " ", "Rich Sauce", "sauces/red", "@salt@"])
+    @Test(arguments: ["Rich Sauce", "sauces/red", "@salt@", "a  b"])
     func writesAGroupNameThatStillReadsBack(name: String) {
         var value = Recipe.read("## Sauce\nBrown the beef.")
         value.groups[0].name = name

@@ -178,6 +178,36 @@ extension String {
 }
 
 enum TestSupport {
+    /// Layout a writer is free to normalize: a trailing newline, a run of blank lines, a
+    /// whitespace-only line, a fence line with trailing space, and the whitespace a name, an
+    /// amount, or a header value is separated from what precedes it by, which every reader
+    /// trims away.
+    static let normalizedLayouts = [
+        "Toast the bread.\n",
+        "Toast the bread.\n\n",
+        "\nToast the bread.",
+        "First step.\n\n\nSecond step.",
+        "---\n---",
+        "---\ntitle: Toast\n---\nBody line.",
+        "Cook @{200 g}pasta@.",
+        "Cook @{200 g}  pasta@.",
+        "Cook @pasta @.",
+        "Add @{ 200 g } flour@.",
+        "Add @{200\tg} flour@.",
+        "Wait ~40 min ~ now.",
+        "Layer the >{300 g}  sauce> in a dish.",
+        "##  Sauce\nBrown the beef.",
+        "##\tSauce\nBrown the beef.",
+        "Toast the bread.\n   \nSpread with butter.",
+        "--- \ntitle: Toast\n--- ",
+        "Add @{200 g}@ now.",
+        "Toast the bread\u{2028}and butter it.",
+        "---\ntitle:  Toast\n---",
+        "---\ntitle:\tToast\n---",
+        "---\ntags: [italian, quick] \n---",
+        "---\ntags:  [italian, quick]\n---"
+    ]
+
     /// Reported as one line, because a broken escape rule fails on hundreds of inputs at once.
     static func expectNoFailures(
         _ failures: [String],
