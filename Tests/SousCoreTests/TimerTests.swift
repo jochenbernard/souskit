@@ -49,6 +49,20 @@ struct TimerTests {
         #expect(timer.components.map(\.text) == ["1 h", "30 min"])
     }
 
+    // A range is read before the parts of a compound are, so a separator whitespace stands
+    // around states one duration rather than opening a second part.
+
+    @Test(arguments: ["8 - 10 min", "8- 10 min", "8 -10 min"])
+    func parsesARangeWhateverWhitespaceSurroundsItsSeparator(content: String) throws {
+        let timer = try #require(Recipe.read("Bake for ~\(content)~.").firstTimer)
+
+        #expect(timer.kind == .range)
+        #expect(timer.components.count == 1)
+        #expect(timer.components.first?.kind.rangeQuantities?.low.value == 8.0)
+        #expect(timer.components.first?.kind.rangeQuantities?.high.value == 10.0)
+        #expect(timer.components.first?.unit == "min")
+    }
+
     @Test
     func parsesACompoundDurationOfMoreThanTwoParts() throws {
         let timer = try #require(Recipe.read("Hold for ~1 h 30 min 15 s~.").firstTimer)

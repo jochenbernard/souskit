@@ -175,13 +175,22 @@ enum AmountParser {
         from start: Int
     ) -> (kind: Amount.Kind, end: Int)? {
         guard let first = number(in: characters, from: start) else { return nil }
-
-        guard first.end < characters.count,
-              characters[first.end] == rangeSeparator,
-              let second = number(in: characters, from: first.end + 1)
+        guard let second = rangeEnd(in: characters, from: first.end)
         else { return (.precise(first.quantity), first.end) }
 
         return (.range(first.quantity, second.quantity), second.end)
+    }
+
+    /// Scans the far end of a range: the separator, and the number after it.
+    ///
+    /// The separator stands between the two ends, so the whitespace on either side of it
+    /// separates each end from it and belongs to neither, as whitespace does everywhere. A
+    /// separator no number follows states no range, leaving it to open the unit instead.
+    private static func rangeEnd(in characters: [Character], from start: Int) -> (quantity: Quantity, end: Int)? {
+        let separator = SourceText.run(in: characters, from: start, while: \.isWhitespace)
+        guard SourceText.character(in: characters, at: separator) == rangeSeparator else { return nil }
+
+        return number(in: characters, from: SourceText.run(in: characters, from: separator + 1, while: \.isWhitespace))
     }
 
     /// Scans one quantity: a number, a fraction, or a mixed number.
