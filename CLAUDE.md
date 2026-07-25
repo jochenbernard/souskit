@@ -1,4 +1,6 @@
 # Documentation
+- Before writing or editing any documentation or comment, read `docs/documentation-style.md` and
+  follow it exactly.
 - All public symbols must have DocC documentation.
 - All documentation must:
   - Be consistent in wording.
