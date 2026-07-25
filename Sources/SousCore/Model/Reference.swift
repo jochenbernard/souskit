@@ -6,8 +6,8 @@ public struct Reference: Equatable, Hashable, Sendable {
     /// It names a group of the same file, matched normalized, so `bechamel` consumes what a
     /// group named `Bechamel` produced.
     ///
-    /// Writing wraps the target in its sigils, so a target that is empty or that holds a blank
-    /// line writes text a reader takes for prose rather than for a reference, and reading
+    /// Writing wraps the target in its sigils, so a target that is empty or that holds a line
+    /// break writes text a reader takes for prose rather than for a reference, and reading
     /// produces neither. A target opening with whitespace writes such text too, unless an
     /// amount fence stands between it and the opening sigil. Where the text does bound a
     /// target, reading trims the whitespace around it away.

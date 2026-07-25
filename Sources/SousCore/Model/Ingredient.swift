@@ -3,7 +3,7 @@ public struct Ingredient: Equatable, Hashable, Sendable {
     /// The ingredient's name, captured trimmed of the whitespace around it and with each escape
     /// resolved.
     ///
-    /// Writing wraps the name in its sigils, so a name that is empty or that holds a blank line
+    /// Writing wraps the name in its sigils, so a name that is empty or that holds a line break
     /// writes text a reader takes for prose rather than for an ingredient, and reading produces
     /// neither. A name opening with whitespace writes such text too, unless an amount fence
     /// stands between it and the opening sigil. Where the text does bound a name, reading trims

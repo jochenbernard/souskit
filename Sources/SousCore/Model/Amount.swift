@@ -30,7 +30,7 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// Scaling changes them together, taking the amount from reading its regenerated text back.
     ///
     /// Writing wraps the text in the fence's braces, so text holding a closing brace closes
-    /// that fence early, and text holding a blank line ends the paragraph the span needs.
+    /// that fence early, and text holding a line break leaves the fence unclosed on its line.
     /// Reading produces neither.
     public var text: String
 }

@@ -41,7 +41,6 @@ struct IngredientTests {
         "@{200 g}  pasta@",
         "@{200 g}\tpasta@",
         "@{200 g} pasta @",
-        "@{200 g}\npasta@",
         "@pasta @"
     ])
     func trimsTheWhitespaceAroundAName(span: String) {

@@ -28,7 +28,7 @@ public struct Timer: Equatable, Hashable, Sendable {
     /// timer does not.
     ///
     /// Writing wraps the text in its sigils, so text that is empty, that opens with
-    /// whitespace, or that holds a blank line writes text a reader takes for prose rather than
+    /// whitespace, or that holds a line break writes text a reader takes for prose rather than
     /// for a timer, and reading produces none of them. Text ending in whitespace reads back
     /// without it.
     public var text: String

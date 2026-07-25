@@ -1,8 +1,9 @@
 // Scans one paragraph into a step: ordered prose and annotation segments.
 //
-// A sigil opens a span only when immediately followed by a non-whitespace character. A
-// span that is never closed, or an amount fence with no closing brace, degrades to
-// literal text with a warning, so the surrounding paragraph still reads.
+// A sigil opens a span only when immediately followed by a non-whitespace character, and a
+// span closes on the line it opens on, a name holding no line break. A span that is never
+// closed, or an amount fence with no closing brace, degrades to literal text with a
+// warning, so the surrounding paragraph still reads.
 
 enum StepParser {
     /// The result of scanning a span: a well-formed annotation, or literal text recovered
@@ -17,8 +18,8 @@ enum StepParser {
 
     /// Finds the brace an amount fence closes on, remembering what it has already looked at.
     ///
-    /// A fence closes on the first `}` in the paragraph, so a paragraph holding none would
-    /// have every fence in it walk to the end. Remembering the region already found to hold
+    /// A fence closes on the first `}` on its own line, so a line holding none would have
+    /// every fence on it walk to the line's end. Remembering the region already found to hold
     /// no brace keeps each character looked at once, however many fences ask. A question
     /// starting outside that region simply starts over, so an answer never depends on the
     /// order the questions arrive in.
@@ -36,10 +37,14 @@ enum StepParser {
                 searchedFrom = start
             }
 
-            let cursor = SourceText.run(in: characters, from: from, while: { $0 != AmountFence.closing })
+            // A line break bounds the search, so the region remembered as holding no brace
+            // ends there and a fence opening past it starts a search of its own line.
+            let cursor = SourceText.run(in: characters, from: from, while: { character in
+                character != AmountFence.closing && !character.isNewline
+            })
             searchedTo = cursor
 
-            return cursor < characters.count ? cursor : nil
+            return cursor < characters.count && characters[cursor] == AmountFence.closing ? cursor : nil
         }
     }
 
@@ -143,9 +148,12 @@ enum StepParser {
 
     /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays
     /// part of the name rather than closing it.
+    ///
+    /// A name holds no line break, so the search ends at one: a span closes on the line it
+    /// opens on or on no line at all.
     private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
         var cursor = start
-        while cursor < characters.count {
+        while cursor < characters.count, !characters[cursor].isNewline {
             if opensEscape(characters, at: cursor) {
                 cursor += 2
                 continue

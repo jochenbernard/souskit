@@ -9,9 +9,9 @@ import Testing
 @Suite("Mutated models")
 struct MutatedModelTests {
     // The values that stop being an annotation: nothing to bound, a sigil the opener rule
-    // leaves shut, or a paragraph break the span cannot reach across.
+    // leaves shut, or a line break the span cannot reach across.
 
-    @Test(arguments: ["", " salt", "\tsalt", "a\n\nb"])
+    @Test(arguments: ["", " salt", "\tsalt", "a\nb", "salt\n", "a\n\nb"])
     func writesAnIngredientNameThatNoLongerReadsBackAsOne(name: String) throws {
         var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
@@ -21,7 +21,7 @@ struct MutatedModelTests {
         #expect(value.reRead().ingredients.isEmpty)
     }
 
-    @Test(arguments: ["", " pan", "\tpan", "a\n\nb"])
+    @Test(arguments: ["", " pan", "\tpan", "a\nb", "pan\n", "a\n\nb"])
     func writesACookwareNameThatNoLongerReadsBackAsOne(name: String) throws {
         var value = Recipe.read("Use a #pan# now.")
         var cookware = try #require(value.cookware.first)
@@ -31,7 +31,7 @@ struct MutatedModelTests {
         #expect(value.reRead().cookware.isEmpty)
     }
 
-    @Test(arguments: ["", " 40 min", "\t40 min", "a\n\nb"])
+    @Test(arguments: ["", " 40 min", "\t40 min", "a\nb", "40 min\n", "a\n\nb"])
     func writesATimerTextThatNoLongerReadsBackAsOne(text: String) throws {
         var value = Recipe.read("Wait ~40 min~ now.")
         var timer = try #require(value.timers.first)
@@ -41,7 +41,7 @@ struct MutatedModelTests {
         #expect(value.reRead().timers.isEmpty)
     }
 
-    @Test(arguments: ["", " sauce", "\tsauce", "a\n\nb"])
+    @Test(arguments: ["", " sauce", "\tsauce", "a\nb", "sauce\n", "a\n\nb"])
     func writesAReferenceTargetThatNoLongerReadsBackAsOne(target: String) throws {
         var value = Recipe.read("Layer the >sauce> in a dish.")
         var reference = try #require(value.references.first)
@@ -55,7 +55,7 @@ struct MutatedModelTests {
     // the whitespace around every name. A fence stands between the opening sigil and the
     // target, so it is the one place a name opening with whitespace still bounds one at all.
 
-    @Test(arguments: ["salt ", "salt\t", "salt\n"])
+    @Test(arguments: ["salt ", "salt\t"])
     func writesAnIngredientNameThatReadsBackTrimmed(name: String) throws {
         var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
@@ -77,9 +77,9 @@ struct MutatedModelTests {
 
     // The values that stay an annotation stating themselves, which is what makes the lists
     // above real boundaries rather than a blanket warning: only the whitespace around a name,
-    // emptiness, and a blank line cost a name anything.
+    // emptiness, and a line break cost a name anything.
 
-    @Test(arguments: ["sa uce", "a\nb", "sauces/red"])
+    @Test(arguments: ["sa uce", "sauces/red"])
     func writesAReferenceTargetThatStillReadsBack(target: String) throws {
         var value = Recipe.read("Layer the >sauce> in a dish.")
         var reference = try #require(value.references.first)
@@ -89,7 +89,7 @@ struct MutatedModelTests {
         #expect(value.reRead().references.map(\.target) == [target])
     }
 
-    @Test(arguments: ["sa lt", "a\nb"])
+    @Test(arguments: ["sa lt"])
     func writesAnIngredientNameThatStillReadsBack(name: String) throws {
         var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
@@ -114,11 +114,11 @@ struct MutatedModelTests {
         #expect(written.name == "b} salt")
     }
 
-    @Test
-    func writesAnAmountTextHoldingABlankLineThatEndsTheParagraph() throws {
+    @Test(arguments: ["a\nb", "a\n\nb"])
+    func writesAnAmountTextHoldingALineBreakThatLeavesTheFenceUnclosed(text: String) throws {
         var value = Recipe.read("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
-        ingredient.amount?.text = "a\n\nb"
+        ingredient.amount?.text = text
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(value.reRead().ingredients.isEmpty)

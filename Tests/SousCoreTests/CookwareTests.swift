@@ -18,7 +18,7 @@ struct CookwareTests {
     // A name is trimmed, as every name is. A sigil opens no span before whitespace, so a name
     // with no fence before it reaches only the whitespace at its end.
 
-    @Test(arguments: ["#large pot #", "#large pot\t#", "#large pot\n#"])
+    @Test(arguments: ["#large pot #", "#large pot\t#"])
     func trimsTheWhitespaceAroundAName(span: String) throws {
         #expect(try #require(Recipe.read("Bring a \(span) to a boil.").firstCookware).name == "large pot")
     }

@@ -143,12 +143,28 @@ struct ReadingRulesTests {
         #expect(parsed.value.serialized() == source)
     }
 
+    // A name holds no line break, so a span closes on the line it opens on or on no line at
+    // all. This is what keeps a wrapped line from stating a name of its own, since a name
+    // broken across one would state something other than the same name written on one line.
+
     @Test
-    func closesASpanOnALaterLineOfTheSameParagraph() throws {
+    func doesNotCloseASpanAcrossALineBreak() {
         let parsed = SousParser().parseRecipe("Add @baby\nspinach@ to the pan.")
 
-        let ingredient = try #require(parsed.value.firstIngredient)
-        #expect(ingredient.name == "baby\nspinach")
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.value.steps.map(\.text) == ["Add @baby\nspinach@ to the pan."])
+        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
+    }
+
+    @Test
+    func doesNotCloseAnAmountFenceAcrossALineBreak() {
+        // The fence leaves its own span literal, and the sigil the second line ends with then
+        // opens a span of its own that no sigil closes, so each is reported.
+        let parsed = SousParser().parseRecipe("Add @{200 g\npasta} water@.")
+
+        #expect(parsed.value.ingredients.isEmpty)
+        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g\npasta} water@."])
+        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan, .unclosedSpan])
     }
 
     @Test

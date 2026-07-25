@@ -69,14 +69,11 @@ struct ReferenceTests {
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
     }
 
-    @Test
-    func closesAReferenceOnALaterLineOfTheSameParagraph() {
-        #expect(Recipe.read("Spread the >sauce\nlayer> on top.").references.map(\.target) == ["sauce\nlayer"])
-    }
+    // A target holds no line break, so a span closes on the line it opens on or on none.
 
-    @Test
-    func doesNotCloseAReferenceAcrossAParagraphBreak() {
-        let parsed = SousParser().parseRecipe("Spread the >sauce\n\nlayer> on top.")
+    @Test(arguments: ["Spread the >sauce\nlayer> on top.", "Spread the >sauce\n\nlayer> on top."])
+    func doesNotCloseAReferenceAcrossALineBreak(source: String) {
+        let parsed = SousParser().parseRecipe(source)
 
         #expect(parsed.value.references.isEmpty)
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
