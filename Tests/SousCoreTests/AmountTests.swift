@@ -215,7 +215,7 @@ struct AmountTests {
     // and one opening as a number nonetheless states a number nowhere else. Each is reported,
     // and each keeps its text as written.
 
-    @Test(arguments: ["3,2 kg", "1,000 g", "3. kg", "1/0 cup", "1/x cup", "=3,2 kg", ".5", ",5", "-2 tbsp"])
+    @Test(arguments: ["3,2 kg", "1,000 g", "3. kg", "1/0 cup", "1/x cup", ".5", ",5", "-2 tbsp"])
     func warnsAboutANumberAnAmountCannotFinish(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
 
@@ -224,7 +224,7 @@ struct AmountTests {
         #expect(parsed.diagnostics.map(\.kind) == [.malformedQuantity])
     }
 
-    @Test(arguments: ["a pinch", "half", "to taste", "=a pinch", "-", "."])
+    @Test(arguments: ["a pinch", "half", "to taste", "-", "."])
     func readsAnImpreciseAmountStatingNoNumberWithoutReporting(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
 
@@ -284,7 +284,7 @@ struct AmountTests {
         let amount = try #require(Recipe.read("Stir in @{ =1 tsp} baking soda@.").firstAmount)
 
         #expect(amount.isFixed)
-        #expect(amount.text == "=1 tsp")
+        #expect(amount.text == "1 tsp")
     }
 
     // Whitespace separates whatever it stands between, whatever it is built from and however

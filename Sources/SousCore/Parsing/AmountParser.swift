@@ -71,11 +71,10 @@ enum AmountParser {
     ///   - text: The text the amount is read from.
     ///   - fenced: Whether a fence holds it, which is what gives a leading `=` its meaning.
     static func defect(in text: String, fenced: Bool = true) -> Defect? {
-        let characters = Array(SourceText.trimmed(text))
-        let start = fenced && characters.first == AmountFence.fixedMarker ? 1 : 0
+        let characters = Array(markerRemoved(from: SourceText.trimmed(text), fenced: fenced).text)
 
-        guard let scanned = scannedQuantity(in: characters, from: start) else {
-            return leadingDefect(in: characters, from: start)
+        guard let scanned = scannedQuantity(in: characters, from: 0) else {
+            return leadingDefect(in: characters, from: 0)
         }
 
         return defect(in: characters, at: scanned.end)
@@ -112,21 +111,31 @@ enum AmountParser {
         parse(text, fenced: false)
     }
 
+    /// The amount a fence's content states, and whether the marker it opens with fixes it. The
+    /// whitespace separating the two belongs to neither, as whitespace does everywhere, so what
+    /// remains is the amount's own text.
+    private static func markerRemoved(from text: String, fenced: Bool) -> (text: String, isFixed: Bool) {
+        guard fenced, text.first == AmountFence.fixedMarker else { return (text, false) }
+
+        return (String(text.dropFirst().drop(while: \.isWhitespace)), true)
+    }
+
     /// The whitespace around a value is layout rather than part of what it states, so it is
     /// removed before reading and a fence states what the header value of the same text does.
     private static func parse(_ value: String, fenced: Bool) -> Amount {
-        let text = SourceText.trimmed(value)
+        // The marker states that the amount holds still rather than what it states, so it is
+        // read out of the text and the amount after it is read as any other is, precise or
+        // imprecise. A fence is what gives the marker that meaning, so a value no fence holds
+        // opens with ordinary text.
+        let read = markerRemoved(from: SourceText.trimmed(value), fenced: fenced)
+        let text = read.text
         let characters = Array(text)
-        // The marker fixes an amount only immediately before a numeric quantity. Anywhere
-        // else it is ordinary text, and the amount it opens is imprecise like any other,
-        // which is what the quantity scan failing below already reports.
-        let isMarked = fenced && characters.first == AmountFence.fixedMarker
 
-        guard let quantity = quantity(in: characters, from: isMarked ? 1 : 0) else {
+        guard let quantity = quantity(in: characters, from: 0) else {
             return Amount(
                 kind: .imprecise(text),
                 unit: nil,
-                isFixed: false,
+                isFixed: read.isFixed,
                 text: text
             )
         }
@@ -138,7 +147,7 @@ enum AmountParser {
         return Amount(
             kind: quantity.kind,
             unit: String(characters[cursor...]),
-            isFixed: isMarked,
+            isFixed: read.isFixed,
             text: text
         )
     }

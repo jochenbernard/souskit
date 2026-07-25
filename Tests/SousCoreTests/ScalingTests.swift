@@ -33,7 +33,7 @@ struct ScalingTests {
 
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == 1.0)
-        #expect(amount.text == "=1 tsp")
+        #expect(amount.text == "1 tsp")
     }
 
     @Test

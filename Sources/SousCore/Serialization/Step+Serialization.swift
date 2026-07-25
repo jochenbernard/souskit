@@ -112,7 +112,7 @@ extension Step {
             at: position.continued(by: annotation.sigil)
         )
         if let amount {
-            content = "\(AmountFence.around(amount.text)) \(content)"
+            content = "\(AmountFence.around(amount)) \(content)"
         }
 
         return annotation.span(around: content) + renderedFlags(flags)

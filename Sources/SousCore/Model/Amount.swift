@@ -21,15 +21,23 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// `nil` for an imprecise amount and may be empty when a quantity has no unit.
     public var unit: String?
 
-    /// Whether an `=` before the quantity marks the amount as fixed, holding it constant when the recipe is scaled.
+    /// Whether the fence's `=` marker fixes the amount, holding it constant when the recipe is
+    /// scaled.
+    ///
+    /// The marker opens the fence and states that the whole amount holds still, so it fixes an
+    /// imprecise amount as readily as a numeric one, whatever whitespace separates the two. An
+    /// imprecise amount never moves under scaling in any case, so there the marker records the
+    /// author's intent and nothing more.
     public var isFixed: Bool
 
-    /// The text the amount was read from, trimmed of the whitespace around it: the content of
-    /// an amount fence, without its braces, or the one part of a timer it states.
+    /// The text the amount was read from, trimmed of the whitespace around it and of the
+    /// marker: the content of an amount fence, without its braces, or the one part of a timer
+    /// it states.
     ///
-    /// It is the only property writing an amount emits. ``kind``, ``unit``, and ``isFixed`` were
-    /// read from it, so changing one of them states something the written amount does not.
-    /// Scaling changes them together, taking the amount from reading its regenerated text back.
+    /// Writing emits this and ``isFixed``, the marker going back where reading took it from.
+    /// ``kind`` and ``unit`` were read from the text, so changing one of them states something
+    /// the written amount does not. Scaling changes them together, taking the amount from
+    /// reading its regenerated text back.
     ///
     /// Writing wraps the text in the fence's braces, so text holding a closing brace closes
     /// that fence early, and text holding a line break leaves the fence unclosed on its line.
