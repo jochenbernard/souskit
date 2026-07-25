@@ -152,18 +152,20 @@ enum HeaderParser {
     }
 
     /// A key ends at the first colon followed by whitespace or the end of the line, so a
-    /// colon inside a value such as a URL does not split it. The whitespace separating the
-    /// two belongs to neither, so any run of it states the separation.
+    /// colon inside a value such as a URL does not split it.
+    ///
+    /// The whitespace around a key and around a value belongs to neither them nor the
+    /// separator between them, so each states what stands between its ends, as every name
+    /// does. A value under an unrecognized key is trimmed like any other: the whitespace
+    /// states nothing a reader would otherwise carry through for it.
     private static func field(in line: Substring) -> (key: String, value: String)? {
         for colon in line.indices where line[colon] == ":" {
             let afterColon = line.index(after: colon)
-            // The whitespace around a key belongs to neither the key nor the separator, so a
-            // key states what stands between its ends, as every name does.
             let key = SourceText.trimmed(String(line[..<colon]))
 
             if afterColon == line.endIndex { return (key, "") }
             if line[afterColon].isWhitespace {
-                return (key, String(line[afterColon...].drop(while: \.isWhitespace)))
+                return (key, SourceText.trimmed(String(line[afterColon...])))
             }
         }
 

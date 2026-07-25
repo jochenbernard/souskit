@@ -44,14 +44,36 @@ struct MetadataTests {
         #expect(metadata["servings"] == "six")
     }
 
-    @Test(arguments: [
-        (header: "servings: 6 ", value: "6 "),
-        (header: "servings:  6", value: "6")
-    ])
-    func readsServingsSurroundedByWhitespaceAsANumberWhilePreservingItVerbatim(header: String, value: String) {
+    // A value states what stands between its ends, as every name does, so the whitespace
+    // around one belongs to neither the value nor the separator before it. An unknown key's
+    // value is trimmed like any other: the whitespace states nothing this reader would
+    // otherwise have to carry through.
+
+    @Test(arguments: ["servings: 6 ", "servings:  6", "servings: \t6\t"])
+    func readsAValueTrimmedOfTheWhitespaceAroundIt(header: String) {
         let metadata = Metadata.read(header)
+
         #expect(metadata.servings == 6)
-        #expect(metadata["servings"] == value)
+        #expect(metadata["servings"] == "6")
+    }
+
+    @Test(arguments: [
+        (header: "title: Toast ", key: "title", value: "Toast"),
+        (header: "chef: Alice ", key: "chef", value: "Alice"),
+        (header: "source: https://example.com/x  ", key: "source", value: "https://example.com/x")
+    ])
+    func trimsTheValueOfEveryKeyRecognizedOrNot(header: String, key: String, value: String) {
+        #expect(Metadata.read(header)[key] == value)
+    }
+
+    @Test
+    func writesAValueWithoutTheWhitespaceItNoLongerStates() {
+        #expect(Recipe.read("---\ntitle: Toast \n---").serialized() == "---\ntitle: Toast\n---")
+    }
+
+    @Test
+    func tellsApartNoTwoTitlesThatDifferOnlyByTheWhitespaceAroundThem() {
+        #expect(Metadata.read("title: Toast ").title == Metadata.read("title: Toast").title)
     }
 
     // An amount-valued field is read as a fence is, so a number it states and cannot finish is
