@@ -174,7 +174,8 @@ struct StepGroupTests {
         #expect(parsed.diagnostics.isEmpty)
     }
 
-    /// A recipe of three groups, each carrying annotations of every kind.
+    /// A recipe of three groups whose steps carry ingredients, cookware, timers, and references
+    /// between them.
     private var pastaBake: Recipe {
         Recipe.read("""
         ## Sauce

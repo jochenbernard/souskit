@@ -1,5 +1,5 @@
 extension Quantity {
-    /// A quantity whose text is the value written as briefly as it reads back.
+    /// A quantity whose text is the value written without a trailing `.0`.
     init(_ value: Double) {
         self.init(value: value, text: Self.written(value))
     }

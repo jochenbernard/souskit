@@ -3,9 +3,10 @@ public struct Step: Equatable, Hashable, Sendable {
     /// The prose and annotations of the step, in document order.
     public var segments: [Segment]
 
-    /// The step as written, sigils and escapes included.
+    /// The step as source text, sigils and escapes included.
     ///
-    /// Every line break is normalized to a line feed, whatever the source wrote.
+    /// Every line break is normalized to a line feed, whatever the source wrote. Scaling
+    /// regenerates this from ``segments`` rather than carrying it over.
     public var text: String
 
     /// The ingredients annotated in this step, in document order.

@@ -1,6 +1,7 @@
 /// A reference to an intermediate produced by another group, written `>name>`.
 public struct Reference: Equatable, Hashable, Sendable {
-    /// The name of the group referred to, trimmed of surrounding whitespace.
+    /// The group name written in the reference, trimmed of surrounding whitespace. It may match
+    /// no group.
     public var target: String
 
     /// The portion consumed, from the annotation's fence, or `nil` when it has none.

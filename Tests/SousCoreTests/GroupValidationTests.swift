@@ -259,7 +259,7 @@ struct GroupValidationTests {
         return loops
     }
 
-    /// Every group reachable from a start, by breadth-first walk over the edges.
+    /// Every group reachable from a start, directly or through others.
     private static func reached(from start: Int, edges: [[Int]]) -> Set<Int> {
         var seen: Set<Int> = []
         var pending = edges[start]

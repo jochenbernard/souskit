@@ -18,7 +18,7 @@ public struct Timer: Equatable, Hashable, Sendable {
     /// The amounts the timer is written as, in the order written.
     public var components: [Amount]
 
-    /// The timer as written, without its sigils.
+    /// The timer as written, without its sigils and trimmed.
     public var text: String
 
     /// The form this timer takes.

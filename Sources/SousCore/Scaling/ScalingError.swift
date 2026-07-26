@@ -15,6 +15,6 @@ public enum ScalingError: Error, Equatable, Hashable, Sendable {
     /// The matching yield is zero, so no factor reaches the target.
     case zeroYield
 
-    /// Several declared yields share the target's unit but state different quantities.
+    /// Several declared yields share the target's unit but give different quantities.
     case conflictingYields
 }

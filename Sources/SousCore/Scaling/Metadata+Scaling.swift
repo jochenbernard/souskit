@@ -23,7 +23,7 @@ extension Metadata {
         try AmountParser.parse(unfenced: value).scaled(by: factor)?.text ?? value
     }
 
-    /// The header with the yields matching the unit rewritten to state the target exactly.
+    /// The header with the yields matching the unit rewritten to the target exactly.
     ///
     /// Scaling by a factor can land just off the requested target through rounding, so the
     /// declared yield is restated rather than left as the multiplication produced it.

@@ -47,13 +47,13 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
         /// The header declared more than one yield in the same unit.
         case repeatedYield
 
-        /// Two group headings carry the same name.
+        /// More than one group heading carries the same name.
         case repeatedGroupName
 
         /// A reference matches no group.
         case unresolvedReference
 
-        /// Groups consume each other in a loop.
+        /// Groups consume each other in a loop, or a group consumes itself.
         case referenceCycle
     }
 

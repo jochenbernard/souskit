@@ -32,8 +32,9 @@ public struct SousParser: Sendable {
     /// Parses the content of an amount fence into an amount.
     ///
     /// The text is what a fence holds without its braces, such as `200 g` or `18 pancakes`, and
-    /// surrounding whitespace is trimmed. Text with no usable leading number parses as an
-    /// imprecise amount rather than failing, so no diagnostics are returned.
+    /// surrounding whitespace is trimmed. A leading `=` is read as the marker fixing the amount.
+    /// Text with no usable leading number parses as an imprecise amount rather than failing, so
+    /// no diagnostics are returned.
     ///
     /// - Parameter text: The fence content to parse.
     /// - Returns: The parsed amount.

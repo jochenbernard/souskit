@@ -27,7 +27,8 @@ enum Heading {
         )
     }
 
-    /// The heading line naming a group, with sigils in the name escaped.
+    /// The heading line naming a group, with any backslash that would otherwise escape the next
+    /// character doubled, so the name reads back unchanged.
     static func line(naming name: String) -> String {
         let characters = Array(name)
         var result = marker + String(separator)

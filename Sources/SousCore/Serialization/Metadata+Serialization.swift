@@ -29,7 +29,7 @@ extension Metadata {
         "[\(items.map(escapedItem).joined(separator: ", "))]"
     }
 
-    /// An item with the characters that would split or close the list escaped.
+    /// An item with the characters that would otherwise read as list syntax escaped.
     private static func escapedItem(_ item: String) -> String {
         SourceText.escaped(item, escaping: SourceText.isEscapableInList)
     }

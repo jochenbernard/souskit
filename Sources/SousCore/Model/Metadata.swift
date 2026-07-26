@@ -7,7 +7,7 @@ public struct Metadata: Equatable, Hashable, Sendable {
     public struct Entry: Equatable, Hashable, Sendable {
         /// What an entry holds.
         public enum Value: Equatable, Hashable, Sendable {
-            /// A single value, as written.
+            /// A single value, trimmed.
             case scalar(String)
 
             /// The items of a list-valued key.

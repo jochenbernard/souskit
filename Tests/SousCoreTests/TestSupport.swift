@@ -33,7 +33,7 @@ extension Amount.Kind {
 }
 
 extension SousParser {
-    /// The amount of the single annotated ingredient of a source, after scaling by the factor.
+    /// The amount of the first annotated ingredient of a source, after scaling by the factor.
     func scaledAmount(in source: String, by factor: Double) throws -> Amount? {
         try parseRecipe(source).value.scaled(by: factor).firstAmount
     }

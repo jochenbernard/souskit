@@ -204,8 +204,10 @@ The rest of the old paragraph explained why, which Rule 3 cuts.
 Run from the repository root. Each command expects no output.
 
 ```bash
-# Banned vocabulary
-find Sources Tests -name '*.swift' | xargs grep -niE '^[[:space:]]*//.*\b(states|asks|owes|of its own|which is what|nobody wrote)\b'
+# Banned vocabulary. Match conjugations too: an earlier check looked only for "states"
+# and missed "state different quantities" and "rewritten to state the target".
+# "State" as a noun is fine, as in "a parser holds no state".
+find Sources Tests -name '*.swift' | xargs grep -niE '^[[:space:]]*//.*\b(state|states|stating|stated|ask|asks|asking|owe|owes|of its own|which is what|nobody wrote)\b'
 
 # Non-ASCII in comments, which also catches a literal em-dash
 find Sources Tests -name '*.swift' | xargs grep -nE '^[[:space:]]*//' | LC_ALL=C grep '[^ -~]'

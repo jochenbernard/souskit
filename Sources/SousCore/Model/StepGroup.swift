@@ -1,4 +1,4 @@
-/// A group of steps, introduced by a `## Name` heading.
+/// A run of steps, named by a `## Name` heading when it has one.
 public struct StepGroup: Equatable, Hashable, Sendable {
     /// The heading name, or `nil` for steps written before any heading.
     public var name: String?
