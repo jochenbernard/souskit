@@ -157,7 +157,7 @@ struct ReferenceTests {
         let parsed = SousParser().parseRecipe("Serve with >chili-oil>:homemade now.")
 
         #expect(try #require(parsed.value.references.first).flags.unrecognized == ["homemade"])
-        #expect(parsed.diagnostics.map(\.kind) == [.unknownFlag])
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

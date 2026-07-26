@@ -49,7 +49,11 @@ struct MetadataTests {
         (header: "chef: Alice ", key: "chef", value: "Alice"),
         (header: "source: https://example.com/x  ", key: "source", value: "https://example.com/x")
     ])
-    func trimsTheValueOfEveryKeyRecognizedOrNot(header: String, key: String, value: String) {
+    func trimsTheValueOfEveryKeyRecognizedOrNot(
+        header: String,
+        key: String,
+        value: String
+    ) {
         #expect(Metadata.read(header)[key] == value)
     }
 
@@ -77,7 +81,7 @@ struct MetadataTests {
     }
 
     @Test
-    func warnsAboutAnUnrecognizedKeyAndPreservesIt() {
+    func preservesAnUnrecognizedKey() {
         let source = """
         ---
         chef: Alice
@@ -86,7 +90,7 @@ struct MetadataTests {
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.metadata["chef"] == "Alice")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

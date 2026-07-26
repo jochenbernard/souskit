@@ -78,7 +78,12 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyAmountFence() {
-        expectRoundTrips(["0", ".", "/", "-", "=", " ", "g", "}"], upTo: 4, prefix: "Add @{", suffix: "} water@.")
+        expectRoundTrips(
+            ["0", ".", "/", "-", "=", " ", "g", "}"],
+            upTo: 4,
+            prefix: "Add @{",
+            suffix: "} water@."
+        )
     }
 
     @Test(arguments: [0.5, 2.0, 4.0])
@@ -99,7 +104,12 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyReferenceContent() {
-        expectRoundTrips([">", "{", "}", "\\", "a", " "], upTo: 4, prefix: "Spread the >", suffix: "> now.")
+        expectRoundTrips(
+            [">", "{", "}", "\\", "a", " "],
+            upTo: 4,
+            prefix: "Spread the >",
+            suffix: "> now."
+        )
     }
 
     @Test(arguments: [
@@ -112,27 +122,48 @@ struct ExhaustiveRoundTripTests {
 
     @Test(arguments: ["", "Add @", "Use a #", "Wait ~", "Spread the >"])
     func everyContentThatCouldOpenAHeading(prefix: String) {
-        expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, prefix: prefix)
+        expectRoundTrips(
+            ["#", " ", "\n", "\\", "a"],
+            upTo: 5,
+            prefix: prefix
+        )
     }
 
     @Test(arguments: ["@a@", "#p#", ">a>", "~4 h~"])
     func everyContentThatCouldOpenAHeadingBeforeAnAnnotation(suffix: String) {
-        expectRoundTrips(["#", " ", "\n", "\\", "a"], upTo: 5, suffix: suffix)
+        expectRoundTrips(
+            ["#", " ", "\n", "\\", "a"],
+            upTo: 5,
+            suffix: suffix
+        )
     }
 
     @Test
     func everyContentThatCouldOpenAHeadingAfterASpanEndingALine() {
-        expectRoundTrips(["#", " ", "\\", "a", "\n"], upTo: 5, prefix: "Use a #x\n")
+        expectRoundTrips(
+            ["#", " ", "\\", "a", "\n"],
+            upTo: 5,
+            prefix: "Use a #x\n"
+        )
     }
 
     @Test
     func everyTimerContent() {
-        expectRoundTrips(["~", "\\", "4", "-", " ", "h"], upTo: 4, prefix: "Wait ~", suffix: "~ now.")
+        expectRoundTrips(
+            ["~", "\\", "4", "-", " ", "h"],
+            upTo: 4,
+            prefix: "Wait ~",
+            suffix: "~ now."
+        )
     }
 
     @Test
     func everyFlagPunctuation() {
-        expectRoundTrips([":", "?", "-", "a", "2", " ", "\\"], upTo: 4, prefix: "Add @salt@")
+        expectRoundTrips(
+            [":", "?", "-", "a", "2", " ", "\\"],
+            upTo: 4,
+            prefix: "Add @salt@"
+        )
     }
 
     @Test
@@ -146,22 +177,42 @@ struct ExhaustiveRoundTripTests {
 
     @Test
     func everyListValue() {
-        expectRoundTrips(["[", "]", ",", "\\", "a", " "], upTo: 4, prefix: "---\ntags: ", suffix: "\n---")
+        expectRoundTrips(
+            ["[", "]", ",", "\\", "a", " "],
+            upTo: 4,
+            prefix: "---\ntags: ",
+            suffix: "\n---"
+        )
     }
 
     @Test
     func everyYieldValue() {
-        expectRoundTrips(["[", "]", ",", "\\", "2", " ", "g"], upTo: 4, prefix: "---\nyield: ", suffix: "\n---")
+        expectRoundTrips(
+            ["[", "]", ",", "\\", "2", " ", "g"],
+            upTo: 4,
+            prefix: "---\nyield: ",
+            suffix: "\n---"
+        )
     }
 
     @Test
     func everyScalarValue() {
-        expectRoundTrips(["[", "]", ",", "\\", ":", " ", "a"], upTo: 4, prefix: "---\ntitle: ", suffix: "\n---")
+        expectRoundTrips(
+            ["[", "]", ",", "\\", ":", " ", "a"],
+            upTo: 4,
+            prefix: "---\ntitle: ",
+            suffix: "\n---"
+        )
     }
 
     @Test
     func everyHeaderLine() {
-        expectRoundTrips(["-", ":", " ", "a", "\n", "["], upTo: 4, prefix: "---\n", suffix: "\n---")
+        expectRoundTrips(
+            ["-", ":", " ", "a", "\n", "["],
+            upTo: 4,
+            prefix: "---\n",
+            suffix: "\n---"
+        )
     }
 
     @Test

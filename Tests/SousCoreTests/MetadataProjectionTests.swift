@@ -63,7 +63,11 @@ struct MetadataProjectionTests {
         (key: "version", first: "1.0", last: "1.1"),
         (key: "source", first: "Jane", last: "Jon")
     ])
-    func keepsTheLastValueOfEveryRepeatedScalarKey(key: String, first: String, last: String) {
+    func keepsTheLastValueOfEveryRepeatedScalarKey(
+        key: String,
+        first: String,
+        last: String
+    ) {
         #expect(Metadata.read("\(key): \(first)\n\(key): \(last)")[key] == last)
     }
 

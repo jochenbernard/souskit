@@ -84,7 +84,7 @@ struct IngredientFlagTests {
 
         #expect(parsed.value.ingredients.map(\.flags.unrecognized) == [["homemade"]])
         #expect(parsed.value.serialized() == "Add @sauce@:homemade now.")
-        #expect(parsed.diagnostics.map(\.kind) == [.unknownFlag, .unknownFlag])
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
@@ -212,8 +212,7 @@ struct IngredientFlagTests {
         let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.unrecognized == ["homemade"])
         #expect(!ingredient.flags.isStaple)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownFlag }))
-        #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

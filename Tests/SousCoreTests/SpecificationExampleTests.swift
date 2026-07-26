@@ -118,8 +118,7 @@ struct SpecificationExampleTests {
         #expect(staples.map(\.name) == ["salt", "black pepper"])
 
         #expect(recipe.metadata["prep-time"] == "5 min")
-        #expect(parsed.diagnostics.count == 3)
-        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey && $0.severity == .warning }))
+        #expect(parsed.diagnostics.isEmpty)
         #expect(recipe.serialized() == source)
     }
 
@@ -247,7 +246,7 @@ struct SpecificationExampleTests {
         #expect(recipe.dependencies(of: assemble).map(\.name) == ["Filling", "Crumble"])
         #expect(recipe.validate().isEmpty)
 
-        #expect(parsed.diagnostics.map(\.kind) == Array(repeating: .unknownHeaderKey, count: 3))
+        #expect(parsed.diagnostics.isEmpty)
 
         #expect(recipe.serialized() == withYieldWritten(source))
     }
@@ -281,7 +280,7 @@ struct SpecificationExampleTests {
         #expect(reference.amount?.text == "600 g")
 
         #expect(recipe.validate().map(\.kind) == [.unresolvedReference])
-        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unknownHeaderKey }))
+        #expect(parsed.diagnostics.isEmpty)
         #expect(recipe.serialized() == source)
     }
 }

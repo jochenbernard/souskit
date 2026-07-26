@@ -1,14 +1,14 @@
 extension Recipe {
-    /// One error per name carried by more than one heading, reported at the first occurrence.
+    /// One warning per name carried by more than one heading, reported at the first occurrence.
     ///
     /// Names are compared normalized, so two headings differing only in case or a leading
     /// connective collide.
     func repeatedGroupNames() -> [Diagnostic] {
         Repetition.firstOfEachRepeated(in: groups.compactMap(\.name), by: Normalization.normalized)
-            .map({ .error(.repeatedGroupName, "Recipe has more than one group named '\($0)'.") })
+            .map({ Diagnostic(.repeatedGroupName, "Recipe has more than one group named '\($0)'.") })
     }
 
-    /// One error per reference target matching no group, reported at its first occurrence.
+    /// One warning per reference target matching no group, reported at its first occurrence.
     func unresolvedReferences() -> [Diagnostic] {
         var reported: Set<String> = []
 
@@ -18,11 +18,11 @@ extension Recipe {
                   reported.insert(normalized).inserted
             else { return nil }
 
-            return .error(.unresolvedReference, "Reference to '\(reference.target)' matches no group.")
+            return Diagnostic(.unresolvedReference, "Reference to '\(reference.target)' matches no group.")
         })
     }
 
-    /// One error per cycle of groups consuming each other, reported at the first group in it.
+    /// One warning per cycle of groups consuming each other, reported at the first group in it.
     ///
     /// Every group in a cycle reaches itself, so reporting each would repeat one problem. The
     /// whole cycle is marked when its first member is reported.
@@ -38,7 +38,7 @@ extension Recipe {
                 reported.insert(other)
             }
 
-            return .error(.referenceCycle, "Group '\(name)' consumes an intermediate that depends on it.")
+            return Diagnostic(.referenceCycle, "Group '\(name)' consumes an intermediate that depends on it.")
         })
     }
 

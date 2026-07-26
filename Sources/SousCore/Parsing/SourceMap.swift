@@ -3,7 +3,6 @@ struct SourceMap {
     private let source: String
     private let lineStarts: [String.Index]
     private let lineOffsets: [Int]
-
     private let endOffset: Int
 
     init(_ source: String, lines: [Substring]) {
@@ -17,21 +16,20 @@ struct SourceMap {
             offset += line.count + 1
         }
         self.lineOffsets = offsets
+
         self.endOffset = offset - 1
     }
 
     /// The character offset of a string index.
     func offset(of index: String.Index) -> Int {
-        let number = lineNumber(startingAtOrBefore: { lineStarts[$0] <= index })
-
+        let number = lineNumber(startingAtOrBefore: index, in: lineStarts)
         return lineOffsets[number] + source.distance(from: lineStarts[number], to: index)
     }
 
     /// The location at a character offset, clamped to the bounds of the source.
     func location(atOffset offset: Int) -> SourceLocation {
         let bounded = min(max(offset, 0), endOffset)
-        let number = lineNumber(startingAtOrBefore: { lineOffsets[$0] <= bounded })
-
+        let number = lineNumber(startingAtOrBefore: bounded, in: lineOffsets)
         return SourceLocation(
             line: number + 1,
             column: bounded - lineOffsets[number] + 1,
@@ -53,13 +51,16 @@ struct SourceMap {
     }
 
     // Binary search: a linear scan here would be quadratic over a whole source.
-    private func lineNumber(startingAtOrBefore isAtOrBefore: (Int) -> Bool) -> Int {
+    private func lineNumber<Position: Comparable>(
+        startingAtOrBefore position: Position,
+        in starts: [Position]
+    ) -> Int {
         var low = 0
-        var high = lineStarts.count - 1
+        var high = starts.count - 1
 
         while low < high {
             let middle = (low + high + 1) / 2
-            if isAtOrBefore(middle) {
+            if starts[middle] <= position {
                 low = middle
             } else {
                 high = middle - 1

@@ -143,12 +143,12 @@ struct HeaderFormTests {
     }
 
     @Test
-    func warnsAboutAKeyThatIsNotLowercase() {
+    func preservesAKeyThatIsNotLowercase() {
         let parsed = SousParser().parseRecipe("---\nTitle: Toast\n---")
 
         #expect(parsed.value.metadata.title == nil)
         #expect(parsed.value.metadata["Title"] == "Toast")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
@@ -156,6 +156,6 @@ struct HeaderFormTests {
         let parsed = SousParser().parseRecipe("---\nprep-time: 15 min\n---")
 
         #expect(parsed.value.metadata["prep-time"] == "15 min")
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unknownHeaderKey }))
+        #expect(parsed.diagnostics.isEmpty)
     }
 }

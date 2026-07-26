@@ -13,14 +13,33 @@ struct DiagnosticsTests {
         let source = """
         ---
         title: Toast
-        chef: Alice
+        stray line
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
+        #expect(parsed.diagnostics.map(\.severity) == [.warning])
         #expect(parsed.value.metadata.title == "Toast")
-        #expect(parsed.value.metadata["chef"] == "Alice")
+        #expect(parsed.value.serialized() == source)
+    }
+
+    @Test(arguments: [
+        (Diagnostic.Kind.unterminatedHeader, Diagnostic.Severity.error),
+        (.malformedHeaderLine, .warning),
+        (.emptyHeaderKey, .warning),
+        (.repeatedScalarKey, .warning),
+        (.repeatedListKey, .warning),
+        (.repeatedYield, .warning),
+        (.zeroYield, .warning),
+        (.repeatedGroupName, .warning),
+        (.unclosedSpan, .warning),
+        (.malformedQuantity, .warning),
+        (.unnamedAnnotation, .warning),
+        (.unresolvedReference, .warning),
+        (.referenceCycle, .warning)
+    ])
+    func severityFollowsFromTheKind(kind: Diagnostic.Kind, severity: Diagnostic.Severity) {
+        #expect(kind.severity == severity)
     }
 
     @Test
@@ -30,7 +49,6 @@ struct DiagnosticsTests {
             "---\ntitle: Buttered Toast",
             "Fry @garlic and warm a #pan.",
             "Cook @{200 g pasta",
-            "Add @sauce@:homemade now.",
             "Spread the >sauce on top.",
             "Add @{3,2 kg} flour@.",
             "Add @{200 g}@ now.",
@@ -42,11 +60,9 @@ struct DiagnosticsTests {
         #expect(Set(diagnostics.map(\.kind)) == [
             .unclosedSpan,
             .unterminatedHeader,
-            .unknownHeaderKey,
             .repeatedScalarKey,
             .repeatedListKey,
             .malformedHeaderLine,
-            .unknownFlag,
             .malformedQuantity,
             .unnamedAnnotation,
             .emptyHeaderKey
@@ -84,24 +100,6 @@ struct DiagnosticsTests {
     }
 
     @Test
-    func locatesAnUnrecognizedHeaderKey() throws {
-        let source = """
-        ---
-        title: Toast
-        chef: Alice
-        ---
-        """
-
-        let parsed = SousParser().parseRecipe(source)
-        let diagnostic = try parsed.firstDiagnostic(ofKind: .unknownHeaderKey)
-        let range = try #require(diagnostic.range)
-        #expect(range.start.line == 3)
-        #expect(range.start.column == 1)
-        #expect(range.start.offset == 17)
-        #expect(range.end.column == 5)
-    }
-
-    @Test
     func locatesTheRepeatedOccurrenceOfAScalarKey() throws {
         let source = """
         ---
@@ -131,19 +129,6 @@ struct DiagnosticsTests {
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 3)
         #expect(range.start.column == 1)
-        #expect(diagnostic.severity == .warning)
-    }
-
-    @Test
-    func locatesAnUnrecognizedFlag() throws {
-        let parsed = SousParser().parseRecipe("Add @sauce@:homemade now.")
-
-        let diagnostic = try parsed.firstDiagnostic(ofKind: .unknownFlag)
-        let range = try #require(diagnostic.range)
-        #expect(range.start.line == 1)
-        #expect(range.start.column == 12)
-        #expect(range.start.offset == 11)
-        #expect(range.end.offset == 20)
         #expect(diagnostic.severity == .warning)
     }
 

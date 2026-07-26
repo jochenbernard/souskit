@@ -100,7 +100,11 @@ enum AmountParser {
             )
         }
 
-        let cursor = SourceText.run(in: characters, from: quantity.end, while: \.isWhitespace)
+        let cursor = SourceText.run(
+            in: characters,
+            from: quantity.end,
+            while: \.isWhitespace
+        )
 
         return Amount(
             kind: quantity.kind,
@@ -136,10 +140,18 @@ enum AmountParser {
     /// Whitespace around the separator belongs to neither side, so `1-2`, `1 - 2`, and `1- 2`
     /// read alike.
     private static func rangeEnd(in characters: [Character], from start: Int) -> (quantity: Quantity, end: Int)? {
-        let separator = SourceText.run(in: characters, from: start, while: \.isWhitespace)
+        let separator = SourceText.run(
+            in: characters,
+            from: start,
+            while: \.isWhitespace
+        )
         guard SourceText.character(in: characters, at: separator) == rangeSeparator else { return nil }
 
-        return number(in: characters, from: SourceText.run(in: characters, from: separator + 1, while: \.isWhitespace))
+        return number(in: characters, from: SourceText.run(
+            in: characters,
+            from: separator + 1,
+            while: \.isWhitespace
+        ))
     }
 
     /// One number: a decimal, a fraction, or a whole number followed by a fraction.
@@ -173,7 +185,11 @@ enum AmountParser {
     private static func mixedFraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         if let single = vulgarFraction(in: characters, at: start) { return (single, start + 1) }
 
-        let afterSeparator = SourceText.run(in: characters, from: start, while: \.isWhitespace)
+        let afterSeparator = SourceText.run(
+            in: characters,
+            from: start,
+            while: \.isWhitespace
+        )
         guard afterSeparator > start else { return nil }
 
         return fraction(in: characters, from: afterSeparator)
@@ -228,7 +244,11 @@ enum AmountParser {
 
     /// A run of ASCII digits, or `nil` when there is none.
     private static func digits(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
-        let end = SourceText.run(in: characters, from: start, while: SourceText.isDigit)
+        let end = SourceText.run(
+            in: characters,
+            from: start,
+            while: SourceText.isDigit
+        )
         guard end > start else { return nil }
 
         return (Double(String(characters[start..<end])) ?? 0.0, end)

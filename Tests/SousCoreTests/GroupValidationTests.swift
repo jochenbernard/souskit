@@ -15,7 +15,7 @@ struct GroupValidationTests {
         #expect(diagnostics.count == 1)
         let diagnostic = try #require(diagnostics.first)
         #expect(diagnostic.kind == .repeatedGroupName)
-        #expect(diagnostic.severity == .error)
+        #expect(diagnostic.severity == .warning)
         #expect(diagnostic.range == nil)
         #expect(diagnostic.message == "Recipe has more than one group named 'Bechamel'.")
     }
@@ -55,7 +55,7 @@ struct GroupValidationTests {
         #expect(diagnostics.count == 1)
         let diagnostic = try #require(diagnostics.first)
         #expect(diagnostic.kind == .unresolvedReference)
-        #expect(diagnostic.severity == .error)
+        #expect(diagnostic.severity == .warning)
         #expect(diagnostic.range == nil)
         #expect(diagnostic.message == "Reference to 'bechamel' matches no group.")
     }
@@ -97,7 +97,7 @@ struct GroupValidationTests {
         #expect(diagnostics.count == 1)
         let diagnostic = try #require(diagnostics.first)
         #expect(diagnostic.kind == .referenceCycle)
-        #expect(diagnostic.severity == .error)
+        #expect(diagnostic.severity == .warning)
         #expect(diagnostic.range == nil)
         #expect(diagnostic.message == "Group 'Sauce' consumes an intermediate that depends on it.")
     }

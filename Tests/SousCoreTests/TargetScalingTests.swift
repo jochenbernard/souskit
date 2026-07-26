@@ -108,7 +108,11 @@ struct TargetScalingTests {
         (header: "yield: [plenty, 12]", target: "18", expected: 300.0),
         (header: "yield: [plenty g, 800 g]", target: "1600 g", expected: 400.0)
     ])
-    func looksPastAYieldThatStatesNoQuantity(header: String, target: String, expected: Double) throws {
+    func looksPastAYieldThatStatesNoQuantity(
+        header: String,
+        target: String,
+        expected: Double
+    ) throws {
         #expect(try SousParser().scaled(Recipe.flourRecipe(header), to: target).flourWeight() == expected)
     }
 
@@ -172,7 +176,11 @@ struct TargetScalingTests {
         (header: "yield: [0 g, 0 g]", target: "500 g", error: ScalingError.zeroYield),
         (header: "yield: [0 g, 5 g]", target: "500 g", error: ScalingError.conflictingYields)
     ])
-    func reportsWhatStoppedTheDivision(header: String, target: String, error: ScalingError) {
+    func reportsWhatStoppedTheDivision(
+        header: String,
+        target: String,
+        error: ScalingError
+    ) {
         #expect(throws: error) {
             try SousParser().scaled(Recipe.flourRecipe(header), to: target)
         }

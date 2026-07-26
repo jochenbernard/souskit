@@ -18,7 +18,7 @@ enum HeaderParser {
             return (header: Array(lines[(opening + 1)..<closing]), body: Array(lines[(closing + 1)...]))
         }
 
-        diagnostics.append(.warning(
+        diagnostics.append(Diagnostic(
             .unterminatedHeader,
             "Header is missing a closing fence.",
             at: map.range(from: lines[opening].startIndex, length: lines[opening].count)
@@ -28,8 +28,16 @@ enum HeaderParser {
     }
 
     /// The metadata the header lines describe.
-    static func parse(_ lines: [Substring], map: SourceMap, diagnostics: inout [Diagnostic]) -> Metadata {
-        Metadata(entries: entries(in: lines, map: map, diagnostics: &diagnostics))
+    static func parse(
+        _ lines: [Substring],
+        map: SourceMap,
+        diagnostics: inout [Diagnostic]
+    ) -> Metadata {
+        Metadata(entries: entries(
+            in: lines,
+            map: map,
+            diagnostics: &diagnostics
+        ))
     }
 
     /// One entry per non-blank header line, in document order.
@@ -42,7 +50,11 @@ enum HeaderParser {
         var seenKeys: Set<String> = []
 
         for line in lines {
-            guard let read = entry(from: line, map: map, seenKeys: &seenKeys) else { continue }
+            guard let read = entry(
+                from: line,
+                map: map,
+                seenKeys: &seenKeys
+            ) else { continue }
 
             entries.append(read.entry)
             diagnostics.append(contentsOf: read.diagnostics)
@@ -65,7 +77,7 @@ enum HeaderParser {
 
         let isIndented = line.first?.isWhitespace ?? false
         guard !isIndented, let field = field(in: line) else {
-            let diagnostic = Diagnostic.warning(
+            let diagnostic = Diagnostic(
                 .malformedHeaderLine,
                 "Header line is not a top-level 'key: value' entry.",
                 at: map.range(from: line.startIndex, length: line.count)
@@ -79,21 +91,15 @@ enum HeaderParser {
         var diagnostics: [Diagnostic] = []
 
         if field.key.isEmpty {
-            diagnostics.append(.warning(
+            diagnostics.append(Diagnostic(
                 .emptyHeaderKey,
                 "Header line has a value but no key.",
-                at: keyRange
-            ))
-        } else if !HeaderField.isRecognized(field.key) {
-            diagnostics.append(.warning(
-                .unknownHeaderKey,
-                "Unrecognized header key '\(field.key)'.",
                 at: keyRange
             ))
         }
 
         if !seenKeys.insert(field.key).inserted {
-            diagnostics.append(.warning(
+            diagnostics.append(Diagnostic(
                 isList ? .repeatedListKey : .repeatedScalarKey,
                 "Repeated header key '\(field.key)'.",
                 at: keyRange
@@ -124,7 +130,13 @@ enum HeaderParser {
         guard HeaderField.amounts.contains(key) else { return [] }
 
         return amounts(of: value).compactMap({ AmountParser.defect(in: $0, fenced: false) })
-            .map({ Diagnostic.warning(.malformedQuantity, $0.message, at: range) })
+            .map({ defect in
+                Diagnostic(
+                    .malformedQuantity,
+                    defect.message,
+                    at: range
+                )
+            })
     }
 
     /// The texts to read as amounts for a value.

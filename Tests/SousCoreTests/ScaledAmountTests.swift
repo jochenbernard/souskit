@@ -14,13 +14,21 @@ struct ScaledAmountTests {
         let reRead = parser.parseRecipe(scaled.serialized())
         let note = Comment(rawValue: "\(source.debugDescription) scaled by \(factor)")
 
-        #expect(reRead.value.metadata == scaled.metadata, note, sourceLocation: sourceLocation)
+        #expect(
+            reRead.value.metadata == scaled.metadata,
+            note,
+            sourceLocation: sourceLocation
+        )
         #expect(
             reRead.value.steps.map(\.segments) == scaled.steps.map(\.segments),
             note,
             sourceLocation: sourceLocation
         )
-        #expect(reRead.diagnostics.isEmpty, note, sourceLocation: sourceLocation)
+        #expect(
+            reRead.diagnostics.isEmpty,
+            note,
+            sourceLocation: sourceLocation
+        )
     }
 
     @Test(arguments: [
@@ -33,7 +41,11 @@ struct ScaledAmountTests {
         (fence: "200 g", factor: 0.0, text: "0 g"),
         (fence: "3 g", factor: 0.5, text: "1.5 g")
     ])
-    func regeneratesTheTextOfAScaledAmount(fence: String, factor: Double, text: String) throws {
+    func regeneratesTheTextOfAScaledAmount(
+        fence: String,
+        factor: Double,
+        text: String
+    ) throws {
         #expect(try SousParser().amount(in: "Add @{\(fence)} water@.", scaledBy: factor).text == text)
     }
 

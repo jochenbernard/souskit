@@ -33,7 +33,12 @@ extension Step {
 
             switch segments[index] {
             case let .text(text):
-                result += Self.renderedProse(text, at: index, in: segments, at: position)
+                result += Self.renderedProse(
+                    text,
+                    at: index,
+                    in: segments,
+                    at: position
+                )
             case let .ingredient(ingredient):
                 result += Self.renderedSpan(
                     ingredient.name,
@@ -43,9 +48,17 @@ extension Step {
                     flags: ingredient.flags
                 )
             case let .cookware(cookware):
-                result += Self.renderedSpan(cookware.name, as: .cookware, at: position)
+                result += Self.renderedSpan(
+                    cookware.name,
+                    as: .cookware,
+                    at: position
+                )
             case let .timer(timer):
-                result += Self.renderedSpan(timer.text, as: .timer, at: position)
+                result += Self.renderedSpan(
+                    timer.text,
+                    as: .timer,
+                    at: position
+                )
             case let .reference(reference):
                 result += Self.renderedSpan(
                     reference.target,
@@ -145,7 +158,12 @@ extension Step {
             let escaped = character == annotation.sigil
                 || SourceText.escapesFollowing(character, before: following)
                 || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
-                || opensHeading(characters, at: index, at: position, followedByContent: true)
+                || opensHeading(
+                    characters,
+                    at: index,
+                    at: position,
+                    followedByContent: true
+                )
 
             if escaped { result.append(SourceText.escape) }
             result.append(character)

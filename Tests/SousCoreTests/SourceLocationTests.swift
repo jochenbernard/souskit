@@ -53,10 +53,10 @@ struct SourceLocationTests {
 
     @Test
     func reportsHeaderDiagnosticsBeforeBodyDiagnostics() {
-        let source = "---\nchef: Alice\n---\n\nFry @garlic now."
+        let source = "---\ntitle: First\ntitle: Second\n---\n\nFry @garlic now."
 
         let kinds = SousParser().parseRecipe(source).diagnostics.map(\.kind)
-        #expect(kinds == [.unknownHeaderKey, .unclosedSpan])
+        #expect(kinds == [.repeatedScalarKey, .unclosedSpan])
     }
 
     @Test
@@ -69,11 +69,11 @@ struct SourceLocationTests {
     }
 
     @Test
-    func reportsBothAnUnknownAndARepeatedWarningForARepeatedUnknownKey() {
+    func reportsARepeatedWarningForARepeatedUnrecognizedKey() {
         let source = "---\nchef: Alice\nchef: Bob\n---"
 
         let kinds = SousParser().parseRecipe(source).diagnostics.map(\.kind)
-        #expect(kinds == [.unknownHeaderKey, .unknownHeaderKey, .repeatedScalarKey])
+        #expect(kinds == [.repeatedScalarKey])
     }
 
     @Test
@@ -89,7 +89,7 @@ struct SourceLocationTests {
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.diagnostics.count == 6)
+        #expect(parsed.diagnostics.count == 4)
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
     }
 }

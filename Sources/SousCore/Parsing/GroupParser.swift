@@ -12,7 +12,11 @@ enum GroupParser {
         var groups: [StepGroup] = []
 
         for run in runs(in: lines) {
-            let groupSteps = steps(in: run.lines, map: map, diagnostics: &diagnostics)
+            let groupSteps = steps(
+                in: run.lines,
+                map: map,
+                diagnostics: &diagnostics
+            )
             guard run.name != nil || !groupSteps.isEmpty else { continue }
 
             groups.append(StepGroup(name: run.name, steps: groupSteps))
@@ -54,7 +58,7 @@ enum GroupParser {
 
             steps.append(StepParser.parse(
                 paragraph.joined(separator: "\n"),
-                origin: StepParser.Origin(start: map.offset(of: first.startIndex), map: map),
+                origin: Origin(start: map.offset(of: first.startIndex), map: map),
                 diagnostics: &diagnostics
             ))
         }

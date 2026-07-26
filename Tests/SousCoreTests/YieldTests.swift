@@ -23,7 +23,11 @@ struct YieldTests {
         (value: "1 1/2 kg", quantity: 1.5, unit: "kg"),
         (value: "12", quantity: 12.0, unit: "")
     ])
-    func readsEveryQuantityFormOfAYield(value: String, quantity: Double, unit: String) throws {
+    func readsEveryQuantityFormOfAYield(
+        value: String,
+        quantity: Double,
+        unit: String
+    ) throws {
         let metadata = Metadata.read("yield: \(value)")
 
         let yield = try #require(metadata.yields.first)

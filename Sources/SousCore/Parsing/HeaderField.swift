@@ -21,9 +21,4 @@ enum HeaderField {
 
     /// Keys whose value is read as an amount, so a malformed quantity is reported.
     static let amounts = scaling
-
-    /// Whether this version reads the given key rather than only preserving it.
-    static func isRecognized(_ key: String) -> Bool {
-        lists.contains(key) || scalars.contains(key)
-    }
 }

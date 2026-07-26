@@ -2,13 +2,13 @@ extension Metadata {
     /// One warning per unit declaring more than one yield, reported at the first occurrence.
     func repeatedYields() -> [Diagnostic] {
         Repetition.firstOfEachRepeated(in: declaredYields, by: \.unit)
-            .map({ .warning(.repeatedYield, Self.repeatedMessage(in: $0.unit)) })
+            .map({ Diagnostic(.repeatedYield, Self.repeatedMessage(in: $0.unit)) })
     }
 
     /// One warning per declared yield of zero.
     func zeroYields() -> [Diagnostic] {
         declaredYields.filter({ $0.kind.soleValue == 0 }).map({ yield in
-            .warning(.zeroYield, Self.zeroMessage(in: yield.unit))
+            Diagnostic(.zeroYield, Self.zeroMessage(in: yield.unit))
         })
     }
 

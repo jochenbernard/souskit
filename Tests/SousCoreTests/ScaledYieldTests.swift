@@ -9,7 +9,11 @@ struct ScaledYieldTests {
         (header: "servings: 7", target: "29 servings", written: "29"),
         (header: "servings: 23", target: "13 servings", written: "13")
     ])
-    func statesTheTargetItWasGivenExactly(header: String, target: String, written: String) throws {
+    func statesTheTargetItWasGivenExactly(
+        header: String,
+        target: String,
+        written: String
+    ) throws {
         let scaled = try SousParser().scaled(Recipe.flourRecipe(header), to: target)
 
         #expect(scaled.metadata["servings"] == written)

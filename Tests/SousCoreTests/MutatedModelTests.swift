@@ -126,7 +126,11 @@ struct MutatedModelTests {
         (name: "\tSauce", groups: ["Sauce"], steps: ["Brown the beef."]),
         (name: " ", groups: [nil], steps: ["##  \nBrown the beef."])
     ])
-    func writesAGroupNameThatNoLongerReadsBackAsOne(name: String, groups: [String?], steps: [String]) {
+    func writesAGroupNameThatNoLongerReadsBackAsOne(
+        name: String,
+        groups: [String?],
+        steps: [String]
+    ) {
         var value = Recipe.read("## Sauce\nBrown the beef.")
         value.groups[0].name = name
 

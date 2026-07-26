@@ -19,9 +19,21 @@ public struct SousParser: Sendable {
         let source = SourceText.withoutByteOrderMark(text)
         let lines = SourceText.lines(of: source)
         let map = SourceMap(source, lines: lines)
-        let split = HeaderParser.split(lines, map: map, diagnostics: &diagnostics)
-        let metadata = HeaderParser.parse(split.header, map: map, diagnostics: &diagnostics)
-        let groups = GroupParser.parse(split.body, map: map, diagnostics: &diagnostics)
+        let split = HeaderParser.split(
+            lines,
+            map: map,
+            diagnostics: &diagnostics
+        )
+        let metadata = HeaderParser.parse(
+            split.header,
+            map: map,
+            diagnostics: &diagnostics
+        )
+        let groups = GroupParser.parse(
+            split.body,
+            map: map,
+            diagnostics: &diagnostics
+        )
 
         return Parsed(
             value: Recipe(metadata: metadata, groups: groups),

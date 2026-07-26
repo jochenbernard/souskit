@@ -76,6 +76,35 @@ enum SourceText {
         character == escape && (following.map(isEscapable) ?? false)
     }
 
+    /// Whether an escape begins at this index. A trailing backslash escapes nothing.
+    static func opensEscape(in characters: [Character], at index: Int) -> Bool {
+        escapesFollowing(characters[index], before: character(in: characters, at: index + 1))
+    }
+
+    /// The index of the first unescaped occurrence of the character, or the index the line ends at
+    /// when it holds none.
+    ///
+    /// An escape is stepped over whole, so `\@` inside `@...@` stays part of the name. The search
+    /// stops at a line break, so a span closes on the line it opens on or not at all.
+    static func firstUnescaped(
+        _ character: Character,
+        in characters: [Character],
+        from start: Int
+    ) -> Int {
+        var cursor = start
+
+        while cursor < characters.count, !characters[cursor].isNewline {
+            if opensEscape(in: characters, at: cursor) {
+                cursor += 2
+                continue
+            }
+            if characters[cursor] == character { return cursor }
+            cursor += 1
+        }
+
+        return cursor
+    }
+
     /// Whether a backslash before this character forms an escape inside an inline list.
     static func isEscapableInList(_ character: Character) -> Bool {
         listEscapable.contains(character)

@@ -123,7 +123,12 @@ struct AmountTests {
         (source: "Add @{0.5-1.5 cups} milk@.", low: 0.5, high: 1.5, unit: "cups"),
         (source: "Add @{1/2-1 cup} water@.", low: 0.5, high: 1.0, unit: "cup")
     ])
-    func parsesARangeOfEveryQuantityForm(source: String, low: Double, high: Double, unit: String) throws {
+    func parsesARangeOfEveryQuantityForm(
+        source: String,
+        low: Double,
+        high: Double,
+        unit: String
+    ) throws {
         let amount = try #require(Recipe.read(source).firstAmount)
         let range = try #require(amount.kind.rangeQuantities)
         #expect(range.low.value == low)
@@ -181,7 +186,11 @@ struct AmountTests {
         (fence: "2\u{00BE}", value: 2.75, unit: ""),
         (fence: "\u{2153} cup", value: 1.0 / 3.0, unit: "cup")
     ])
-    func readsAVulgarFractionAsAQuantity(fence: String, value: Double, unit: String) throws {
+    func readsAVulgarFractionAsAQuantity(
+        fence: String,
+        value: Double,
+        unit: String
+    ) throws {
         let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
 
         #expect(amount.kind.preciseQuantity?.value == value)
@@ -244,7 +253,11 @@ struct AmountTests {
         (fence: "1e-5 g", quantity: 1.0, unit: "e-5 g"),
         (fence: "2.5e3", quantity: 2.5, unit: "e3")
     ])
-    func readsNoExponentInAQuantity(fence: String, quantity: Double, unit: String) {
+    func readsNoExponentInAQuantity(
+        fence: String,
+        quantity: Double,
+        unit: String
+    ) {
         let amount = SousParser().parseAmount(fence)
 
         #expect(amount.kind.preciseQuantity?.value == quantity)
