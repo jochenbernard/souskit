@@ -18,12 +18,12 @@ extension Step {
         }
     }
 
-    /// Renders the step back to Sous source text.
+    /// The step as Sous source text.
     func serialized() -> String {
         Self.serialized(segments)
     }
 
-    /// Renders segments back to Sous source text, escaping whatever would otherwise read back as
+    /// The segments as Sous source text, escaping whatever would otherwise read back as
     /// something else.
     static func serialized(_ segments: [Segment]) -> String {
         var result = ""

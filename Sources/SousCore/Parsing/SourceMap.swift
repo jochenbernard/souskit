@@ -1,5 +1,4 @@
-/// Converts positions in the source between string indices, character offsets, and
-/// line-and-column locations.
+/// Converts between string indices, character offsets, and source locations.
 struct SourceMap {
     private let source: String
     private let lineStarts: [String.Index]

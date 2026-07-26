@@ -1,5 +1,5 @@
 extension Metadata {
-    /// Renders the header, fences included, one line per entry in document order.
+    /// The header as source text, fences included, one line per entry in document order.
     func serialized() -> String {
         var lines = [SourceText.fence]
 

@@ -1,10 +1,10 @@
 extension Recipe {
-    /// Renders the recipe back to Sous source text.
+    /// The recipe as Sous source text.
     ///
     /// Content is preserved and incidental layout such as repeated blank lines is normalized, so
     /// re-reading the result yields the same recipe.
     ///
-    /// - Returns: The recipe rendered as Sous source text.
+    /// - Returns: The recipe as Sous source text.
     public func serialized() -> String {
         let hasHeader = !metadata.entries.isEmpty
         var blocks: [String] = []

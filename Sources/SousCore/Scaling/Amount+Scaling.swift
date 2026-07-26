@@ -1,5 +1,6 @@
 extension Amount {
-    /// An amount built from quantities and a unit, taken from reading the text they render to.
+    /// An amount built from quantities and a unit, taken from reading the text they are written
+    /// as.
     ///
     /// Building by reading back keeps ``Amount/text`` and ``Amount/kind`` in agreement. When the
     /// round trip does not reproduce the values, the quantities are rewritten with an explicit
@@ -33,7 +34,7 @@ extension Amount {
         return Amount(scaled, unit: unit ?? "")
     }
 
-    /// The text quantities and a unit render to, a range joined by its separator.
+    /// The text quantities and a unit are written as, a range joined by its separator.
     private static func written(_ quantities: [Quantity], unit: String) -> String {
         let text = quantities.map(\.text).joined(separator: String(AmountParser.rangeSeparator))
 

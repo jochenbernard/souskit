@@ -17,6 +17,19 @@ produced it.
 The reasoning belongs in a commit message, or nowhere. A reader reaching for a symbol wants to
 know how to use it correctly, not how it came to be shaped that way.
 
+Do not restate the name, and do not reach for a synonym to avoid restating it. `SourceLocation`
+documented as "a location in the source" says nothing. Documented as "a position in the source"
+it is worse, because the codebase now carries two nouns for one concept and a reader cannot tell
+whether they mean different things. Say what the symbol holds or does instead:
+
+```swift
+// Before
+/// A single position in the source.
+
+// After
+/// Where something sits in the source, given as a line, a column, and a character offset.
+```
+
 ### Rule 2: no anthropomorphism
 
 Code does not state, ask for, or owe, and does not have things of its own. A parser reads, a
