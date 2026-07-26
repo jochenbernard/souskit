@@ -12,6 +12,15 @@ struct ScalingTests {
     }
 
     @Test
+    func multipliesAnAmountWithNoUnit() throws {
+        let amount = try SousParser().amount(in: "Whisk @{3} eggs@.", scaledBy: 2.0)
+
+        #expect(amount.kind.preciseQuantity?.value == 6.0)
+        #expect(amount.unit == nil)
+        #expect(amount.text == "6")
+    }
+
+    @Test
     func multipliesBothEndsOfARange() throws {
         let amount = try SousParser().amount(in: "Add @{1-2 tbsp} oil@.", scaledBy: 2.0)
 

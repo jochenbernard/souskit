@@ -106,9 +106,11 @@ enum AmountParser {
             while: \.isWhitespace
         )
 
+        let unit = String(characters[cursor...])
+
         return Amount(
             kind: quantity.kind,
-            unit: String(characters[cursor...]),
+            unit: unit.isEmpty ? nil : unit,
             isFixed: read.isFixed,
             text: text
         )

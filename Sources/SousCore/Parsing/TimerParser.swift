@@ -7,8 +7,7 @@ enum TimerParser {
 
     /// The amounts the content is written as, such as `1 h` and `30 min` for `1 h 30 min`.
     ///
-    /// Scanning stops at the first part that opens with no usable number, so content such as
-    /// `until golden` yields no component at all.
+    /// Content opening with no usable number, such as `until golden`, is one imprecise amount.
     private static func components(in characters: [Character]) -> [Amount] {
         var components: [Amount] = []
         var start = 0
@@ -19,7 +18,9 @@ enum TimerParser {
             start = end + 1
         }
 
-        return components
+        guard components.isEmpty, !characters.isEmpty else { return components }
+
+        return [AmountParser.parse(unfenced: String(characters))]
     }
 
     /// The index where a component ends: the whitespace before the next digit, or the end.

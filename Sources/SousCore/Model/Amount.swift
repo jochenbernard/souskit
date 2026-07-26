@@ -16,9 +16,8 @@ public struct Amount: Equatable, Hashable, Sendable {
     /// The form this amount takes.
     public var kind: Kind
 
-    /// The unit, trimmed of the whitespace separating it from the quantity.
-    ///
-    /// This is `nil` for an imprecise amount, and empty for a quantity written without a unit.
+    /// The unit, trimmed of the whitespace separating it from the quantity, or `nil` when the
+    /// amount carries none.
     public var unit: String?
 
     /// Whether the fence's `=` marker holds this amount constant when the recipe is scaled.

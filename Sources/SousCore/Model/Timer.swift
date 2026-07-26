@@ -1,4 +1,4 @@
-/// A timer annotated in a step, written `~40 min~`.
+/// A timer annotated in a step, written `~40 min~` or `~until golden~`.
 public struct Timer: Equatable, Hashable, Sendable {
     /// The form a timer takes, derived from its components.
     public enum Kind: Equatable, Hashable, Sendable {
@@ -11,7 +11,7 @@ public struct Timer: Equatable, Hashable, Sendable {
         /// More than one component, such as `1 h 30 min`.
         case compound
 
-        /// No component, or one with no usable number, such as `until golden`.
+        /// One component with no usable number, such as `until golden`, or no component at all.
         case qualitative
     }
 

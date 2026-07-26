@@ -54,6 +54,6 @@ extension Metadata {
     private static func restated(_ target: Double, of amount: Amount) -> String? {
         guard let stated = amount.kind.soleValue, stated != target else { return nil }
 
-        return Amount([Quantity(target)], unit: amount.unit ?? "").text
+        return Amount([Quantity(target)], unit: amount.unit).text
     }
 }

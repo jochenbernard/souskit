@@ -21,12 +21,12 @@ struct YieldTests {
         (value: "6 servings", quantity: 6.0, unit: "servings"),
         (value: "1/2 batch", quantity: 0.5, unit: "batch"),
         (value: "1 1/2 kg", quantity: 1.5, unit: "kg"),
-        (value: "12", quantity: 12.0, unit: "")
+        (value: "12", quantity: 12.0, unit: nil)
     ])
     func readsEveryQuantityFormOfAYield(
         value: String,
         quantity: Double,
-        unit: String
+        unit: String?
     ) throws {
         let metadata = Metadata.read("yield: \(value)")
 

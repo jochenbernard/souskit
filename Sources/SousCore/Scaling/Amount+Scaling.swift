@@ -5,7 +5,7 @@ extension Amount {
     /// Building by reading back keeps ``Amount/text`` and ``Amount/kind`` in agreement. When the
     /// round trip does not reproduce the values, the quantities are rewritten with an explicit
     /// decimal point, which reads back unambiguously.
-    init(_ quantities: [Quantity], unit: String) {
+    init(_ quantities: [Quantity], unit: String?) {
         let read = AmountParser.parse(Self.written(quantities, unit: unit))
         if read.kind.values == quantities.values, read.unit == unit {
             self = read
@@ -31,13 +31,15 @@ extension Amount {
         guard values != kind.values else { return nil }
         guard values.allSatisfy(Quantity.isWritable) else { throw ScalingError.unwritableQuantity }
 
-        return Amount(scaled, unit: unit ?? "")
+        return Amount(scaled, unit: unit)
     }
 
     /// The text quantities and a unit are written as, a range joined by its separator.
-    private static func written(_ quantities: [Quantity], unit: String) -> String {
+    private static func written(_ quantities: [Quantity], unit: String?) -> String {
         let text = quantities.map(\.text).joined(separator: String(AmountParser.rangeSeparator))
 
-        return unit.isEmpty ? text : "\(text)\(AmountParser.unitSeparator)\(unit)"
+        guard let unit else { return text }
+
+        return "\(text)\(AmountParser.unitSeparator)\(unit)"
     }
 }

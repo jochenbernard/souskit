@@ -60,18 +60,16 @@ struct AmountTests {
     func treatsAZeroQuantityAsPrecise() throws {
         let amount = try #require(Recipe.read("Add @{0} yeast@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
-        let unit = try #require(amount.unit)
         #expect(quantity.value == 0.0)
-        #expect(unit.isEmpty)
+        #expect(amount.unit == nil)
     }
 
     @Test
     func allowsAQuantityWithNoUnit() throws {
         let amount = try #require(Recipe.read("Whisk @{3} eggs@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
-        let unit = try #require(amount.unit)
         #expect(quantity.value == 3.0)
-        #expect(unit.isEmpty)
+        #expect(amount.unit == nil)
     }
 
     @Test
@@ -112,14 +110,13 @@ struct AmountTests {
     func parsesAFractionWithNoUnit() throws {
         let amount = try #require(Recipe.read("Use @{2/4} lemon@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
-        let unit = try #require(amount.unit)
         #expect(quantity.value == 0.5)
         #expect(quantity.text == "2/4")
-        #expect(unit.isEmpty)
+        #expect(amount.unit == nil)
     }
 
     @Test(arguments: [
-        (source: "Add @{1-2} olive oil@.", low: 1.0, high: 2.0, unit: ""),
+        (source: "Add @{1-2} olive oil@.", low: 1.0, high: 2.0, unit: nil),
         (source: "Add @{0.5-1.5 cups} milk@.", low: 0.5, high: 1.5, unit: "cups"),
         (source: "Add @{1/2-1 cup} water@.", low: 0.5, high: 1.0, unit: "cup")
     ])
@@ -127,7 +124,7 @@ struct AmountTests {
         source: String,
         low: Double,
         high: Double,
-        unit: String
+        unit: String?
     ) throws {
         let amount = try #require(Recipe.read(source).firstAmount)
         let range = try #require(amount.kind.rangeQuantities)
@@ -183,13 +180,13 @@ struct AmountTests {
         (fence: "\u{00BD} cup", value: 0.5, unit: "cup"),
         (fence: "1\u{00BD} cups", value: 1.5, unit: "cups"),
         (fence: "1 \u{00BD} cups", value: 1.5, unit: "cups"),
-        (fence: "2\u{00BE}", value: 2.75, unit: ""),
+        (fence: "2\u{00BE}", value: 2.75, unit: nil),
         (fence: "\u{2153} cup", value: 1.0 / 3.0, unit: "cup")
     ])
     func readsAVulgarFractionAsAQuantity(
         fence: String,
         value: Double,
-        unit: String
+        unit: String?
     ) throws {
         let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
 

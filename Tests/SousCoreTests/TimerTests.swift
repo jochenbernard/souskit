@@ -79,16 +79,24 @@ struct TimerTests {
 
         let timer = try #require(parsed.value.firstTimer)
         #expect(timer.kind == .qualitative)
-        #expect(timer.components.isEmpty)
+        #expect(timer.components.map(\.kind.impreciseText) == [content])
         #expect(timer.text == content)
         #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func treatsATimerStrippedOfItsComponentsAsQualitative() throws {
+        var timer = try #require(Recipe.read("Rest ~40 min~.").firstTimer)
+        timer.components = []
+
+        #expect(timer.kind == .qualitative)
     }
 
     @Test
     func treatsADurationWithNoLeadingNumberAsQualitative() throws {
         let timer = try #require(Recipe.read("Rest ~about 40 min~.").firstTimer)
         #expect(timer.kind == .qualitative)
-        #expect(timer.components.isEmpty)
+        #expect(timer.components.map(\.kind.impreciseText) == ["about 40 min"])
         #expect(timer.text == "about 40 min")
     }
 
@@ -97,7 +105,7 @@ struct TimerTests {
         let timer = try #require(Recipe.read("Wait ~40~ and check.").firstTimer)
         #expect(timer.kind == .precise)
         #expect(timer.components.first?.kind.preciseQuantity?.value == 40.0)
-        #expect(timer.components.first?.unit?.isEmpty == true)
+        #expect(timer.components.first?.unit == nil)
     }
 
     @Test
@@ -123,7 +131,7 @@ struct TimerTests {
     func startsANewPartOnlyAtAWhitespaceSeparatedNumber() throws {
         let timer = try #require(Recipe.read("Chill ~2 8oz jars~ before filling.").firstTimer)
         #expect(timer.kind == .compound)
-        #expect(timer.components.map(\.unit) == ["", "oz jars"])
+        #expect(timer.components.map(\.unit) == [nil, "oz jars"])
     }
 
     @Test

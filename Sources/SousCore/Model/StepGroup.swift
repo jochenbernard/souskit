@@ -1,6 +1,7 @@
 /// A run of steps, named by a `## Name` heading when it has one.
 public struct StepGroup: Equatable, Hashable, Sendable {
-    /// The heading name, or `nil` for steps written before any heading.
+    /// The heading name, trimmed of surrounding whitespace, or `nil` for steps written before any
+    /// heading.
     public var name: String?
 
     /// The steps of the group, in document order.

@@ -42,7 +42,7 @@ struct FixedAmountTests {
         let amount = try #require(Recipe.read("Whisk @{=2} eggs@ into the batter.").firstAmount)
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == 2.0)
-        #expect(amount.unit?.isEmpty == true)
+        #expect(amount.unit == nil)
     }
 
     @Test
