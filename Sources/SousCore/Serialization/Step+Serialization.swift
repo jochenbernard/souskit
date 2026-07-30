@@ -128,16 +128,16 @@ extension Step {
         return result
     }
 
-    /// The flag chain, named flags first, then unrecognized ones, then the shorthand.
+    /// The flag chain, flags written as words first, then unrecognized ones, then shorthands.
     private static func renderedFlags(_ flags: Flags) -> String {
-        let named = Flag.allCases
-            .filter({ $0 != .shorthanded && flags[keyPath: $0.property] })
+        let worded = Flag.allCases
+            .filter({ $0.shorthand == nil && flags[keyPath: $0.property] })
             .map({ Flag.written($0.rawValue) })
             .joined()
         let unrecognized = flags.unrecognized.map(Flag.written).joined()
-        let shorthand = flags[keyPath: Flag.shorthanded.property] ? String(Flag.shorthand) : ""
+        let shorthands = String(Flag.allCases.compactMap({ flags[keyPath: $0.property] ? $0.shorthand : nil }))
 
-        return named + unrecognized + shorthand
+        return worded + unrecognized + shorthands
     }
 
     /// The name with its own sigil escaped, plus a leading brace that would otherwise open a

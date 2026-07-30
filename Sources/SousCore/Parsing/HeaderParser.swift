@@ -11,10 +11,10 @@ enum HeaderParser {
         diagnostics: inout [Diagnostic]
     ) -> (header: [Substring], body: [Substring]) {
         guard let opening = lines.firstIndex(where: { !SourceText.isBlank($0) }),
-              SourceText.isFence(lines[opening])
+              HeaderFence.matches(lines[opening])
         else { return (header: [], body: lines) }
 
-        if let closing = lines[(opening + 1)...].firstIndex(where: SourceText.isFence) {
+        if let closing = lines[(opening + 1)...].firstIndex(where: HeaderFence.matches) {
             return (header: Array(lines[(opening + 1)..<closing]), body: Array(lines[(closing + 1)...]))
         }
 

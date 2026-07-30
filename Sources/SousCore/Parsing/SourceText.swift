@@ -18,14 +18,8 @@ enum SourceText {
         line.allSatisfy(\.isWhitespace)
     }
 
-    static let fence = "---"
-
-    /// Whether the line is a header fence, ignoring trailing whitespace.
-    static func isFence(_ line: Substring) -> Bool {
-        withoutTrailingWhitespace(line) == fence
-    }
-
-    private static func withoutTrailingWhitespace(_ text: Substring) -> Substring {
+    /// The text without trailing whitespace.
+    static func withoutTrailingWhitespace(_ text: Substring) -> Substring {
         guard let last = text.lastIndex(where: { !$0.isWhitespace }) else { return text.prefix(0) }
 
         return text[...last]
@@ -69,7 +63,15 @@ enum SourceText {
     }
 
     private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
-        .union([Flag.separator, Flag.shorthand, AmountFence.opening, AmountFence.closing, escape])
+        .union(Flag.shorthands)
+        .union([Flag.separator, AmountFence.opening, AmountFence.closing, escape])
+
+    /// Whether a backslash before this character forms an escape inside an inline list.
+    static func isEscapableInList(_ character: Character) -> Bool {
+        listEscapable.contains(character)
+    }
+
+    private static let listEscapable: Set<Character> = [",", "[", "]", escape]
 
     /// Whether the character opens an escape, given the character after it.
     static func escapesFollowing(_ character: Character, before following: Character?) -> Bool {
@@ -104,13 +106,6 @@ enum SourceText {
 
         return cursor
     }
-
-    /// Whether a backslash before this character forms an escape inside an inline list.
-    static func isEscapableInList(_ character: Character) -> Bool {
-        listEscapable.contains(character)
-    }
-
-    private static let listEscapable: Set<Character> = [",", "[", "]", escape]
 
     /// The characters with escapes resolved.
     ///

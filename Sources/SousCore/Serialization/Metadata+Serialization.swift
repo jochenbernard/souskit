@@ -1,7 +1,7 @@
 extension Metadata {
     /// The header as source text, fences included, one line per entry in document order.
     func serialized() -> String {
-        var lines = [SourceText.fence]
+        var lines = [HeaderFence.marker]
 
         for entry in entries {
             switch entry.value {
@@ -14,7 +14,7 @@ extension Metadata {
             }
         }
 
-        lines.append(SourceText.fence)
+        lines.append(HeaderFence.marker)
 
         return lines.joined(separator: "\n")
     }

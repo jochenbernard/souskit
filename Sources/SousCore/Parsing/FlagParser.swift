@@ -12,8 +12,8 @@ enum FlagParser {
 
         while cursor < characters.count,
               Flag.opens(characters[cursor], followedBy: SourceText.character(in: characters, at: cursor + 1)) {
-            if characters[cursor] == Flag.shorthand {
-                flags[keyPath: Flag.shorthanded.property] = true
+            if let flag = Flag(shorthand: characters[cursor]) {
+                flags[keyPath: flag.property] = true
                 cursor += 1
                 continue
             }

@@ -7,11 +7,24 @@ enum Flag: String, CaseIterable {
     /// The character introducing a flag.
     static let separator: Character = ":"
 
-    /// The single-character form standing for ``shorthanded``.
-    static let shorthand: Character = "?"
+    /// The character standing for this flag on its own, or `nil` when it may only be written as
+    /// `:name`.
+    var shorthand: Character? {
+        switch self {
+        case .optional: "?"
+        case .staple, .nonFood: nil
+        }
+    }
 
-    /// The flag that ``shorthand`` sets.
-    static let shorthanded: Flag = .optional
+    /// Every character standing for a flag on its own.
+    static let shorthands: Set<Character> = Set(allCases.compactMap(\.shorthand))
+
+    /// Creates the flag a character stands for on its own, or `nil` when none does.
+    init?(shorthand character: Character) {
+        guard let flag = Self.allCases.first(where: { $0.shorthand == character }) else { return nil }
+
+        self = flag
+    }
 
     /// The property on ``Flags`` this flag sets.
     var property: WritableKeyPath<Flags, Bool> {
@@ -32,7 +45,7 @@ enum Flag: String, CaseIterable {
     /// A separator not followed by a word character is ordinary text, so prose such as
     /// `@salt@: to taste` carries no flag.
     static func opens(_ character: Character, followedBy following: Character?) -> Bool {
-        if character == shorthand { return true }
+        if shorthands.contains(character) { return true }
 
         return character == separator && (following.map(continuesWord) ?? false)
     }
