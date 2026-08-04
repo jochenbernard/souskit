@@ -39,6 +39,42 @@ enum AmountParser {
         parse(fence, fenced: true)
     }
 
+    /// The amount a header value describes, where a leading `=` is ordinary text.
+    static func parse(unfenced text: String) -> Amount {
+        parse(text, fenced: false)
+    }
+
+    /// The amount the text describes. Text opening with no usable number is imprecise.
+    private static func parse(_ value: String, fenced: Bool) -> Amount {
+        let read = markerRemoved(from: SourceText.trimmed(value), fenced: fenced)
+        let text = read.text
+        let characters = Array(text)
+
+        guard let quantity = quantity(in: characters, from: 0) else {
+            return Amount(
+                kind: .imprecise(text),
+                unit: nil,
+                isFixed: read.isFixed,
+                text: text
+            )
+        }
+
+        let cursor = SourceText.run(
+            in: characters,
+            from: quantity.end,
+            while: \.isWhitespace
+        )
+
+        let unit = String(characters[cursor...])
+
+        return Amount(
+            kind: quantity.kind,
+            unit: unit.isEmpty ? nil : unit,
+            isFixed: read.isFixed,
+            text: text
+        )
+    }
+
     /// The defect in the text, or `nil` when it opens as a usable number or as no number at all.
     ///
     /// Text with no leading number is imprecise rather than defective, so it reports nothing.
@@ -73,47 +109,11 @@ enum AmountParser {
         }
     }
 
-    /// The amount a header value describes, where a leading `=` is ordinary text.
-    static func parse(unfenced text: String) -> Amount {
-        parse(text, fenced: false)
-    }
-
     /// The text without a leading `=` marker, and whether one was present.
     private static func markerRemoved(from text: String, fenced: Bool) -> (text: String, isFixed: Bool) {
         guard fenced, text.first == AmountFence.fixedMarker else { return (text, false) }
 
         return (String(text.dropFirst().drop(while: \.isWhitespace)), true)
-    }
-
-    /// The amount the text describes. Text opening with no usable number is imprecise.
-    private static func parse(_ value: String, fenced: Bool) -> Amount {
-        let read = markerRemoved(from: SourceText.trimmed(value), fenced: fenced)
-        let text = read.text
-        let characters = Array(text)
-
-        guard let quantity = quantity(in: characters, from: 0) else {
-            return Amount(
-                kind: .imprecise(text),
-                unit: nil,
-                isFixed: read.isFixed,
-                text: text
-            )
-        }
-
-        let cursor = SourceText.run(
-            in: characters,
-            from: quantity.end,
-            while: \.isWhitespace
-        )
-
-        let unit = String(characters[cursor...])
-
-        return Amount(
-            kind: quantity.kind,
-            unit: unit.isEmpty ? nil : unit,
-            isFixed: read.isFixed,
-            text: text
-        )
     }
 
     /// The quantity beginning at the index, or `nil` when none is there or it is defective.

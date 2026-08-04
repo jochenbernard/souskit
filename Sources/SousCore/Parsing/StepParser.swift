@@ -120,21 +120,6 @@ enum StepParser {
         Annotation.opensSpan(before: SourceText.character(in: characters, at: index + 1))
     }
 
-    /// The index of the span's closing sigil, or `nil` when the line holds none.
-    private static func closingSigil(
-        _ sigil: Character,
-        in characters: [Character],
-        from start: Int
-    ) -> Int? {
-        let end = SourceText.firstUnescaped(
-            sigil,
-            in: characters,
-            from: start
-        )
-
-        return end < characters.count && characters[end] == sigil ? end : nil
-    }
-
     /// Scans one annotation span opening at `start`.
     private static func scanSpan(
         _ characters: [Character],
@@ -296,5 +281,20 @@ enum StepParser {
             next: end + 1,
             warnings: [unclosed]
         )
+    }
+
+    /// The index of the span's closing sigil, or `nil` when the line holds none.
+    private static func closingSigil(
+        _ sigil: Character,
+        in characters: [Character],
+        from start: Int
+    ) -> Int? {
+        let end = SourceText.firstUnescaped(
+            sigil,
+            in: characters,
+            from: start
+        )
+
+        return end < characters.count && characters[end] == sigil ? end : nil
     }
 }
