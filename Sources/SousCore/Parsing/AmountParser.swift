@@ -91,11 +91,14 @@ enum AmountParser {
 
     /// The defect in text that opens with a point, comma, or hyphen before a digit.
     private static func leadingDefect(in characters: [Character], from start: Int) -> Defect? {
-        guard let first = SourceText.character(in: characters, at: start),
-              first == decimalPoint || first == commaPoint || first == rangeSeparator,
-              let following = SourceText.character(in: characters, at: start + 1),
-              SourceText.isDigit(following)
-        else { return nil }
+        guard
+            let first = SourceText.character(in: characters, at: start),
+            first == decimalPoint || first == commaPoint || first == rangeSeparator,
+            let following = SourceText.character(in: characters, at: start + 1),
+            SourceText.isDigit(following)
+        else {
+            return nil
+        }
 
         return .leadingCharacter
     }
@@ -118,9 +121,12 @@ enum AmountParser {
 
     /// The quantity beginning at the index, or `nil` when none is there or it is defective.
     static func quantity(in characters: [Character], from start: Int) -> (kind: Amount.Kind, end: Int)? {
-        guard let scanned = scannedQuantity(in: characters, from: start),
-              defect(in: characters, at: scanned.end) == nil
-        else { return nil }
+        guard
+            let scanned = scannedQuantity(in: characters, from: start),
+            defect(in: characters, at: scanned.end) == nil
+        else {
+            return nil
+        }
 
         return scanned
     }
@@ -131,8 +137,9 @@ enum AmountParser {
         from start: Int
     ) -> (kind: Amount.Kind, end: Int)? {
         guard let first = number(in: characters, from: start) else { return nil }
-        guard let second = rangeEnd(in: characters, from: first.end)
-        else { return (.precise(first.quantity), first.end) }
+        guard let second = rangeEnd(in: characters, from: first.end) else {
+            return (.precise(first.quantity), first.end)
+        }
 
         return (.range(first.quantity, second.quantity), second.end)
     }
@@ -201,9 +208,12 @@ enum AmountParser {
     private static func fraction(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         if let single = vulgarFraction(in: characters, at: start) { return (single, start + 1) }
 
-        guard let numerator = decimal(in: characters, from: start),
-              let denominator = denominator(in: characters, from: numerator.end)
-        else { return nil }
+        guard
+            let numerator = decimal(in: characters, from: start),
+            let denominator = denominator(in: characters, from: numerator.end)
+        else {
+            return nil
+        }
 
         return (numerator.value / denominator.value, denominator.end)
     }
@@ -212,22 +222,28 @@ enum AmountParser {
     ///
     /// A whole-valued numeric character such as a superscript digit is not a fraction.
     private static func vulgarFraction(in characters: [Character], at index: Int) -> Double? {
-        guard let character = SourceText.character(in: characters, at: index),
-              character.unicodeScalars.count == 1,
-              let value = character.unicodeScalars.first?.properties.numericValue,
-              value != value.rounded()
-        else { return nil }
+        guard
+            let character = SourceText.character(in: characters, at: index),
+            character.unicodeScalars.count == 1,
+            let value = character.unicodeScalars.first?.properties.numericValue,
+            value != value.rounded()
+        else {
+            return nil
+        }
 
         return value
     }
 
     /// The denominator following a `/`, or `nil` when it is missing or zero.
     private static func denominator(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
-        guard start < characters.count,
-              characters[start] == fractionSeparator,
-              let run = decimal(in: characters, from: start + 1),
-              run.value != 0.0
-        else { return nil }
+        guard
+            start < characters.count,
+            characters[start] == fractionSeparator,
+            let run = decimal(in: characters, from: start + 1),
+            run.value != 0.0
+        else {
+            return nil
+        }
 
         return (run.value, run.end)
     }
@@ -236,10 +252,13 @@ enum AmountParser {
     private static func decimal(in characters: [Character], from start: Int) -> (value: Double, end: Int)? {
         guard let leading = digits(in: characters, from: start) else { return nil }
 
-        guard leading.end + 1 < characters.count,
-              characters[leading.end] == decimalPoint,
-              let decimals = digits(in: characters, from: leading.end + 1)
-        else { return leading }
+        guard
+            leading.end + 1 < characters.count,
+            characters[leading.end] == decimalPoint,
+            let decimals = digits(in: characters, from: leading.end + 1)
+        else {
+            return leading
+        }
 
         return (Double(String(characters[start..<decimals.end])) ?? leading.value, decimals.end)
     }

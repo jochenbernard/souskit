@@ -54,8 +54,7 @@ extension Recipe {
         let declared = metadata.declaredYields.filter({ $0.unit == unit })
 
         guard let yield = declared.first else { throw ScalingError.noMatchingYield }
-        guard declared.allSatisfy({ $0.kind.values == yield.kind.values })
-        else { throw ScalingError.conflictingYields }
+        guard declared.allSatisfy({ $0.kind.values == yield.kind.values }) else { throw ScalingError.conflictingYields }
 
         guard let divisor = yield.kind.soleValue else { throw ScalingError.noMatchingYield }
         guard divisor != 0 else { throw ScalingError.zeroYield }

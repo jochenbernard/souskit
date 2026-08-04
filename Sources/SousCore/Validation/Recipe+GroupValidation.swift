@@ -14,9 +14,12 @@ extension Recipe {
 
         return references.compactMap { reference in
             let normalized = Normalization.normalized(reference.target)
-            guard index(ofGroupNamed: reference.target) == nil,
-                  reported.insert(normalized).inserted
-            else { return nil }
+            guard
+                index(ofGroupNamed: reference.target) == nil,
+                reported.insert(normalized).inserted
+            else {
+                return nil
+            }
 
             return Diagnostic(.unresolvedReference, "Reference to '\(reference.target)' matches no group.")
         }
@@ -31,8 +34,13 @@ extension Recipe {
         var reported: Set<Int> = []
 
         return groups.indices.compactMap { index in
-            guard let name = groups[index].name, reaches[index][index], !reported.contains(index)
-            else { return nil }
+            guard
+                let name = groups[index].name,
+                reaches[index][index],
+                !reported.contains(index)
+            else {
+                return nil
+            }
 
             for other in groups.indices where reaches[index][other] && reaches[other][index] {
                 reported.insert(other)

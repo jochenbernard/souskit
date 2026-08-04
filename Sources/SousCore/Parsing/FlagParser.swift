@@ -10,8 +10,10 @@ enum FlagParser {
         var flags = Flags.empty
         guard annotation.allowsFlags else { return flags }
 
-        while cursor < characters.count,
-              Flag.opens(characters[cursor], followedBy: SourceText.character(in: characters, at: cursor + 1)) {
+        while
+            cursor < characters.count,
+            Flag.opens(characters[cursor], followedBy: SourceText.character(in: characters, at: cursor + 1))
+        {
             if let flag = Flag(shorthand: characters[cursor]) {
                 flags[keyPath: flag.property] = true
                 cursor += 1

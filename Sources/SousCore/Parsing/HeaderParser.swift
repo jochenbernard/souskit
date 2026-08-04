@@ -10,9 +10,12 @@ enum HeaderParser {
         map: SourceMap,
         diagnostics: inout [Diagnostic]
     ) -> (header: [Substring], body: [Substring]) {
-        guard let opening = lines.firstIndex(where: { !SourceText.isBlank($0) }),
-              HeaderFence.matches(lines[opening])
-        else { return (header: [], body: lines) }
+        guard
+            let opening = lines.firstIndex(where: { !SourceText.isBlank($0) }),
+            HeaderFence.matches(lines[opening])
+        else {
+            return (header: [], body: lines)
+        }
 
         if let closing = lines[(opening + 1)...].firstIndex(where: HeaderFence.matches) {
             return (header: Array(lines[(opening + 1)..<closing]), body: Array(lines[(closing + 1)...]))
@@ -50,11 +53,15 @@ enum HeaderParser {
         var seenKeys: Set<String> = []
 
         for line in lines {
-            guard let read = entry(
-                from: line,
-                map: map,
-                seenKeys: &seenKeys
-            ) else { continue }
+            guard
+                let read = entry(
+                    from: line,
+                    map: map,
+                    seenKeys: &seenKeys
+                )
+            else {
+                continue
+            }
 
             entries.append(read.entry)
             diagnostics.append(contentsOf: read.diagnostics)

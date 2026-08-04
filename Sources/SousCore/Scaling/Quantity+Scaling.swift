@@ -41,9 +41,12 @@ extension Quantity {
     /// Swift writes large and small values as `1e-05`, which reads back as the quantity `1`
     /// followed by the unit `e-05`.
     private static func positional(_ text: String) -> String {
-        guard let mark = text.firstIndex(of: exponentMark),
-              let exponent = Int(text[text.index(after: mark)...])
-        else { return text }
+        guard
+            let mark = text.firstIndex(of: exponentMark),
+            let exponent = Int(text[text.index(after: mark)...])
+        else {
+            return text
+        }
 
         var digits = Array(text[..<mark])
         let point = digits.firstIndex(of: AmountParser.decimalPoint) ?? digits.count

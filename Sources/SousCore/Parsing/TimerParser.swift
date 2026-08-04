@@ -28,9 +28,11 @@ enum TimerParser {
         var cursor = start
 
         while cursor < characters.count {
-            if characters[cursor].isWhitespace,
-               cursor + 1 < characters.count,
-               SourceText.isDigit(characters[cursor + 1]) {
+            if
+                characters[cursor].isWhitespace,
+                cursor + 1 < characters.count,
+                SourceText.isDigit(characters[cursor + 1])
+            {
                 return cursor
             }
 

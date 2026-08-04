@@ -128,13 +128,15 @@ enum StepParser {
         fences: inout FenceSearch,
         origin: Origin
     ) -> Span {
-        guard let fence = scanFence(
-            characters,
-            from: start + 1,
-            as: annotation,
-            fences: &fences,
-            origin: origin
-        ) else {
+        guard
+            let fence = scanFence(
+                characters,
+                from: start + 1,
+                as: annotation,
+                fences: &fences,
+                origin: origin
+            )
+        else {
             return degradedFence(
                 characters,
                 from: start,
@@ -143,11 +145,13 @@ enum StepParser {
             )
         }
 
-        guard let closing = closingSigil(
-            annotation.sigil,
-            in: characters,
-            from: fence.nameStart
-        ) else {
+        guard
+            let closing = closingSigil(
+                annotation.sigil,
+                in: characters,
+                from: fence.nameStart
+            )
+        else {
             let unclosed = Diagnostic(
                 .unclosedSpan,
                 "\(annotation.noun) span is missing a closing sigil.",

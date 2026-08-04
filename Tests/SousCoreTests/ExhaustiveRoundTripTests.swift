@@ -19,8 +19,10 @@ struct ExhaustiveRoundTripTests {
         if reRead.value.groups.map(\.name) != recipe.groups.map(\.name) {
             return "\(source.debugDescription) wrote \(written.debugDescription), losing groups"
         }
-        if reRead.value.groups.map({ $0.steps.map(\.segments) })
-            != recipe.groups.map({ $0.steps.map(\.segments) }) {
+        if
+            reRead.value.groups.map({ $0.steps.map(\.segments) })
+                != recipe.groups.map({ $0.steps.map(\.segments) })
+        {
             return "\(source.debugDescription) wrote \(written.debugDescription), losing step segments"
         }
         if reRead.diagnostics.contains(where: { $0.kind == .unclosedSpan }) {
@@ -95,8 +97,9 @@ struct ExhaustiveRoundTripTests {
             guard let scaled = try? parser.parseRecipe(source).value.scaled(by: factor) else { return nil }
 
             let written = scaled.serialized()
-            guard parser.parseRecipe(written).value.steps.map(\.segments) != scaled.steps.map(\.segments)
-            else { return nil }
+            guard parser.parseRecipe(written).value.steps.map(\.segments) != scaled.steps.map(\.segments) else {
+                return nil
+            }
 
             return "\(source.debugDescription) scaled by \(factor) wrote \(written.debugDescription)"
         })
