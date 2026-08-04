@@ -24,11 +24,11 @@ extension Metadata {
         case let .servings(value):
             [DeclaredYield(unit: HeaderField.servings, kind: AmountParser.parse(unfenced: value).kind)]
         case let .yieldList(items):
-            items.map({ item in
+            items.map { item in
                 let yield = AmountParser.parse(unfenced: item)
 
                 return DeclaredYield(unit: DeclaredYield.matching(yield.unit), kind: yield.kind)
-            })
+            }
         case .other:
             []
         }
@@ -59,7 +59,7 @@ extension Metadata {
     func yieldRoles() -> [YieldRole] {
         let alias = aliasIndex
 
-        return entries.enumerated().map({ index, entry in
+        return entries.enumerated().map { index, entry in
             switch entry.value {
             case let .scalar(value) where index == alias:
                 .servings(value)
@@ -68,6 +68,6 @@ extension Metadata {
             default:
                 .other
             }
-        })
+        }
     }
 }

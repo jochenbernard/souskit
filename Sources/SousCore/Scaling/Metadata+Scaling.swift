@@ -4,7 +4,7 @@ extension Metadata {
     /// Only `servings` and `yield` scale. Every other key is literal text and is carried over
     /// unchanged.
     func scaled(by factor: Double) throws -> Metadata {
-        Metadata(entries: try entries.map({ entry in
+        Metadata(entries: try entries.map { entry in
             guard HeaderField.scaling.contains(entry.key) else { return entry }
 
             switch entry.value {
@@ -15,7 +15,7 @@ extension Metadata {
             case .raw:
                 return entry
             }
-        }))
+        })
     }
 
     /// The value scaled, or the original when it holds no scalable amount.
@@ -28,7 +28,7 @@ extension Metadata {
     /// Scaling by a factor can land just off the requested target through rounding, so the
     /// declared yield is restated rather than left as the multiplication produced it.
     func stating(_ target: Double, in unit: String) -> Metadata {
-        Metadata(entries: zip(entries, yieldRoles()).map({ entry, role in
+        Metadata(entries: zip(entries, yieldRoles()).map { entry, role in
             switch role {
             case let .servings(value) where unit == HeaderField.servings:
                 Entry(
@@ -36,17 +36,17 @@ extension Metadata {
                     value: .scalar(Self.restated(target, of: AmountParser.parse(unfenced: value)) ?? value)
                 )
             case let .yieldList(items):
-                Entry(key: entry.key, value: .list(items.map({ item in
+                Entry(key: entry.key, value: .list(items.map { item in
                     let amount = AmountParser.parse(unfenced: item)
 
                     return DeclaredYield.matching(amount.unit) == unit
                         ? Self.restated(target, of: amount) ?? item
                         : item
-                })))
+                }))
             default:
                 entry
             }
-        }))
+        })
     }
 
     /// The amount rewritten to the target, or `nil` when it already holds that value or holds no

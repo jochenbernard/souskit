@@ -7,9 +7,9 @@ extension Metadata {
 
     /// One warning per declared yield of zero.
     func zeroYields() -> [Diagnostic] {
-        declaredYields.filter({ $0.kind.soleValue == 0 }).map({ yield in
+        declaredYields.filter({ $0.kind.soleValue == 0 }).map { yield in
             Diagnostic(.zeroYield, Self.zeroMessage(in: yield.unit))
-        })
+        }
     }
 
     private static func zeroMessage(in unit: String) -> String {

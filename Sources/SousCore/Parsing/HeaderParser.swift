@@ -130,13 +130,13 @@ enum HeaderParser {
         guard HeaderField.amounts.contains(key) else { return [] }
 
         return amounts(of: value).compactMap({ AmountParser.defect(in: $0, fenced: false) })
-            .map({ defect in
+            .map { defect in
                 Diagnostic(
                     .malformedQuantity,
                     defect.message,
                     at: range
                 )
-            })
+            }
     }
 
     /// The texts to read as amounts for a value.

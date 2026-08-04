@@ -66,8 +66,8 @@ struct GroupResolutionTests {
     func findsAGroupExactlyWhenTheTwoNamesNormalizeTheSame() {
         let parts = ["of", "the", "a", " ", "x", "\u{E9}", "E\u{301}", "-"]
         let names = parts.flatMap({ first in parts.map({ first + $0 }) }) + parts
-        let failures = names.flatMap({ heading in
-            names.compactMap({ target -> String? in
+        let failures = names.flatMap { heading in
+            names.compactMap { target -> String? in
                 let value = Recipe.read("## \(heading)\nMix it.")
                 guard value.groups.first?.name != nil else { return nil }
 
@@ -76,8 +76,8 @@ struct GroupResolutionTests {
                 guard found != normalizesTheSame else { return nil }
 
                 return "\(heading.debugDescription) and \(target.debugDescription) disagree"
-            })
-        })
+            }
+        }
 
         TestSupport.expectNoFailures(failures)
     }

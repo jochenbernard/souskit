@@ -9,9 +9,9 @@ struct SpecificationExampleTests {
         let key = "yield: "
 
         return source.split(separator: "\n", omittingEmptySubsequences: false)
-            .map({ line in
+            .map { line in
                 line.hasPrefix(key) ? "\(key)[\(line.dropFirst(key.count))]" : String(line)
-            })
+            }
             .joined(separator: "\n")
     }
 

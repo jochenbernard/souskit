@@ -88,10 +88,10 @@ extension [Metadata.Entry] {
 
     /// The items of every list entry carrying the given key, in document order.
     func mergedList(_ key: String) -> [String] {
-        flatMap({ entry -> [String] in
+        flatMap { entry -> [String] in
             guard entry.key == key, case let .list(values) = entry.value else { return [] }
 
             return values
-        })
+        }
     }
 }

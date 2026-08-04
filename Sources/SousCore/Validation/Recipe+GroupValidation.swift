@@ -12,14 +12,14 @@ extension Recipe {
     func unresolvedReferences() -> [Diagnostic] {
         var reported: Set<String> = []
 
-        return references.compactMap({ reference in
+        return references.compactMap { reference in
             let normalized = Normalization.normalized(reference.target)
             guard index(ofGroupNamed: reference.target) == nil,
                   reported.insert(normalized).inserted
             else { return nil }
 
             return Diagnostic(.unresolvedReference, "Reference to '\(reference.target)' matches no group.")
-        })
+        }
     }
 
     /// One warning per cycle of groups consuming each other, reported at the first group in it.
@@ -30,7 +30,7 @@ extension Recipe {
         let reaches = consumptionReach
         var reported: Set<Int> = []
 
-        return groups.indices.compactMap({ index in
+        return groups.indices.compactMap { index in
             guard let name = groups[index].name, reaches[index][index], !reported.contains(index)
             else { return nil }
 
@@ -39,18 +39,18 @@ extension Recipe {
             }
 
             return Diagnostic(.referenceCycle, "Group '\(name)' consumes an intermediate that depends on it.")
-        })
+        }
     }
 
     /// Which groups each group reaches through its references, directly or through others.
     ///
     /// Transitive closure, so a group in a cycle reaches itself and the diagonal marks it.
     private var consumptionReach: [[Bool]] {
-        var reaches = groups.map({ group in
+        var reaches = groups.map { group in
             let dependencies = Set(dependencyIndices(of: group))
 
             return groups.indices.map(dependencies.contains)
-        })
+        }
 
         for through in groups.indices {
             for consumer in groups.indices where reaches[consumer][through] {

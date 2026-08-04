@@ -224,12 +224,12 @@ struct GroupValidationTests {
         var failures: [String] = []
 
         for encoded in 0..<512 {
-            let edges = (0..<3).map({ group in
+            let edges = (0..<3).map { group in
                 (0..<3).filter({ target in encoded >> (group * 3 + target) & 1 == 1 })
-            })
-            let groups = (0..<3).map({ group in
+            }
+            let groups = (0..<3).map { group in
                 "## g\(group)\n" + edges[group].map({ "Stir the >g\($0)>." }).joined(separator: " ")
-            })
+            }
             let source = groups.joined(separator: "\n\n")
 
             let reported = validate(source).filter({ $0.kind == .referenceCycle }).map(\.message)

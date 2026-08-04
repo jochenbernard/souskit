@@ -90,7 +90,7 @@ struct ExhaustiveRoundTripTests {
     func everyScaledAmountFence(factor: Double) {
         let parser = SousParser()
 
-        TestSupport.expectNoFailures(strings(over: ["1", ".", "/", " "], upTo: 7).compactMap({ fence -> String? in
+        TestSupport.expectNoFailures(strings(over: ["1", ".", "/", " "], upTo: 7).compactMap { fence -> String? in
             let source = "Add @{\(fence)} water@."
             guard let scaled = try? parser.parseRecipe(source).value.scaled(by: factor) else { return nil }
 
@@ -99,7 +99,7 @@ struct ExhaustiveRoundTripTests {
             else { return nil }
 
             return "\(source.debugDescription) scaled by \(factor) wrote \(written.debugDescription)"
-        }))
+        })
     }
 
     @Test

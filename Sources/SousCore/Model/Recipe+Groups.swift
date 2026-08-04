@@ -32,11 +32,11 @@ extension Recipe {
     func dependencyIndices(of group: StepGroup) -> [Int] {
         var seen: Set<Int> = []
 
-        return group.references.compactMap({ reference in
+        return group.references.compactMap { reference in
             guard let index = index(ofGroupNamed: reference.target), seen.insert(index).inserted
             else { return nil }
 
             return index
-        })
+        }
     }
 }
