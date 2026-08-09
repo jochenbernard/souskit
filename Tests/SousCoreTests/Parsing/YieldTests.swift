@@ -17,7 +17,7 @@ struct YieldTests {
 
     @Test(arguments: [
         (value: "1.5 L", quantity: 1.5, unit: "L"),
-        (value: "12 muffins", quantity: 12.0, unit: "muffins"),
+        (value: "12 madeleines", quantity: 12.0, unit: "madeleines"),
         (value: "6 servings", quantity: 6.0, unit: "servings"),
         (value: "1/2 batch", quantity: 0.5, unit: "batch"),
         (value: "1 1/2 kg", quantity: 1.5, unit: "kg"),
@@ -48,9 +48,9 @@ struct YieldTests {
 
     @Test
     func combinesRepeatedYieldKeysAndWarns() {
-        let parsed = SousParser().parseRecipe("---\nyield: 800 g\nyield: 12 muffins\n---")
+        let parsed = SousParser().parseRecipe("---\nyield: 800 g\nyield: 12 madeleines\n---")
 
-        #expect(parsed.value.metadata.yields.map(\.text) == ["800 g", "12 muffins"])
+        #expect(parsed.value.metadata.yields.map(\.text) == ["800 g", "12 madeleines"])
         #expect(parsed.diagnostics.map(\.kind) == [.repeatedListKey])
     }
 
@@ -65,17 +65,17 @@ struct YieldTests {
 
     @Test
     func readsAYieldRangeAsARange() throws {
-        let metadata = Metadata.read("yield: 10-12 muffins")
+        let metadata = Metadata.read("yield: 10-12 madeleines")
 
         let yield = try #require(metadata.yields.first)
         #expect(yield.kind.rangeQuantities?.low.value == 10.0)
         #expect(yield.kind.rangeQuantities?.high.value == 12.0)
-        #expect(yield.unit == "muffins")
+        #expect(yield.unit == "madeleines")
     }
 
     @Test
     func statesNoYieldsWhenTheKeyIsAbsentOrEmpty() {
-        #expect(Metadata.read("title: Pancakes").yields.isEmpty)
+        #expect(Metadata.read("title: Crepes").yields.isEmpty)
         #expect(Metadata.read("yield:").yields.isEmpty)
     }
 
@@ -117,7 +117,7 @@ struct YieldTests {
     @Test(arguments: [
         (value: "[800 g", items: ["[800 g"]),
         (value: "[6 servings], [3.2 kg]", items: ["[6 servings], [3.2 kg]"]),
-        (value: "[12 muffins, , 800 g,]", items: ["12 muffins", "800 g"]),
+        (value: "[12 madeleines, , 800 g,]", items: ["12 madeleines", "800 g"]),
         (value: "[1 handful\\, or two]", items: ["1 handful, or two"])
     ])
     func readsAYieldValueUnderTheInlineListRules(value: String, items: [String]) {

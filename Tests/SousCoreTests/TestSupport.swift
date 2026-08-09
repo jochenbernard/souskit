@@ -105,11 +105,11 @@ extension Recipe {
     /// A source exercising a header, an ingredient with an amount, and cookware.
     static let wellFormedSource = """
     ---
-    title: Garlic Pasta
-    servings: 2
+    title: Soupe a l'Oignon
+    servings: 4
     ---
 
-    Cook @{200 g} spaghetti@ in a #large pot#.
+    Soften @{1 kg} onions@ in a #stockpot#.
     """
 }
 
@@ -176,29 +176,29 @@ enum TestSupport {
     /// Sources whose layout serializing normalizes, so re-reading them is stable but their text
     /// is not preserved byte for byte.
     static let normalizedLayouts = [
-        "Toast the bread.\n",
-        "Toast the bread.\n\n",
-        "\nToast the bread.",
+        "Toast the baguette.\n",
+        "Toast the baguette.\n\n",
+        "\nToast the baguette.",
         "First step.\n\n\nSecond step.",
         "---\n---",
-        "---\ntitle: Toast\n---\nBody line.",
-        "Cook @{200 g}pasta@.",
-        "Cook @{200 g}  pasta@.",
-        "Cook @pasta @.",
+        "---\ntitle: Tartine Beurree\n---\nBody line.",
+        "Sift @{200 g}flour@.",
+        "Sift @{200 g}  flour@.",
+        "Sift @flour @.",
         "Add @{ 200 g } flour@.",
         "Add @{200\tg} flour@.",
         "Wait ~40 min ~ now.",
-        "Layer the >{300 g}  sauce> in a dish.",
-        "##  Sauce\nBrown the beef.",
-        "##\tSauce\nBrown the beef.",
-        "Toast the bread.\n   \nSpread with butter.",
-        "--- \ntitle: Toast\n--- ",
+        "Layer the >{300 g}  bechamel> in a dish.",
+        "##  Filling\nBrown the beef.",
+        "##\tFilling\nBrown the beef.",
+        "Toast the baguette.\n   \nSpread with butter.",
+        "--- \ntitle: Tartine Beurree\n--- ",
         "Add @{200 g}@ now.",
-        "Toast the bread\u{2028}and butter it.",
-        "---\ntitle:  Toast\n---",
-        "---\ntitle:\tToast\n---",
-        "---\ntags: [italian, quick] \n---",
-        "---\ntags:  [italian, quick]\n---"
+        "Toast the baguette\u{2028}and butter it.",
+        "---\ntitle:  Tartine Beurree\n---",
+        "---\ntitle:\tTartine Beurree\n---",
+        "---\ntags: [french, quick] \n---",
+        "---\ntags:  [french, quick]\n---"
     ]
 
     /// Reports the first of a batch of failures, naming how many there were.

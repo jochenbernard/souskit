@@ -4,19 +4,19 @@ import Testing
 @Suite("Header preservation")
 struct HeaderPreservationTests {
     /// A header holding one line that is not a `key: value` entry.
-    private static let strayLineHeader = "---\ntitle: Toast\nstray line\n---"
+    private static let strayLineHeader = "---\ntitle: Tartine\nstray line\n---"
 
     @Test
     func preservesAHeaderLineWithNoSeparatorAsARawEntry() {
         let metadata = SousParser().parseRecipe(Self.strayLineHeader).value.metadata
-        #expect(metadata.title == "Toast")
+        #expect(metadata.title == "Tartine")
         #expect(metadata.entries.contains(where: { $0.value == .raw("stray line") }))
     }
 
     @Test
     func preservesABlockListItemLineAsARawEntry() {
-        let entries = Metadata.read("tags:\n  - italian").entries
-        #expect(entries.contains(where: { $0.value == .raw("  - italian") }))
+        let entries = Metadata.read("tags:\n  - french").entries
+        #expect(entries.contains(where: { $0.value == .raw("  - french") }))
     }
 
     @Test
@@ -28,7 +28,7 @@ struct HeaderPreservationTests {
 
     @Test
     func skipsABlankHeaderLineSilently() {
-        let source = "---\ntitle: Toast\n\nsource: Jane\n---"
+        let source = "---\ntitle: Tartine\n\nsource: Jane\n---"
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.metadata.entries.map(\.key) == ["title", "source"])

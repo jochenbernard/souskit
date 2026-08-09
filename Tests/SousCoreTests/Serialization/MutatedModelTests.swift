@@ -33,9 +33,9 @@ struct MutatedModelTests {
         #expect(value.reRead().timers.isEmpty)
     }
 
-    @Test(arguments: ["", " sauce", "\tsauce", "a\nb", "sauce\n", "a\n\nb"])
+    @Test(arguments: ["", " bechamel", "\tbechamel", "a\nb", "bechamel\n", "a\n\nb"])
     func writesAReferenceTargetThatNoLongerReadsBackAsOne(target: String) throws {
-        var value = Recipe.read("Layer the >sauce> in a dish.")
+        var value = Recipe.read("Layer the >bechamel> in a dish.")
         var reference = try #require(value.references.first)
         reference.target = target
         value.groups[0].steps[0].segments[1] = .reference(reference)
@@ -53,19 +53,19 @@ struct MutatedModelTests {
         #expect(value.reRead().ingredients.map(\.name) == ["salt"])
     }
 
-    @Test(arguments: [" sauce", "sauce "])
+    @Test(arguments: [" bechamel", "bechamel "])
     func writesAReferenceTargetTheFenceBeforeItLeavesTrimmed(target: String) throws {
-        var value = Recipe.read("Layer the >{2 g} sauce> in a dish.")
+        var value = Recipe.read("Layer the >{2 g} bechamel> in a dish.")
         var reference = try #require(value.references.first)
         reference.target = target
         value.groups[0].steps[0].segments[1] = .reference(reference)
 
-        #expect(value.reRead().references.map(\.target) == ["sauce"])
+        #expect(value.reRead().references.map(\.target) == ["bechamel"])
     }
 
-    @Test(arguments: ["sa uce", "sauces/red"])
+    @Test(arguments: ["bech amel", "sauces/rouille"])
     func writesAReferenceTargetThatStillReadsBack(target: String) throws {
-        var value = Recipe.read("Layer the >sauce> in a dish.")
+        var value = Recipe.read("Layer the >bechamel> in a dish.")
         var reference = try #require(value.references.first)
         reference.target = target
         value.groups[0].steps[0].segments[1] = .reference(reference)
@@ -119,11 +119,11 @@ struct MutatedModelTests {
 
     @Test(arguments: [
         (name: "", groups: [nil], steps: ["## \nBrown the beef."]),
-        (name: "Sauce\nMore", groups: ["Sauce"], steps: ["More\nBrown the beef."]),
-        (name: "Sauce\n## Other", groups: ["Sauce", "Other"], steps: ["Brown the beef."]),
-        (name: " Sauce", groups: ["Sauce"], steps: ["Brown the beef."]),
-        (name: "Sauce ", groups: ["Sauce"], steps: ["Brown the beef."]),
-        (name: "\tSauce", groups: ["Sauce"], steps: ["Brown the beef."]),
+        (name: "Filling\nMore", groups: ["Filling"], steps: ["More\nBrown the beef."]),
+        (name: "Filling\n## Other", groups: ["Filling", "Other"], steps: ["Brown the beef."]),
+        (name: " Filling", groups: ["Filling"], steps: ["Brown the beef."]),
+        (name: "Filling ", groups: ["Filling"], steps: ["Brown the beef."]),
+        (name: "\tFilling", groups: ["Filling"], steps: ["Brown the beef."]),
         (name: " ", groups: [nil], steps: ["##  \nBrown the beef."])
     ])
     func writesAGroupNameThatNoLongerReadsBackAsOne(
@@ -131,7 +131,7 @@ struct MutatedModelTests {
         groups: [String?],
         steps: [String]
     ) {
-        var value = Recipe.read("## Sauce\nBrown the beef.")
+        var value = Recipe.read("## Filling\nBrown the beef.")
         value.groups[0].name = name
 
         let written = value.reRead()
@@ -139,9 +139,9 @@ struct MutatedModelTests {
         #expect(written.steps.map(\.text) == steps)
     }
 
-    @Test(arguments: ["Rich Sauce", "sauces/red", "@salt@", "a  b"])
+    @Test(arguments: ["Rich Filling", "sauces/rouille", "@salt@", "a  b"])
     func writesAGroupNameThatStillReadsBack(name: String) {
-        var value = Recipe.read("## Sauce\nBrown the beef.")
+        var value = Recipe.read("## Filling\nBrown the beef.")
         value.groups[0].name = name
 
         #expect(value.reRead().groups.map(\.name) == [name])
@@ -149,10 +149,10 @@ struct MutatedModelTests {
 
     @Test
     func writesAnEmptyDefaultGroupAsNothing() {
-        var value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown the beef.")
+        var value = Recipe.read("Warm the oven.\n\n## Filling\nBrown the beef.")
         value.groups[0].steps = []
 
-        #expect(value.serialized() == "## Sauce\nBrown the beef.")
+        #expect(value.serialized() == "## Filling\nBrown the beef.")
     }
 
     @Test

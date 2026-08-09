@@ -23,8 +23,8 @@ struct ReadingRulesTests {
 
     @Test
     func opensACookwareSpanAtTheStartOfALine() throws {
-        let step = try #require(Recipe.read("#large pot# of salted water.").firstStep)
-        #expect(step.cookware.map(\.name) == ["large pot"])
+        let step = try #require(Recipe.read("#stockpot# of salted water.").firstStep)
+        #expect(step.cookware.map(\.name) == ["stockpot"])
     }
 
     @Test(arguments: [
@@ -58,7 +58,7 @@ struct ReadingRulesTests {
         "Simmer ~40 min gently.",
         "Fry @garlic until fragrant.",
         "Use a #pan to fry the eggs.",
-        "Cook @{200 g pasta@ now."
+        "Sift @{200 g flour@ now."
     ])
     func recoversFromAnUnclosedSpan(source: String) throws {
         let parsed = SousParser().parseRecipe(source)
@@ -86,12 +86,12 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotTreatALineBeginningWithADoubleHashAsCookware() throws {
-        let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
+        let parsed = SousParser().parseRecipe("## Filling\nBrown the beef.")
 
         let step = try #require(parsed.value.steps.first)
         #expect(step.cookware.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
-        #expect(parsed.value.serialized() == "## Sauce\nBrown the beef.")
+        #expect(parsed.value.serialized() == "## Filling\nBrown the beef.")
     }
 
     @Test
@@ -107,7 +107,7 @@ struct ReadingRulesTests {
 
     @Test(arguments: [
         "---\nnutrition:\n  calories: 3840 kcal\n---",
-        "---\ntags:\n  - italian\n---"
+        "---\ntags:\n  - french\n---"
     ])
     func preservesConstructsFromLaterVersions(source: String) {
         #expect(Recipe.read(source).serialized() == source)
@@ -136,19 +136,19 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotCloseASpanAcrossALineBreak() {
-        let parsed = SousParser().parseRecipe("Add @baby\nspinach@ to the pan.")
+        let parsed = SousParser().parseRecipe("Add @pearl\nonions@ to the pan.")
 
         #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Add @baby\nspinach@ to the pan."])
+        #expect(parsed.value.steps.map(\.text) == ["Add @pearl\nonions@ to the pan."])
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
 
     @Test
     func doesNotCloseAnAmountFenceAcrossALineBreak() {
-        let parsed = SousParser().parseRecipe("Add @{200 g\npasta} water@.")
+        let parsed = SousParser().parseRecipe("Add @{200 g\nflour} butter@.")
 
         #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g\npasta} water@."])
+        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g\nflour} butter@."])
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan, .unclosedSpan])
     }
 
@@ -157,7 +157,7 @@ struct ReadingRulesTests {
         let source = """
         Add @garlic
 
-        spinach@ to the pan.
+        shallots@ to the pan.
         """
 
         let parsed = SousParser().parseRecipe(source)
@@ -171,22 +171,22 @@ struct ReadingRulesTests {
         let source = """
         Add @{200 g
 
-        pasta} water@.
+        flour} butter@.
         """
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g", "pasta} water@."])
+        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g", "flour} butter@."])
         #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unclosedSpan }))
     }
 
     @Test
     func recoversFromAnUnclosedAmountFenceWithNoClosingSigil() throws {
-        let parsed = SousParser().parseRecipe("Cook @{200 g pasta")
+        let parsed = SousParser().parseRecipe("Sift @{200 g flour")
 
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.isEmpty)
-        #expect(step.text == "Cook @{200 g pasta")
+        #expect(step.text == "Sift @{200 g flour")
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
     }
 
@@ -239,7 +239,7 @@ struct ReadingRulesTests {
 
     @Test(arguments: [
         "Heat to \\>200C, then cool to \\>50C before adding @salt@.",
-        "Layer the \\>{300 g} bolognese\\> in a dish.",
+        "Layer the \\>{300 g} bechamel\\> in a dish.",
         "Reduce by \\>half."
     ])
     func writesAProseReferenceSigilBackEscaped(source: String) {
@@ -253,9 +253,9 @@ struct ReadingRulesTests {
 
     @Test
     func dropsAnEscapeTheProseDoesNotNeed() {
-        let written = Recipe.read("Spread the \\>sauce\\> on top.").serialized()
+        let written = Recipe.read("Spread the \\>bechamel\\> on top.").serialized()
 
-        #expect(written == "Spread the \\>sauce> on top.")
+        #expect(written == "Spread the \\>bechamel> on top.")
     }
 
     @Test

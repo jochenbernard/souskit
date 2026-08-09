@@ -44,7 +44,7 @@ struct SourceLocationTests {
 
     @Test
     func coversTheWholeSpanWhenAnAmountFenceIsUnclosed() throws {
-        let parsed = SousParser().parseRecipe("Cook @{200 g pasta@ now.")
+        let parsed = SousParser().parseRecipe("Sift @{200 g flour@ now.")
 
         let range = try #require(parsed.diagnostics.first?.range)
         #expect(range.start.offset == 5)

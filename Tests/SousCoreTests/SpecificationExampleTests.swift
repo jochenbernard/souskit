@@ -19,32 +19,32 @@ struct SpecificationExampleTests {
     func readsTheIntroductoryRecipe() {
         let source = """
         ---
-        title: Tomato Basil Soup
+        title: Soupe a l'Oignon
         servings: 4
         ---
 
-        Warm @{2 tbsp} olive oil@ in a #large pot# and soften @{1} onion@ with
-        @{2 cloves} garlic@ for ~5 min~. Add @{800 g} chopped tomatoes@ and
-        @{500 ml} vegetable stock@, then simmer for ~20 min~.
+        Melt @{50 g} butter@ in a #stockpot# and soften @{1 kg} onions@ with
+        @{2 cloves} garlic@ for ~25 min~. Add @{200 ml} white wine@ and
+        @{1 l} beef stock@, then simmer for ~20 min~.
 
-        Blend until smooth, stir through a handful of @basil@, and season with
+        Ladle into bowls, scatter over grated @gruyere@, and season with
         @salt@:staple and @black pepper@:staple.
         """
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        #expect(recipe.metadata.title == "Tomato Basil Soup")
+        #expect(recipe.metadata.title == "Soupe a l'Oignon")
         #expect(recipe.metadata.servings == 4)
         #expect(recipe.steps.count == 2)
         #expect(recipe.ingredients.map(\.name) == [
-            "olive oil", "onion", "garlic", "chopped tomatoes", "vegetable stock",
-            "basil", "salt", "black pepper"
+            "butter", "onions", "garlic", "white wine", "beef stock",
+            "gruyere", "salt", "black pepper"
         ])
         #expect(recipe.ingredients.map({ $0.amount?.text }) == [
-            "2 tbsp", "1", "2 cloves", "800 g", "500 ml", nil, nil, nil
+            "50 g", "1 kg", "2 cloves", "200 ml", "1 l", nil, nil, nil
         ])
-        #expect(recipe.cookware.map(\.name) == ["large pot"])
-        #expect(recipe.timers.map(\.text) == ["5 min", "20 min"])
+        #expect(recipe.cookware.map(\.name) == ["stockpot"])
+        #expect(recipe.timers.map(\.text) == ["25 min", "20 min"])
         #expect(recipe.timers.allSatisfy({ $0.kind == .precise }))
         #expect(recipe.ingredients.suffix(2).map(\.flags.isStaple) == [true, true])
         #expect(parsed.diagnostics.isEmpty)
@@ -55,25 +55,25 @@ struct SpecificationExampleTests {
     func readsTheIngredientsPageRecipe() throws {
         let source = """
         ---
-        title: Garlic Butter Pasta
+        title: Sole Meuniere
         servings: 2
         ---
 
-        Bring a #large pot# of salted water to a boil and cook @{200 g} spaghetti@.
-        Melt @{30 g} butter@ in a #pan#, fry @{2 cloves} garlic@, and add @chili flakes@?.
-        Toss the pasta, season with @salt@:staple, and finish with grated @parmesan@.
+        Dust @{50 g} flour@ over a plate and season it well.
+        Melt @{80 g} butter@ in a #frying pan#, fry @{2} sole fillets@, and add @lemon@?.
+        Lift them out with a #fish slice#, season with @salt@:staple, and scatter over @parsley@.
         """
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
         #expect(recipe.ingredients.map(\.name)
-            == ["spaghetti", "butter", "garlic", "chili flakes", "salt", "parmesan"])
-        #expect(recipe.cookware.map(\.name) == ["large pot", "pan"])
+            == ["flour", "butter", "sole fillets", "lemon", "salt", "parsley"])
+        #expect(recipe.cookware.map(\.name) == ["frying pan", "fish slice"])
         #expect(recipe.steps.count == 1)
 
-        let spaghetti = try #require(recipe.ingredients.first?.amount)
-        #expect(spaghetti.kind.preciseQuantity?.value == 200)
-        #expect(spaghetti.unit == "g")
+        let flour = try #require(recipe.ingredients.first?.amount)
+        #expect(flour.kind.preciseQuantity?.value == 50)
+        #expect(flour.unit == "g")
 
         #expect(recipe.ingredients.map(\.flags.isOptional) == [false, false, false, true, false, false])
         #expect(recipe.ingredients.map(\.flags.isStaple) == [false, false, false, false, true, false])
@@ -82,42 +82,42 @@ struct SpecificationExampleTests {
     }
 
     @Test
-    func readsTheHerbOmeletteExample() {
+    func readsTheQuicheLorraineExample() {
         let source = """
         ---
-        title: Herb Omelette
+        title: Quiche Lorraine
         language: en
         version: 1.0
-        servings: 1
-        prep-time: 5 min
-        cook-time: 5 min
-        tags: [breakfast, quick, vegetarian]
-        diet: [vegetarian]
+        servings: 6
+        prep-time: 25 min
+        cook-time: 35 min
+        tags: [lunch, classic, french]
+        allergens: [gluten, dairy]
         ---
 
         Whisk @{3} eggs@ with @salt@:staple and @black pepper@:staple until just combined.
 
-        Melt @{15 g} butter@ in a #non-stick pan# over medium heat. Pour in the eggs and
-        cook ~2-3 min~, drawing the edges in, until almost set.
+        Fry @{150 g} lardons@ in a #frying pan# over medium heat, then stir them through
+        @{200 ml} cream@ and the eggs, resting the mixture ~2-3 min~.
 
-        Scatter over chopped @{2 tbsp} chives@ and grated @cheese@?, fold, and serve.
+        Pour into the pastry case, scatter over grated @gruyere@?, and bake until just set.
         """
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        #expect(recipe.metadata.title == "Herb Omelette")
-        #expect(recipe.metadata.servings == 1)
+        #expect(recipe.metadata.title == "Quiche Lorraine")
+        #expect(recipe.metadata.servings == 6)
         #expect(recipe.steps.count == 3)
         #expect(recipe.ingredients.map(\.name)
-            == ["eggs", "salt", "black pepper", "butter", "chives", "cheese"])
-        #expect(recipe.cookware.map(\.name) == ["non-stick pan"])
+            == ["eggs", "salt", "black pepper", "lardons", "cream", "gruyere"])
+        #expect(recipe.cookware.map(\.name) == ["frying pan"])
         #expect(recipe.timers.map(\.kind) == [.range])
         #expect(recipe.ingredients.last?.flags.isOptional == true)
 
         let staples = recipe.ingredients.filter(\.flags.isStaple)
         #expect(staples.map(\.name) == ["salt", "black pepper"])
 
-        #expect(recipe.metadata["prep-time"] == "5 min")
+        #expect(recipe.metadata["prep-time"] == "25 min")
         #expect(parsed.diagnostics.isEmpty)
         #expect(recipe.serialized() == source)
     }
@@ -125,7 +125,7 @@ struct SpecificationExampleTests {
     @Test
     func readsTheTimersPageExample() {
         let source = """
-        Bring the dough together and refrigerate ~overnight~ (or up to ~2 days~).
+        Bring the brioche dough together and refrigerate ~overnight~ (or up to ~2 days~).
         The next day, prove until puffy, about ~1-2 h~, then bake for ~20-25 min~.
         """
 
@@ -142,18 +142,18 @@ struct SpecificationExampleTests {
     func preservesEveryFieldOfTheFullHeaderExample() {
         let source = """
         ---
-        title: Vegetable Lasagna
+        title: Gratin Dauphinois
         language: en
         version: 1.0
         servings: 6
         yield: 3.2 kg
-        tags: [comfort food, italian, make-ahead]
+        tags: [comfort food, french, make-ahead]
         diet: [vegetarian]
-        allergens: [gluten, dairy]
-        source: https://example.com/veg-lasagna
+        allergens: [dairy]
+        source: https://example.com/gratin-dauphinois
         author: Jane Doe
         license: CC-BY-4.0
-        image: images/lasagna.jpg
+        image: images/gratin.jpg
         prep-time: 40 min
         cook-time: 45 min
         make-ahead: best assembled a day ahead and baked from cold
@@ -165,12 +165,12 @@ struct SpecificationExampleTests {
 
         let parsed = SousParser().parseRecipe(source)
         let metadata = parsed.value.metadata
-        #expect(metadata.title == "Vegetable Lasagna")
+        #expect(metadata.title == "Gratin Dauphinois")
         #expect(metadata.language == "en")
         #expect(metadata.version == "1.0")
         #expect(metadata.servings == 6)
-        #expect(metadata.tags == ["comfort food", "italian", "make-ahead"])
-        #expect(metadata.source == "https://example.com/veg-lasagna")
+        #expect(metadata.tags == ["comfort food", "french", "make-ahead"])
+        #expect(metadata.source == "https://example.com/gratin-dauphinois")
 
         #expect(metadata.yields.map(\.text) == ["3.2 kg"])
 
@@ -186,9 +186,9 @@ struct SpecificationExampleTests {
     }
 
     @Test(arguments: [
-        "Toast the bread and spread it with butter.",
-        "---\ntitle: Buttered Toast\n---",
-        "---\ntitle: Buttered Toast\nservings: 1\n---\n\nToast @{2 slices} bread@ until golden."
+        "Toast the baguette and spread it with butter.",
+        "---\ntitle: Tartine Beurree\n---",
+        "---\ntitle: Tartine Beurree\nservings: 1\n---\n\nToast @{2 slices} baguette@ until golden."
     ])
     func readsEverySmallestRecipe(source: String) {
         let parsed = SousParser().parseRecipe(source)
@@ -201,49 +201,50 @@ struct SpecificationExampleTests {
     func readsTheGroupsExample() throws {
         let source = """
         ---
-        title: Berry Crumble
+        title: Tarte Tatin
         servings: 6
-        yield: 1 dish
+        yield: 1 tart
         prep-time: 20 min
-        cook-time: 35 min
-        tags: [dessert, baking]
+        cook-time: 40 min
+        tags: [dessert, french]
         allergens: [gluten, dairy]
         ---
 
-        ## Filling
-        Toss @{600 g} mixed berries@ with @{50 g} sugar@ and @{1 tbsp} cornflour@ in a #bowl#.
+        ## Caramel
+        Melt @{150 g} caster sugar@ with @{100 g} butter@ and pack in @{1.2 kg} apples@
+        in an #ovenproof skillet#.
 
-        ## Crumble
-        Rub cold @{100 g} butter@ into @{150 g} flour@ until sandy, then stir through
-        @{75 g} sugar@ and @{50 g} rolled oats@.
+        ## Pastry
+        Roll @{320 g} puff pastry@ into a round, dust it with @{20 g} flour@, brush it
+        with @{1} egg@, and add a pinch of @salt@.
 
         ## Assemble
-        Spread the >filling> into a #baking dish#, scatter the >crumble> over the top, and
-        bake at 190C for ~35-40 min~ until golden. Rest ~10 min~ before serving.
+        Set the >caramel> aside to cool, lay the >pastry> over it, and bake at 190C for
+        ~35-40 min~ until golden. Rest ~10 min~ on a #wire rack# before turning out.
         """
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        #expect(recipe.metadata.title == "Berry Crumble")
+        #expect(recipe.metadata.title == "Tarte Tatin")
         #expect(recipe.metadata.servings == 6)
         #expect(recipe.ingredients.map(\.name) == [
-            "mixed berries", "sugar", "cornflour", "butter", "flour", "sugar", "rolled oats"
+            "caster sugar", "butter", "apples", "puff pastry", "flour", "egg", "salt"
         ])
-        #expect(recipe.cookware.map(\.name) == ["bowl", "baking dish"])
+        #expect(recipe.cookware.map(\.name) == ["ovenproof skillet", "wire rack"])
         #expect(recipe.timers.map(\.text) == ["35-40 min", "10 min"])
         #expect(recipe.timers.map(\.kind) == [.range, .precise])
-        #expect(recipe.metadata.yields.map(\.text) == ["1 dish"])
+        #expect(recipe.metadata.yields.map(\.text) == ["1 tart"])
 
-        #expect(recipe.groups.map(\.name) == ["Filling", "Crumble", "Assemble"])
+        #expect(recipe.groups.map(\.name) == ["Caramel", "Pastry", "Assemble"])
         #expect(recipe.groups.map({ $0.ingredients.map(\.name) }) == [
-            ["mixed berries", "sugar", "cornflour"],
-            ["butter", "flour", "sugar", "rolled oats"],
+            ["caster sugar", "butter", "apples"],
+            ["puff pastry", "flour", "egg", "salt"],
             []
         ])
 
         let assemble = try #require(recipe.groups.last)
-        #expect(assemble.references.map(\.target) == ["filling", "crumble"])
-        #expect(recipe.dependencies(of: assemble).map(\.name) == ["Filling", "Crumble"])
+        #expect(assemble.references.map(\.target) == ["caramel", "pastry"])
+        #expect(recipe.dependencies(of: assemble).map(\.name) == ["Caramel", "Pastry"])
         #expect(recipe.validate().isEmpty)
 
         #expect(parsed.diagnostics.isEmpty)
@@ -255,28 +256,28 @@ struct SpecificationExampleTests {
     func readsTheReferenceExampleWrittenForALaterVersion() throws {
         let source = """
         ---
-        title: Baked Ziti
+        title: Croque Monsieur
         servings: 6
         prep-time: 25 min
         cook-time: 30 min
-        tags: [italian, pasta, comfort food]
+        tags: [french, lunch, classic]
         allergens: [gluten, dairy]
         ---
 
-        Cook @{500 g} ziti@ in a #large pot# of salted water for ~9-11 min~, then drain.
+        Toast @{12 slices} pain de mie@ in a #frying pan# for ~2-3 min~, then set them aside.
 
-        Grate @{250 g} mozzarella@ and stir the pasta through >{600 g} ragu> with half of it.
-        Tip into a #baking dish#, scatter over the rest, and bake at 200C for ~25-30 min~.
+        Grate @{250 g} gruyere@ and spread the slices with >{600 g} bechamel> and half of it.
+        Layer them in a #baking dish#, scatter over the rest, and grill for ~5-8 min~.
         """
 
         let parsed = SousParser().parseRecipe(source)
         let recipe = parsed.value
-        #expect(recipe.ingredients.map(\.name) == ["ziti", "mozzarella"])
-        #expect(recipe.cookware.map(\.name) == ["large pot", "baking dish"])
+        #expect(recipe.ingredients.map(\.name) == ["pain de mie", "gruyere"])
+        #expect(recipe.cookware.map(\.name) == ["frying pan", "baking dish"])
         #expect(recipe.timers.map(\.kind) == [.range, .range])
 
         let reference = try #require(recipe.references.first)
-        #expect(reference.target == "ragu")
+        #expect(reference.target == "bechamel")
         #expect(reference.amount?.text == "600 g")
 
         #expect(recipe.validate().map(\.kind) == [.unresolvedReference])

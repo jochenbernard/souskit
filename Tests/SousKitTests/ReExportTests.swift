@@ -6,14 +6,14 @@ import Testing
 struct ReExportTests {
     @Test
     func exposesTheParserAndParsedResult() {
-        let parsed: Parsed<Recipe> = SousParser().parseRecipe("Toast the bread.")
+        let parsed: Parsed<Recipe> = SousParser().parseRecipe("Toast the baguette.")
 
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
     func exposesTheModelAndDiagnosticTypes() {
-        let parsed = SousParser().parseRecipe("Toast the bread.")
+        let parsed = SousParser().parseRecipe("Toast the baguette.")
         let recipe: Recipe = parsed.value
         let metadata: Metadata = recipe.metadata
         let diagnostics: [Diagnostic] = parsed.diagnostics

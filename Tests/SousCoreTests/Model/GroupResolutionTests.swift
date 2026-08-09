@@ -4,36 +4,36 @@ import Testing
 @Suite("Group resolution")
 struct GroupResolutionTests {
     /// A recipe of three groups where the last consumes the other two.
-    private var pastaBake: Recipe {
+    private var quicheLorraine: Recipe {
         Recipe.read("""
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
 
-        ## Topping
-        Grate the cheese.
+        ## Filling
+        Whisk the eggs.
 
         ## Assemble
-        Layer the >sauce> in a dish and dot the >topping> over it.
+        Layer the >pastry> in a dish and dot the >filling> over it.
         """)
     }
 
     @Test
     func findsTheGroupANameRefersTo() {
-        #expect(pastaBake.group(named: "Sauce")?.steps.map(\.text) == ["Brown the beef."])
+        #expect(quicheLorraine.group(named: "Pastry")?.steps.map(\.text) == ["Rub in the butter."])
     }
 
-    @Test(arguments: ["sauce", "SAUCE", "  sauce  ", "the sauce", "of the sauce", "Sauce"])
+    @Test(arguments: ["pastry", "PASTRY", "  pastry  ", "the pastry", "of the pastry", "Pastry"])
     func matchesANameNormalized(name: String) {
-        #expect(pastaBake.group(named: name)?.name == "Sauce")
+        #expect(quicheLorraine.group(named: name)?.name == "Pastry")
     }
 
     @Test
     func matchesANameHoldingAPathSeparator() throws {
-        let value = Recipe.read("## sauces/red\nBrown it.\n\n## Assemble\nLayer the >sauces/red>.")
+        let value = Recipe.read("## sauces/rouille\nBlend it.\n\n## Assemble\nLayer the >sauces/rouille>.")
         let assemble = try #require(value.groups.last)
 
-        #expect(value.group(named: "sauces/red")?.name == "sauces/red")
-        #expect(value.dependencies(of: assemble).map(\.name) == ["sauces/red"])
+        #expect(value.group(named: "sauces/rouille")?.name == "sauces/rouille")
+        #expect(value.dependencies(of: assemble).map(\.name) == ["sauces/rouille"])
     }
 
     @Test
@@ -41,25 +41,25 @@ struct GroupResolutionTests {
         #expect(Recipe.read("## B\u{E9}chamel\nWhisk it.").group(named: "bechamel")?.name == "B\u{E9}chamel")
     }
 
-    @Test(arguments: ["Filling", "sauces/red", "sauce topping"])
+    @Test(arguments: ["Custard", "sauces/rouille", "pastry filling"])
     func findsNoGroupForANameNoHeadingStates(name: String) {
-        #expect(pastaBake.group(named: name) == nil)
+        #expect(quicheLorraine.group(named: name) == nil)
     }
 
     @Test
     func refersToTheDefaultGroupByNothing() {
-        let value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown the beef.")
+        let value = Recipe.read("Warm the oven.\n\n## Pastry\nRub in the butter.")
 
         #expect(value.group(named: "") == nil)
         #expect(value.group(named: "   ") == nil)
-        #expect(value.group(named: "Sauce")?.name == "Sauce")
+        #expect(value.group(named: "Pastry")?.name == "Pastry")
     }
 
     @Test
     func returnsTheFirstOfTwoGroupsThatShareAName() {
-        let value = Recipe.read("## Sauce\nBrown the beef.\n\n## sauce\nGrate the cheese.")
+        let value = Recipe.read("## Pastry\nRub in the butter.\n\n## pastry\nWhisk the eggs.")
 
-        #expect(value.group(named: "sauce")?.steps.map(\.text) == ["Brown the beef."])
+        #expect(value.group(named: "pastry")?.steps.map(\.text) == ["Rub in the butter."])
     }
 
     @Test
@@ -84,93 +84,93 @@ struct GroupResolutionTests {
 
     @Test
     func listsTheGroupsAGroupDependsOn() throws {
-        let value = pastaBake
+        let value = quicheLorraine
         let assemble = try #require(value.groups.last)
 
-        #expect(value.dependencies(of: assemble).map(\.name) == ["Sauce", "Topping"])
+        #expect(value.dependencies(of: assemble).map(\.name) == ["Pastry", "Filling"])
     }
 
     @Test
     func listsNoDependencyForAGroupThatConsumesNothing() throws {
-        let value = pastaBake
-        let sauce = try #require(value.groups.first)
+        let value = quicheLorraine
+        let pastry = try #require(value.groups.first)
 
-        #expect(value.dependencies(of: sauce).isEmpty)
+        #expect(value.dependencies(of: pastry).isEmpty)
     }
 
     @Test
     func listsEachGroupOnceHoweverOftenItIsConsumed() throws {
         let value = Recipe.read("""
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
 
         ## Assemble
-        Spread the >sauce>, then the pasta, then the rest of the >the sauce>.
+        Spread the >pastry>, then the lardons, then the rest of the >the pastry>.
         """)
         let assemble = try #require(value.groups.last)
 
-        #expect(value.dependencies(of: assemble).map(\.name) == ["Sauce"])
+        #expect(value.dependencies(of: assemble).map(\.name) == ["Pastry"])
     }
 
     @Test
     func listsDependenciesInTheOrderTheirReferencesAppear() throws {
         let value = Recipe.read("""
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
 
-        ## Topping
-        Grate the cheese.
+        ## Filling
+        Whisk the eggs.
 
         ## Assemble
-        Dot the >topping> over the >sauce>.
+        Dot the >filling> over the >pastry>.
         """)
         let assemble = try #require(value.groups.last)
 
-        #expect(value.dependencies(of: assemble).map(\.name) == ["Topping", "Sauce"])
+        #expect(value.dependencies(of: assemble).map(\.name) == ["Filling", "Pastry"])
     }
 
     @Test
     func dependsOnAGroupWrittenAfterIt() throws {
         let value = Recipe.read("""
         ## Assemble
-        Layer the >sauce> in a dish.
+        Layer the >pastry> in a dish.
 
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
         """)
         let assemble = try #require(value.groups.first)
 
-        #expect(value.dependencies(of: assemble).map(\.name) == ["Sauce"])
+        #expect(value.dependencies(of: assemble).map(\.name) == ["Pastry"])
     }
 
     @Test
     func leavesOutATargetThatNamesNoGroup() throws {
         let value = Recipe.read("""
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
 
         ## Assemble
-        Layer the >sauce> and the >bechamel> in a dish.
+        Layer the >pastry> and the >bechamel> in a dish.
         """)
         let assemble = try #require(value.groups.last)
 
-        #expect(value.dependencies(of: assemble).map(\.name) == ["Sauce"])
+        #expect(value.dependencies(of: assemble).map(\.name) == ["Pastry"])
     }
 
     @Test
     func listsAGroupThatConsumesItsOwnIntermediate() throws {
-        let value = Recipe.read("## Sauce\nStir the >sauce> again.")
-        let sauce = try #require(value.groups.first)
+        let value = Recipe.read("## Pastry\nStir the >pastry> again.")
+        let pastry = try #require(value.groups.first)
 
-        #expect(value.dependencies(of: sauce).map(\.name) == ["Sauce"])
+        #expect(value.dependencies(of: pastry).map(\.name) == ["Pastry"])
     }
 
     @Test
     func letsTheDefaultGroupDependOnANamedGroup() throws {
-        let value = Recipe.read("Layer the >sauce> in a dish.\n\n## Sauce\nBrown the beef.")
+        let value = Recipe.read("Layer the >pastry> in a dish.\n\n## Pastry\nRub in the butter.")
         let group = try #require(value.groups.first)
 
         #expect(group.name == nil)
-        #expect(value.dependencies(of: group).map(\.name) == ["Sauce"])
+        #expect(value.dependencies(of: group).map(\.name) == ["Pastry"])
     }
 }

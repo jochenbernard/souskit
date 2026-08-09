@@ -14,10 +14,10 @@ struct MetadataProjectionTests {
 
     @Test
     func derivesTheTagsFromTheEntries() {
-        var metadata = Metadata.read("tags: [italian]\ntags: [quick]")
+        var metadata = Metadata.read("tags: [french]\ntags: [quick]")
         metadata.entries.removeLast()
 
-        #expect(metadata.tags == ["italian"])
+        #expect(metadata.tags == ["french"])
     }
 
     @Test
@@ -30,23 +30,23 @@ struct MetadataProjectionTests {
 
     @Test
     func rendersTheEditedEntriesOnSerialization() {
-        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nToast.")
+        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nToast the baguette.")
         recipe.metadata.entries.removeLast()
 
         #expect(recipe.metadata.title == "First")
-        #expect(recipe.serialized() == "---\ntitle: First\n---\n\nToast.")
+        #expect(recipe.serialized() == "---\ntitle: First\n---\n\nToast the baguette.")
     }
 
     @Test
     func returnsNilFromTheSubscriptForAnAbsentKey() {
-        #expect(Metadata.read("title: Toast")["chef"] == nil)
+        #expect(Metadata.read("title: Tartine")["chef"] == nil)
     }
 
     @Test
     func returnsNilFromTheSubscriptForAListKey() {
-        let metadata = Metadata.read("tags: [italian]")
+        let metadata = Metadata.read("tags: [french]")
         #expect(metadata["tags"] == nil)
-        #expect(metadata.tags == ["italian"])
+        #expect(metadata.tags == ["french"])
     }
 
     @Test

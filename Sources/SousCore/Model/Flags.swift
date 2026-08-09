@@ -1,6 +1,6 @@
 /// The flags written after an ingredient or reference, such as `@salt@:staple`.
 ///
-/// A flag is written as `:` followed by its name, and flags chain: `@rosemary@?:staple`. The
+/// A flag is written as `:` followed by its name, and flags chain: `@thyme@?:staple`. The
 /// shorthand `?` is equivalent to `:optional`.
 public struct Flags: Equatable, Hashable, Sendable {
     /// Whether `:optional`, or its `?` shorthand, is set.

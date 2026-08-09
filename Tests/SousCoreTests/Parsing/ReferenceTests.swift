@@ -5,10 +5,10 @@ import Testing
 struct ReferenceTests {
     @Test
     func readsAReferenceBetweenPairedSigils() throws {
-        let parsed = SousParser().parseRecipe("Spread the >sauce> on top.")
+        let parsed = SousParser().parseRecipe("Spread the >bechamel> on top.")
 
         let reference = try #require(parsed.value.references.first)
-        #expect(reference.target == "sauce")
+        #expect(reference.target == "bechamel")
         #expect(reference.amount == nil)
         #expect(!reference.flags.isOptional)
         #expect(!reference.flags.isStaple)
@@ -19,17 +19,17 @@ struct ReferenceTests {
 
     @Test
     func readsAReferenceAsItsOwnSegment() throws {
-        let segments = try #require(Recipe.read("Spread the >sauce> on top.").steps.first?.segments)
+        let segments = try #require(Recipe.read("Spread the >bechamel> on top.").steps.first?.segments)
 
         #expect(segments.count == 3)
         #expect(segments.first?.proseText == "Spread the ")
-        #expect(segments.dropFirst().first?.referenceValue?.target == "sauce")
+        #expect(segments.dropFirst().first?.referenceValue?.target == "bechamel")
         #expect(segments.last?.proseText == " on top.")
     }
 
     @Test
     func opensAReferenceAtTheStartOfALine() {
-        #expect(Recipe.read(">sauce> goes in first.").references.map(\.target) == ["sauce"])
+        #expect(Recipe.read(">bechamel> goes in first.").references.map(\.target) == ["bechamel"])
     }
 
     @Test
@@ -50,14 +50,14 @@ struct ReferenceTests {
 
     @Test
     func recoversFromAnUnclosedReferenceSpan() {
-        let parsed = SousParser().parseRecipe("Spread the >sauce on top.")
+        let parsed = SousParser().parseRecipe("Spread the >bechamel on top.")
 
         #expect(parsed.value.references.isEmpty)
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
     }
 
-    @Test(arguments: ["Spread the >sauce\nlayer> on top.", "Spread the >sauce\n\nlayer> on top."])
+    @Test(arguments: ["Spread the >bechamel\nlayer> on top.", "Spread the >bechamel\n\nlayer> on top."])
     func doesNotCloseAReferenceAcrossALineBreak(source: String) {
         let parsed = SousParser().parseRecipe(source)
 
@@ -75,21 +75,23 @@ struct ReferenceTests {
 
     @Test
     func readsATargetHoldingAPathSeparator() throws {
-        #expect(try #require(Recipe.read("Spread the >sauces/red> on top.").firstReference).target == "sauces/red")
+        let reference = try #require(Recipe.read("Spread the >sauces/rouille> on top.").firstReference)
+
+        #expect(reference.target == "sauces/rouille")
     }
 
     @Test
     func contributesNoIngredient() {
-        let value = Recipe.read("## Sauce\nBrown @{500 g} minced beef@.\n\n## Assemble\nLayer the >sauce>.")
+        let value = Recipe.read("## Filling\nBrown @{500 g} beef@.\n\n## Assemble\nLayer the >filling>.")
 
-        #expect(value.ingredients.map(\.name) == ["minced beef"])
+        #expect(value.ingredients.map(\.name) == ["beef"])
     }
 
     @Test
     func readsTheConsumptionFence() throws {
-        let reference = try #require(Recipe.read("Layer the >{300 g} sauce> in a dish.").firstReference)
+        let reference = try #require(Recipe.read("Layer the >{300 g} bechamel> in a dish.").firstReference)
 
-        #expect(reference.target == "sauce")
+        #expect(reference.target == "bechamel")
         #expect(reference.amount?.text == "300 g")
         #expect(reference.amount?.kind.preciseQuantity?.value == 300)
         #expect(reference.amount?.unit == "g")
@@ -97,40 +99,40 @@ struct ReferenceTests {
 
     @Test
     func readsAFenceWithNoSeparatingSpace() throws {
-        #expect(try #require(Recipe.read("Layer the >{300 g}sauce> in a dish.").firstReference).target == "sauce")
+        #expect(try #require(Recipe.read("Layer the >{300 g}bechamel> in a dish.").firstReference).target == "bechamel")
     }
 
-    @Test(arguments: ["Layer the >{300 g}  sauce> in a dish.", "Layer the >{300 g} sauce > in a dish."])
+    @Test(arguments: ["Layer the >{300 g}  bechamel> in a dish.", "Layer the >{300 g} bechamel > in a dish."])
     func trimsTheWhitespaceAroundATarget(source: String) throws {
-        #expect(try #require(Recipe.read(source).firstReference).target == "sauce")
-        #expect(Recipe.read(source).serialized() == "Layer the >{300 g} sauce> in a dish.")
+        #expect(try #require(Recipe.read(source).firstReference).target == "bechamel")
+        #expect(Recipe.read(source).serialized() == "Layer the >{300 g} bechamel> in a dish.")
     }
 
     @Test
     func readsAFenceStatingNoQuantityAsImprecise() throws {
-        let reference = try #require(Recipe.read("Spread the >{half} sauce> over it.").firstReference)
+        let reference = try #require(Recipe.read("Spread the >{half} bechamel> over it.").firstReference)
 
-        #expect(reference.target == "sauce")
+        #expect(reference.target == "bechamel")
         #expect(reference.amount?.kind.impreciseText == "half")
     }
 
     @Test
     func readsTheFixedMarkerInAFence() throws {
-        let reference = try #require(Recipe.read("Spread the >{=300 g} sauce> over it.").firstReference)
+        let reference = try #require(Recipe.read("Spread the >{=300 g} bechamel> over it.").firstReference)
         #expect(reference.amount?.isFixed == true)
     }
 
     @Test
     func readsEverySigilInsideAFenceAsText() throws {
-        let reference = try #require(Recipe.read("Spread the >{>300 g} sauce> over it.").firstReference)
+        let reference = try #require(Recipe.read("Spread the >{>300 g} bechamel> over it.").firstReference)
 
-        #expect(reference.target == "sauce")
+        #expect(reference.target == "bechamel")
         #expect(reference.amount?.kind.impreciseText == ">300 g")
     }
 
     @Test
     func degradesAReferenceWhoseFenceNeverCloses() {
-        let parsed = SousParser().parseRecipe("Spread the >{300 g sauce> over it.")
+        let parsed = SousParser().parseRecipe("Spread the >{300 g bechamel> over it.")
 
         #expect(parsed.value.references.isEmpty)
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
@@ -138,15 +140,15 @@ struct ReferenceTests {
 
     @Test
     func readsTheShorthandFlagAfterAReference() throws {
-        let reference = try #require(Recipe.read("Serve with >chili-oil>? on the side.").firstReference)
+        let reference = try #require(Recipe.read("Serve with >beurre-blanc>? on the side.").firstReference)
 
-        #expect(reference.target == "chili-oil")
+        #expect(reference.target == "beurre-blanc")
         #expect(reference.flags.isOptional)
     }
 
     @Test
     func readsAChainOfNamedFlagsAfterAReference() throws {
-        let reference = try #require(Recipe.read("Serve with >chili-oil>:optional:staple now.").firstReference)
+        let reference = try #require(Recipe.read("Serve with >beurre-blanc>:optional:staple now.").firstReference)
 
         #expect(reference.flags.isOptional)
         #expect(reference.flags.isStaple)
@@ -154,7 +156,7 @@ struct ReferenceTests {
 
     @Test
     func preservesAnUnrecognizedFlagOnAReference() throws {
-        let parsed = SousParser().parseRecipe("Serve with >chili-oil>:homemade now.")
+        let parsed = SousParser().parseRecipe("Serve with >beurre-blanc>:homemade now.")
 
         #expect(try #require(parsed.value.references.first).flags.unrecognized == ["homemade"])
         #expect(parsed.diagnostics.isEmpty)
@@ -164,25 +166,25 @@ struct ReferenceTests {
     func listsItsReferencesOnTheStepTheGroupAndTheRecipe() throws {
         let value = Recipe.read("""
         ## Assemble
-        Layer the >sauce> in a dish.
+        Layer the >bechamel> in a dish.
 
         Dot the >topping> over it.
         """)
 
         let group = try #require(value.groups.first)
-        #expect(group.steps.map({ $0.references.map(\.target) }) == [["sauce"], ["topping"]])
-        #expect(group.references.map(\.target) == ["sauce", "topping"])
-        #expect(value.references.map(\.target) == ["sauce", "topping"])
+        #expect(group.steps.map({ $0.references.map(\.target) }) == [["bechamel"], ["topping"]])
+        #expect(group.references.map(\.target) == ["bechamel", "topping"])
+        #expect(value.references.map(\.target) == ["bechamel", "topping"])
     }
 
     @Test(arguments: [
-        "Spread the >sauce> on top.",
-        "Layer the >{300 g} bolognese> in a dish.",
-        "Spread the >{half} sauce> over it.",
-        "Serve with >chili-oil>? on the side.",
-        "Serve with >chili-oil>:staple? on the side.",
-        ">sauce> goes in first.",
-        "Spread the >sauces/red> on top."
+        "Spread the >bechamel> on top.",
+        "Layer the >{300 g} mirepoix> in a dish.",
+        "Spread the >{half} bechamel> over it.",
+        "Serve with >beurre-blanc>? on the side.",
+        "Serve with >beurre-blanc>:staple? on the side.",
+        ">bechamel> goes in first.",
+        "Spread the >sauces/rouille> on top."
     ])
     func writesAReferenceBackAsItWasRead(source: String) {
         #expect(Recipe.read(source).serialized() == source)
@@ -195,7 +197,7 @@ struct ReferenceTests {
 
     @Test
     func escapesProseThatWouldOpenAFlagAfterAReference() {
-        #expect(Recipe.read("Is the >sauce>\\? Yes.").serialized() == "Is the >sauce>\\? Yes.")
+        #expect(Recipe.read("Is the >bechamel>\\? Yes.").serialized() == "Is the >bechamel>\\? Yes.")
     }
 
     @Test

@@ -5,13 +5,13 @@ import Testing
 struct MetadataListTests {
     @Test
     func parsesAnInlineTagList() {
-        #expect(Metadata.read("tags: [italian, make-ahead]").tags == ["italian", "make-ahead"])
+        #expect(Metadata.read("tags: [french, make-ahead]").tags == ["french", "make-ahead"])
     }
 
     @Test
     func trimsWhitespaceAroundInlineListItems() {
-        let tags = Metadata.read("tags: [comfort food, italian, make-ahead]").tags
-        #expect(tags == ["comfort food", "italian", "make-ahead"])
+        let tags = Metadata.read("tags: [comfort food, french, make-ahead]").tags
+        #expect(tags == ["comfort food", "french", "make-ahead"])
     }
 
     @Test
@@ -21,26 +21,26 @@ struct MetadataListTests {
 
     @Test
     func readsAnUnbracketedListValueAsASingleItem() {
-        #expect(Metadata.read("tags: italian").tags == ["italian"])
+        #expect(Metadata.read("tags: french").tags == ["french"])
     }
 
     @Test(arguments: [
-        "tags: [italian, quick] ",
-        "tags:  [italian, quick]",
-        "tags: \t[italian, quick]\t"
+        "tags: [french, quick] ",
+        "tags:  [french, quick]",
+        "tags: \t[french, quick]\t"
     ])
     func readsAnInlineListWithSurroundingWhitespaceAsAList(header: String) {
-        #expect(Metadata.read(header).tags == ["italian", "quick"])
+        #expect(Metadata.read(header).tags == ["french", "quick"])
     }
 
     @Test
     func trimsWhitespaceAroundASingleLiteralItem() {
-        #expect(Metadata.read("tags: italian ").tags == ["italian"])
+        #expect(Metadata.read("tags: french ").tags == ["french"])
     }
 
     @Test
     func readsAnEscapedSeparatorAsPartOfAnItem() {
-        #expect(Metadata.read("tags: [comfort food\\, italian]").tags == ["comfort food, italian"])
+        #expect(Metadata.read("tags: [comfort food\\, french]").tags == ["comfort food, french"])
     }
 
     @Test
@@ -88,12 +88,12 @@ struct MetadataListTests {
 
     @Test
     func readsAnUnbracketedListValueHoldingACommaAsOneItem() {
-        #expect(Metadata.read("tags: comfort food, italian").tags == ["comfort food, italian"])
+        #expect(Metadata.read("tags: comfort food, french").tags == ["comfort food, french"])
     }
 
     @Test
     func readsAnUnterminatedBracketAsLiteralText() {
-        #expect(Metadata.read("tags: [italian").tags == ["[italian"])
+        #expect(Metadata.read("tags: [french").tags == ["[french"])
     }
 
     @Test
@@ -122,33 +122,33 @@ struct MetadataListTests {
 
     @Test
     func dropsEmptyItemsFromAnInlineList() {
-        #expect(Metadata.read("tags: [italian, , make-ahead,]").tags == ["italian", "make-ahead"])
+        #expect(Metadata.read("tags: [french, , make-ahead,]").tags == ["french", "make-ahead"])
     }
 
     @Test
     func warnsAboutARepeatedListKeyAndMergesItsItems() {
         let source = """
         ---
-        tags: [italian]
+        tags: [french]
         tags: [quick]
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.diagnostics.contains(where: { $0.kind == .repeatedListKey }))
-        #expect(parsed.value.metadata.tags == ["italian", "quick"])
+        #expect(parsed.value.metadata.tags == ["french", "quick"])
     }
 
     @Test
     func mergesItemsAcrossRepeatedListKeysWrittenInDifferentForms() {
-        #expect(Metadata.read("tags: italian\ntags: [quick, make-ahead]").tags == ["italian", "quick", "make-ahead"])
+        #expect(Metadata.read("tags: french\ntags: [quick, make-ahead]").tags == ["french", "quick", "make-ahead"])
     }
 
     @Test
     func mergesItemsAcrossRepeatedListKeysInDocumentOrder() {
         #expect(
-            Metadata.read("tags: [comfort food, italian]\ntags: [make-ahead]").tags
-                == ["comfort food", "italian", "make-ahead"]
+            Metadata.read("tags: [comfort food, french]\ntags: [make-ahead]").tags
+                == ["comfort food", "french", "make-ahead"]
         )
     }
 }

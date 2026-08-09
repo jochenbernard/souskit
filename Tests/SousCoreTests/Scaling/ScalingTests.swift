@@ -22,7 +22,7 @@ struct ScalingTests {
 
     @Test
     func multipliesBothEndsOfARange() throws {
-        let amount = try SousParser().amount(in: "Add @{1-2 tbsp} oil@.", scaledBy: 2.0)
+        let amount = try SousParser().amount(in: "Add @{1-2 tbsp} olive oil@.", scaledBy: 2.0)
 
         #expect(amount.kind.rangeQuantities?.low.value == 2.0)
         #expect(amount.kind.rangeQuantities?.high.value == 4.0)
@@ -87,34 +87,34 @@ struct ScalingTests {
 
     @Test
     func scalesEveryEntryOfARepeatedField() throws {
-        let source = "---\nservings: 4\nservings: 6\nyield: 800 g\nyield: 12 muffins\n---"
+        let source = "---\nservings: 4\nservings: 6\nyield: 800 g\nyield: 12 madeleines\n---"
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.servings == 12.0)
         #expect(recipe.metadata.entries.map(\.value) == [
-            .scalar("8"), .scalar("12"), .list(["1600 g"]), .list(["24 muffins"])
+            .scalar("8"), .scalar("12"), .list(["1600 g"]), .list(["24 madeleines"])
         ])
     }
 
     @Test
     func leavesEveryFieldButTheYieldAndTheServingsAlone() throws {
-        let source = "---\nversion: 1.0\ntitle: 3 Bean Stew\ncalories: 640\ntags: [4 star]\n---"
+        let source = "---\nversion: 1.0\ntitle: 3 Onion Gratin\ncalories: 640\ntags: [4 star]\n---"
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.version == "1.0")
-        #expect(recipe.metadata.title == "3 Bean Stew")
+        #expect(recipe.metadata.title == "3 Onion Gratin")
         #expect(recipe.metadata["calories"] == "640")
         #expect(recipe.metadata.tags == ["4 star"])
     }
 
     @Test
     func leavesAHeaderValueWithNoQuantityAlone() throws {
-        let source = "---\nservings: six\nyield: plenty\ntitle: Stew\n---"
+        let source = "---\nservings: six\nyield: plenty\ntitle: Gratin\n---"
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata["servings"] == "six")
         #expect(recipe.metadata.yields.map(\.text) == ["plenty"])
-        #expect(recipe.metadata.title == "Stew")
+        #expect(recipe.metadata.title == "Gratin")
     }
 
     @Test
@@ -127,7 +127,7 @@ struct ScalingTests {
 
     @Test
     func keepsTheTextOfAStepItDidNotChange() throws {
-        let source = "Toast the @bread@  slowly with @{=1 tsp} butter@."
+        let source = "Toast the @baguette@  slowly with @{=1 tsp} butter@."
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == source)
@@ -135,18 +135,18 @@ struct ScalingTests {
 
     @Test
     func reEscapesTheProseOfARewrittenStep() throws {
-        let source = "Add @{200 g} water@ then wait \\~5\\~."
+        let source = "Add @{200 g} cream@ then wait \\~5\\~."
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
-        #expect(recipe.steps.first?.text == "Add @{400 g} water@ then wait \\~5\\~.")
+        #expect(recipe.steps.first?.text == "Add @{400 g} cream@ then wait \\~5\\~.")
     }
 
     @Test
     func keepsTheFlagsOfARewrittenStep() throws {
-        let source = "Mix @{200 g} flour@:staple? into a #bowl#."
+        let source = "Mix @{200 g} flour@:staple? into a #mixing bowl#."
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
-        #expect(recipe.steps.first?.text == "Mix @{400 g} flour@:staple? into a #bowl#.")
+        #expect(recipe.steps.first?.text == "Mix @{400 g} flour@:staple? into a #mixing bowl#.")
         let ingredient = try #require(recipe.ingredients.first)
         #expect(ingredient.flags.isStaple)
         #expect(ingredient.flags.isOptional)
@@ -166,29 +166,29 @@ struct ScalingTests {
     @Test
     func keepsTheGroupsOfAScaledRecipe() throws {
         let source = """
-        ## Sauce
+        ## Pastry
         Mix @{200 g} flour@.
 
-        ## Topping
-        Grate @{50 g} parmesan@.
+        ## Filling
+        Grate @{50 g} gruyere@.
         """
 
         let scaled = try Recipe.read(source).scaled(by: 2.0)
-        #expect(scaled.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(scaled.groups.map(\.name) == ["Pastry", "Filling"])
         #expect(scaled.serialized() == """
-        ## Sauce
+        ## Pastry
         Mix @{400 g} flour@.
 
-        ## Topping
-        Grate @{100 g} parmesan@.
+        ## Filling
+        Grate @{100 g} gruyere@.
         """)
     }
 
     @Test(arguments: [
-        (source: "Layer the >{300 g} sauce> in a dish.", text: "Layer the >{600 g} sauce> in a dish."),
-        (source: "Layer the >{=300 g} sauce> in a dish.", text: "Layer the >{=300 g} sauce> in a dish."),
-        (source: "Layer the >{half} sauce> in a dish.", text: "Layer the >{half} sauce> in a dish."),
-        (source: "Layer the >sauce> in a dish.", text: "Layer the >sauce> in a dish.")
+        (source: "Layer the >{300 g} bechamel> in a dish.", text: "Layer the >{600 g} bechamel> in a dish."),
+        (source: "Layer the >{=300 g} bechamel> in a dish.", text: "Layer the >{=300 g} bechamel> in a dish."),
+        (source: "Layer the >{half} bechamel> in a dish.", text: "Layer the >{half} bechamel> in a dish."),
+        (source: "Layer the >bechamel> in a dish.", text: "Layer the >bechamel> in a dish.")
     ])
     func scalesTheConsumptionFenceOfAReference(source: String, text: String) throws {
         #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == text)
@@ -202,7 +202,7 @@ struct ScalingTests {
         yield: [6 servings, 3.2 kg]
         ---
 
-        Mix @{200g} flour@, @{1-2 tbsp} oil@, and @{=1 tsp} salt@ for ~40 min~.
+        Mix @{200g} flour@, @{1-2 tbsp} olive oil@, and @{=1 tsp} salt@ for ~40 min~.
         """
 
         let recipe = Recipe.read(source)

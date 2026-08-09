@@ -129,9 +129,9 @@ struct TimerTests {
 
     @Test
     func startsANewPartOnlyAtAWhitespaceSeparatedNumber() throws {
-        let timer = try #require(Recipe.read("Chill ~2 8oz jars~ before filling.").firstTimer)
+        let timer = try #require(Recipe.read("Chill ~2 8oz ramekins~ before filling.").firstTimer)
         #expect(timer.kind == .compound)
-        #expect(timer.components.map(\.unit) == [nil, "oz jars"])
+        #expect(timer.components.map(\.unit) == [nil, "oz ramekins"])
     }
 
     @Test

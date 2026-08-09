@@ -6,7 +6,7 @@ struct NormalizationTests {
     @Test(arguments: [
         (text: "Bechamel", normalized: "bechamel"),
         (text: "BECHAMEL", normalized: "bechamel"),
-        (text: "Rich Tomato Sauce", normalized: "rich tomato sauce")
+        (text: "Sweet Shortcrust Pastry", normalized: "sweet shortcrust pastry")
     ])
     func foldsCapitalization(text: String, normalized: String) {
         #expect(Normalization.normalized(text) == normalized)
@@ -16,7 +16,7 @@ struct NormalizationTests {
         (text: "B\u{E9}chamel", normalized: "bechamel"),
         (text: "B\u{C9}CHAMEL", normalized: "bechamel"),
         (text: "Cr\u{E8}me Br\u{FB}l\u{E9}e", normalized: "creme brulee"),
-        (text: "Jalape\u{F1}o", normalized: "jalapeno"),
+        (text: "Ni\u{E7}oise", normalized: "nicoise"),
         (text: "Be\u{301}chamel", normalized: "bechamel")
     ])
     func foldsAccents(text: String, normalized: String) {
@@ -24,8 +24,8 @@ struct NormalizationTests {
     }
 
     @Test(arguments: [
-        (text: "  Sauce  ", normalized: "sauce"),
-        (text: "\tSauce\n", normalized: "sauce"),
+        (text: "  Bechamel  ", normalized: "bechamel"),
+        (text: "\tBechamel\n", normalized: "bechamel"),
         (text: "   ", normalized: ""),
         (text: "", normalized: "")
     ])
@@ -35,14 +35,14 @@ struct NormalizationTests {
 
     @Test
     func keepsTheWhitespaceWithinAName() {
-        #expect(Normalization.normalized("baby  spinach") == "baby  spinach")
-        #expect(Normalization.normalized("baby spinach") != Normalization.normalized("baby  spinach"))
+        #expect(Normalization.normalized("pearl  onions") == "pearl  onions")
+        #expect(Normalization.normalized("pearl onions") != Normalization.normalized("pearl  onions"))
     }
 
     @Test
     func dropsTheWhitespaceAfterAConnectiveAlongWithIt() {
-        #expect(Normalization.normalized("of  sauce") == "sauce")
-        #expect(Normalization.normalized("of  sauce") == Normalization.normalized("of sauce"))
+        #expect(Normalization.normalized("of  bechamel") == "bechamel")
+        #expect(Normalization.normalized("of  bechamel") == Normalization.normalized("of bechamel"))
     }
 
     @Test
@@ -51,14 +51,14 @@ struct NormalizationTests {
     }
 
     @Test(arguments: [
-        (text: "of parmesan", normalized: "parmesan"),
-        (text: "the sauce", normalized: "sauce"),
+        (text: "of gruyere", normalized: "gruyere"),
+        (text: "the bechamel", normalized: "bechamel"),
         (text: "a pinch", normalized: "pinch"),
         (text: "an onion", normalized: "onion"),
-        (text: "of the sauce", normalized: "sauce"),
-        (text: "of  the  sauce", normalized: "sauce"),
-        (text: "Of The Sauce", normalized: "sauce"),
-        (text: "of\tthe\tsauce", normalized: "sauce")
+        (text: "of the bechamel", normalized: "bechamel"),
+        (text: "of  the  bechamel", normalized: "bechamel"),
+        (text: "Of The Bechamel", normalized: "bechamel"),
+        (text: "of\tthe\tbechamel", normalized: "bechamel")
     ])
     func dropsEachLeadingConnective(text: String, normalized: String) {
         #expect(Normalization.normalized(text) == normalized)
@@ -84,7 +84,7 @@ struct NormalizationTests {
         (text: "theme", normalized: "theme"),
         (text: "anchovies", normalized: "anchovies"),
         (text: "of-the-day", normalized: "of-the-day"),
-        (text: "sauce of the day", normalized: "sauce of the day"),
+        (text: "bechamel of the day", normalized: "bechamel of the day"),
         (text: "leg of lamb", normalized: "leg of lamb")
     ])
     func dropsNothingButALeadingConnectiveWord(text: String, normalized: String) {
@@ -93,7 +93,7 @@ struct NormalizationTests {
 
     @Test(arguments: [
         "  Of The B\u{E9}chamel  ",
-        "baby  spinach",
+        "pearl  onions",
         "",
         "of",
         "caf\u{FEFF}\u{0301}\u{0301}",

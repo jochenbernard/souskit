@@ -6,17 +6,17 @@ struct MetadataTests {
     @Test
     func parsesTheRecognizedScalarFields() {
         let metadata = Metadata.read("""
-        title: Herb Omelette
+        title: Quiche Lorraine
         language: en
         version: 1.0
         servings: 4
-        source: https://example.com/omelette
+        source: https://example.com/quiche
         """)
-        #expect(metadata.title == "Herb Omelette")
+        #expect(metadata.title == "Quiche Lorraine")
         #expect(metadata.language == "en")
         #expect(metadata.version == "1.0")
         #expect(metadata.servings == 4)
-        #expect(metadata.source == "https://example.com/omelette")
+        #expect(metadata.source == "https://example.com/quiche")
     }
 
     @Test(arguments: [
@@ -45,7 +45,7 @@ struct MetadataTests {
     }
 
     @Test(arguments: [
-        (header: "title: Toast ", key: "title", value: "Toast"),
+        (header: "title: Tartine ", key: "title", value: "Tartine"),
         (header: "chef: Alice ", key: "chef", value: "Alice"),
         (header: "source: https://example.com/x  ", key: "source", value: "https://example.com/x")
     ])
@@ -59,12 +59,12 @@ struct MetadataTests {
 
     @Test
     func writesAValueWithoutTheWhitespaceItNoLongerStates() {
-        #expect(Recipe.read("---\ntitle: Toast \n---").serialized() == "---\ntitle: Toast\n---")
+        #expect(Recipe.read("---\ntitle: Tartine \n---").serialized() == "---\ntitle: Tartine\n---")
     }
 
     @Test
     func tellsApartNoTwoTitlesThatDifferOnlyByTheWhitespaceAroundThem() {
-        #expect(Metadata.read("title: Toast ").title == Metadata.read("title: Toast").title)
+        #expect(Metadata.read("title: Tartine ").title == Metadata.read("title: Tartine").title)
     }
 
     @Test(arguments: ["servings: 3,2", "yield: 3,2 kg", "yield: [1 L, 1/0 kg]", "servings: .5"])
@@ -97,7 +97,7 @@ struct MetadataTests {
     func doesNotWarnAboutRecognizedKeys() {
         let source = """
         ---
-        title: Toast
+        title: Tartine
         servings: 1
         ---
         """

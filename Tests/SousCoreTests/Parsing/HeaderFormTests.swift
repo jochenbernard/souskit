@@ -18,7 +18,7 @@ struct HeaderFormTests {
     @Test
     func treatsAFileWithoutALeadingFenceAsHavingNoHeader() {
         let source = """
-        Toast the bread.
+        Toast the baguette.
         ---
         title: X
         ---
@@ -29,37 +29,37 @@ struct HeaderFormTests {
 
     @Test
     func treatsAnIndentedOpeningFenceAsBodyText() {
-        let parsed = SousParser().parseRecipe(" ---\ntitle: Toast\n---")
+        let parsed = SousParser().parseRecipe(" ---\ntitle: Tartine\n---")
 
         #expect(parsed.value.metadata.entries.isEmpty)
         #expect(parsed.value.steps.count == 1)
     }
 
     @Test(arguments: [
-        "\n---\ntitle: Toast\n---",
-        "\n\n---\ntitle: Toast\n---",
-        "   \n\t\n---\ntitle: Toast\n---"
+        "\n---\ntitle: Tartine\n---",
+        "\n\n---\ntitle: Tartine\n---",
+        "   \n\t\n---\ntitle: Tartine\n---"
     ])
     func readsAHeaderBlankLinesStandBefore(source: String) {
         let parsed = SousParser().parseRecipe(source)
 
-        #expect(parsed.value.metadata.title == "Toast")
+        #expect(parsed.value.metadata.title == "Tartine")
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
     func ignoresALeadingByteOrderMark() {
-        let source = "\u{FEFF}---\ntitle: Buttered Toast\n---"
+        let source = "\u{FEFF}---\ntitle: Tartine Beurree\n---"
 
-        #expect(Recipe.read(source).metadata.title == "Buttered Toast")
+        #expect(Recipe.read(source).metadata.title == "Tartine Beurree")
     }
 
     @Test
     func acceptsAFenceLineWithTrailingWhitespace() {
-        let parsed = SousParser().parseRecipe("--- \ntitle: Toast\n--- \n\nToast the bread.")
+        let parsed = SousParser().parseRecipe("--- \ntitle: Tartine\n--- \n\nToast the baguette.")
 
-        #expect(parsed.value.metadata.title == "Toast")
-        #expect(parsed.value.steps.map(\.text) == ["Toast the bread."])
+        #expect(parsed.value.metadata.title == "Tartine")
+        #expect(parsed.value.steps.map(\.text) == ["Toast the baguette."])
     }
 
     @Test
@@ -75,11 +75,11 @@ struct HeaderFormTests {
     func recoversFromAnUnterminatedHeader() {
         let source = """
         ---
-        title: Buttered Toast
+        title: Tartine Beurree
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.metadata.title == "Buttered Toast")
+        #expect(parsed.value.metadata.title == "Tartine Beurree")
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unterminatedHeader }))
     }
 
@@ -119,17 +119,17 @@ struct HeaderFormTests {
         #expect(title.isEmpty)
     }
 
-    @Test(arguments: ["title:  Toast", "title:\tToast", "title: \t Toast"])
+    @Test(arguments: ["title:  Tartine", "title:\tTartine", "title: \t Tartine"])
     func removesTheWhitespaceSeparatingAValueFromItsKey(entry: String) {
-        #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Toast")
+        #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Tartine")
     }
 
-    @Test(arguments: ["title : Toast", "title\t: Toast", "title  :  Toast"])
+    @Test(arguments: ["title : Tartine", "title\t: Tartine", "title  :  Tartine"])
     func trimsTheWhitespaceAroundAKey(entry: String) {
         let parsed = SousParser().parseRecipe("---\n\(entry)\n---")
 
         #expect(parsed.value.metadata.entries.map(\.key) == ["title"])
-        #expect(parsed.value.metadata.title == "Toast")
+        #expect(parsed.value.metadata.title == "Tartine")
         #expect(parsed.diagnostics.isEmpty)
     }
 
@@ -144,10 +144,10 @@ struct HeaderFormTests {
 
     @Test
     func preservesAKeyThatIsNotLowercase() {
-        let parsed = SousParser().parseRecipe("---\nTitle: Toast\n---")
+        let parsed = SousParser().parseRecipe("---\nTitle: Tartine\n---")
 
         #expect(parsed.value.metadata.title == nil)
-        #expect(parsed.value.metadata["Title"] == "Toast")
+        #expect(parsed.value.metadata["Title"] == "Tartine")
         #expect(parsed.diagnostics.isEmpty)
     }
 

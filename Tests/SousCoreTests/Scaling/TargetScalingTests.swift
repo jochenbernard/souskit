@@ -5,11 +5,11 @@ import Testing
 struct TargetScalingTests {
     @Test
     func readsATargetAmountFromItsText() {
-        let target = SousParser().parseAmount("18 pancakes")
+        let target = SousParser().parseAmount("18 crepes")
 
         #expect(target.kind.preciseQuantity?.value == 18.0)
-        #expect(target.unit == "pancakes")
-        #expect(target.text == "18 pancakes")
+        #expect(target.unit == "crepes")
+        #expect(target.text == "18 crepes")
     }
 
     @Test
@@ -33,11 +33,11 @@ struct TargetScalingTests {
 
     @Test
     func derivesTheFactorFromTheYieldOfTheTargetsUnit() throws {
-        let source = "---\nyield: 12 pancakes\n---\n\nWhisk @{200 g} flour@ into a batter."
+        let source = "---\nyield: 12 crepes\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        let recipe = try SousParser().scaled(source, to: "18 pancakes")
+        let recipe = try SousParser().scaled(source, to: "18 crepes")
         #expect(try recipe.flourWeight() == 300.0)
-        #expect(recipe.metadata.yields.map(\.text) == ["18 pancakes"])
+        #expect(recipe.metadata.yields.map(\.text) == ["18 crepes"])
     }
 
     @Test
@@ -72,10 +72,10 @@ struct TargetScalingTests {
         #expect(try SousParser().scaled(source, to: "18").flourWeight() == 300.0)
     }
 
-    @Test(arguments: ["1 kg", "18 Pancakes", "18", "500 ml"])
+    @Test(arguments: ["1 kg", "18 Crepes", "18", "500 ml"])
     func refusesATargetNoDeclaredYieldStates(target: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try SousParser().scaled(Recipe.flourRecipe("servings: 4\nyield: [800 g, 12 pancakes]"), to: target)
+            try SousParser().scaled(Recipe.flourRecipe("servings: 4\nyield: [800 g, 12 crepes]"), to: target)
         }
     }
 
@@ -172,7 +172,11 @@ struct TargetScalingTests {
     }
 
     @Test(arguments: [
-        (header: "yield: [10-12 muffins, 10-12 muffins]", target: "18 muffins", error: ScalingError.noMatchingYield),
+        (
+            header: "yield: [10-12 madeleines, 10-12 madeleines]",
+            target: "18 madeleines",
+            error: ScalingError.noMatchingYield
+        ),
         (header: "yield: [0 g, 0 g]", target: "500 g", error: ScalingError.zeroYield),
         (header: "yield: [0 g, 5 g]", target: "500 g", error: ScalingError.conflictingYields)
     ])
@@ -189,14 +193,14 @@ struct TargetScalingTests {
     @Test
     func matchesAUnitThroughTheWhitespaceAroundTheTarget() throws {
         #expect(
-            try SousParser().scaled(Recipe.flourRecipe("yield: 12 pancakes"), to: "18  pancakes").flourWeight() == 300.0
+            try SousParser().scaled(Recipe.flourRecipe("yield: 12 crepes"), to: "18  crepes").flourWeight() == 300.0
         )
     }
 
     @Test
     func refusesToDivideByAYieldThatStatesARange() {
         #expect(throws: ScalingError.noMatchingYield) {
-            try SousParser().scaled(Recipe.flourRecipe("yield: 10-12 muffins"), to: "18 muffins")
+            try SousParser().scaled(Recipe.flourRecipe("yield: 10-12 madeleines"), to: "18 madeleines")
         }
     }
 

@@ -21,9 +21,9 @@ struct ScaledYieldTests {
 
     @Test
     func statesAYieldTargetExactly() throws {
-        let scaled = try SousParser().scaled(Recipe.flourRecipe("yield: [11 pancakes]"), to: "15 pancakes")
+        let scaled = try SousParser().scaled(Recipe.flourRecipe("yield: [11 crepes]"), to: "15 crepes")
 
-        #expect(scaled.metadata.yields.map(\.text) == ["15 pancakes"])
+        #expect(scaled.metadata.yields.map(\.text) == ["15 crepes"])
     }
 
     @Test

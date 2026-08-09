@@ -16,7 +16,7 @@ struct ValidationTests {
 
     @Test
     func aProseOnlyRecipeValidatesWithoutDiagnostics() {
-        #expect(Recipe.read("Toast the bread.").validate().isEmpty)
+        #expect(Recipe.read("Toast the baguette.").validate().isEmpty)
     }
 
     @Test(arguments: ["yield: 0 g", "servings: 0", "yield: [0 g, 6 servings]"])
@@ -50,12 +50,12 @@ struct ValidationTests {
         "yield: 6 servings\nyield: 8 servings",
         "yield: [800 g, 900 g]",
         "servings: 4\nyield: 4.5 servings",
-        "yield: [12 muffins, 10-12 muffins]",
+        "yield: [12 madeleines, 10-12 madeleines]",
         "servings: 4\nyield: 4 servings",
         "yield: [6 servings, 6 servings]",
         "servings: 4\nyield: 4.0 servings",
         "yield: [800 g, 800  g]",
-        "yield: [10-12 muffins, 10-12 muffins]"
+        "yield: [10-12 madeleines, 10-12 madeleines]"
     ])
     func reportsADimensionStatedMoreThanOnce(header: String) {
         #expect(validate(header).map(\.kind) == [.repeatedYield])
@@ -65,7 +65,7 @@ struct ValidationTests {
         "yield: [6 servings, 3.2 kg]",
         "yield: [800 g, 1 kg]",
         "servings: 4\nyield: 800 g",
-        "yield: [12, 12 muffins]"
+        "yield: [12, 12 madeleines]"
     ])
     func acceptsOneStatementPerDimension(header: String) {
         #expect(validate(header).isEmpty)

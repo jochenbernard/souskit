@@ -5,7 +5,7 @@ import Testing
 struct StepProjectionTests {
     @Test
     func derivesTheIngredientsFromTheSegments() {
-        var step = Recipe.read("Fry @garlic@ and add @baby spinach@.").steps[0]
+        var step = Recipe.read("Fry @garlic@ and add @pearl onions@.").steps[0]
         step.segments.removeLast(2)
 
         #expect(step.ingredients.map(\.name) == ["garlic"])
@@ -29,10 +29,10 @@ struct StepProjectionTests {
 
     @Test
     func derivesTheReferencesFromTheSegments() {
-        var step = Recipe.read("Layer the >sauce> and the >topping>.").steps[0]
+        var step = Recipe.read("Layer the >pastry> and the >filling>.").steps[0]
         step.segments.removeLast(2)
 
-        #expect(step.references.map(\.target) == ["sauce"])
+        #expect(step.references.map(\.target) == ["pastry"])
     }
 
     @Test
@@ -55,7 +55,7 @@ struct StepProjectionTests {
 
     @Test
     func derivesTheStepsAndTheGroupListsFromTheGroups() {
-        var recipe = Recipe.read("## Sauce\nFry @garlic@.\n\n## Top\nAdd @salt@.")
+        var recipe = Recipe.read("## Pastry\nFry @garlic@.\n\n## Filling\nAdd @salt@.")
         recipe.groups[0].steps = []
 
         #expect(recipe.steps.map(\.text) == ["Add @salt@."])
@@ -66,25 +66,25 @@ struct StepProjectionTests {
     @Test
     func collectsIngredientsAcrossStepsInDocumentOrder() {
         let source = """
-        Fry @garlic@ and add @baby spinach@.
+        Fry @garlic@ and add @pearl onions@.
 
-        Finish with @{50 g} parmesan@.
+        Finish with @{50 g} gruyere@.
         """
 
         let ingredients = Recipe.read(source).ingredients
-        #expect(ingredients.map(\.name) == ["garlic", "baby spinach", "parmesan"])
+        #expect(ingredients.map(\.name) == ["garlic", "pearl onions", "gruyere"])
     }
 
     @Test
     func collectsCookwareAcrossStepsInDocumentOrder() {
         let source = """
-        Bring a #large pot# of water to a boil.
+        Bring a #stockpot# of water to a boil.
 
         Warm a #frying pan# and a #ladle#.
         """
 
         let cookware = Recipe.read(source).cookware
-        #expect(cookware.map(\.name) == ["large pot", "frying pan", "ladle"])
+        #expect(cookware.map(\.name) == ["stockpot", "frying pan", "ladle"])
     }
 
     @Test
@@ -101,7 +101,7 @@ struct StepProjectionTests {
 
     @Test
     func readsNoAnnotationsFromAProseOnlyStep() {
-        let recipe = Recipe.read("Toast the bread.")
+        let recipe = Recipe.read("Toast the baguette.")
 
         #expect(recipe.ingredients.isEmpty)
         #expect(recipe.cookware.isEmpty)

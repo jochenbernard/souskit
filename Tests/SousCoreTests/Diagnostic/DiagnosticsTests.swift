@@ -12,14 +12,14 @@ struct DiagnosticsTests {
     func aWarningPreservesTheContentSoTheFileRemainsUsable() {
         let source = """
         ---
-        title: Toast
+        title: Tartine
         stray line
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.diagnostics.map(\.severity) == [.warning])
-        #expect(parsed.value.metadata.title == "Toast")
+        #expect(parsed.value.metadata.title == "Tartine")
         #expect(parsed.value.serialized() == source)
     }
 
@@ -45,11 +45,11 @@ struct DiagnosticsTests {
     @Test
     func describesAndLocatesEveryDiagnostic() {
         let sources = [
-            "---\nchef: Alice\nchef: Bob\nstray line\ntags: [italian]\ntags: [quick]\n---",
-            "---\ntitle: Buttered Toast",
+            "---\nchef: Alice\nchef: Bob\nstray line\ntags: [french]\ntags: [quick]\n---",
+            "---\ntitle: Tartine Beurree",
             "Fry @garlic and warm a #pan.",
-            "Cook @{200 g pasta",
-            "Spread the >sauce on top.",
+            "Sift @{200 g flour",
+            "Spread the >bechamel on top.",
             "Add @{3,2 kg} flour@.",
             "Add @{200 g}@ now.",
             "---\nservings: 3,2\n---",
@@ -119,7 +119,7 @@ struct DiagnosticsTests {
     func locatesAMalformedHeaderLine() throws {
         let source = """
         ---
-        title: Toast
+        title: Tartine
         stray line
         ---
         """
@@ -134,7 +134,7 @@ struct DiagnosticsTests {
 
     @Test
     func locatesAnUnclosedReferenceSpan() throws {
-        let parsed = SousParser().parseRecipe("Spread the >sauce on top.")
+        let parsed = SousParser().parseRecipe("Spread the >bechamel on top.")
 
         let diagnostic = try parsed.firstDiagnostic(ofKind: .unclosedSpan)
         let range = try #require(diagnostic.range)
@@ -147,7 +147,7 @@ struct DiagnosticsTests {
 
     @Test
     func locatesAnUnterminatedHeaderAtItsOpeningFence() throws {
-        let parsed = SousParser().parseRecipe("---\ntitle: Buttered Toast")
+        let parsed = SousParser().parseRecipe("---\ntitle: Tartine Beurree")
 
         let diagnostic = try parsed.firstDiagnostic(ofKind: .unterminatedHeader)
         let range = try #require(diagnostic.range)

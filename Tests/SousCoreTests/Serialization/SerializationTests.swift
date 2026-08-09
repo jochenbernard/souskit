@@ -23,61 +23,61 @@ struct SerializationTests {
     }
 
     @Test(arguments: [
-        "Toast the bread and spread it with butter.",
-        "Fry @garlic@ until fragrant, then add @baby spinach@.",
-        "Bring a #large pot# of water to a boil and cook @{200 g} spaghetti@.",
+        "Toast the baguette and spread it with butter.",
+        "Fry @garlic@ until fragrant, then add @pearl onions@.",
+        "Bring a #stockpot# of water to a boil and blanch @{200 g} potatoes@.",
         "Add @{1-2 tbsp} olive oil@ and @{a pinch} salt@.",
         """
-        Toast the bread.
+        Toast the baguette.
 
         Spread with butter.
         """,
         """
         ---
-        title: Garlic Butter Pasta
+        title: Sole Meuniere
         servings: 2
         ---
 
-        Melt @{30 g} butter@ in a #pan#, fry @{2 cloves} garlic@.
+        Melt @{30 g} butter@ in a #frying pan#, fry @{2 cloves} garlic@.
         """,
-        "Mix @salt@@pepper@ in.",
+        "Mix @salt@@thyme@ in.",
         "Simmer gently for ~40 min~, then rest ~overnight~.",
         "Bake ~8-10 min~ and rest ~1 h 30 min~.",
         "Chill ~over\\~night~ now.",
         "Wait \\~40 min here.",
-        "Stir in @{=1 tsp} baking soda@.",
+        "Stir in @{=1 tsp} nutmeg@.",
         "Season with @salt@:staple and @black pepper@:staple.",
-        "Scatter @rosemary@? over the top.",
-        "Scatter @rosemary@?y over the top.",
+        "Scatter @thyme@? over the top.",
+        "Scatter @thyme@?y over the top.",
         "Loosen with @{50 ml} water@:non-food if needed.",
         "Add @{=10 g} salt@:staple now.",
         "Add @water@:staple:non-food now.",
         "Add @salt@:staple?y here.",
-        "Add @sauce@:homemade now.",
-        "Add @sauce@:homemade?2 now.",
+        "Add @stock@:homemade now.",
+        "Add @stock@:homemade?2 now.",
         "Is it @salt@\\? Yes.",
-        "Serve @rice@\\:about 200 g each.",
+        "Serve @potatoes@\\:about 200 g each.",
         "Season with @salt@:staple\\?y.",
-        "Add @sauce@:homemade\\:more now.",
+        "Add @stock@:homemade\\:more now.",
         "Season with @salt@: to taste.",
-        "Use a #{200 g} pan#.",
+        "Use a #{200 g} frying pan#.",
         "Add @{} salt@.",
         "Season with salt @",
         "Season to taste \\",
-        "## Sauce\nBrown the beef.",
-        "Layer the >{300 g} bolognese> in a dish.",
+        "## Filling\nBrown the beef.",
+        "Layer the >{300 g} bechamel> in a dish.",
         "Read the \\note here.",
         "Note the path C:\\Users, then add @garlic@.",
         "Use a #8\\ pan#.",
         "Path C:\\\\@garlic@ now.",
         "Add @flour\\\\@ now.",
-        "  Toast the bread.  ",
+        "  Toast the baguette.  ",
         "---\n: Alice\n---",
         "---\ntitle: a: b\n---",
         "---\nprep-time: 15 min\n---",
         "---\ntitle:\n---",
         "---\nnutrition:\n  calories: 640 kcal\n---",
-        "---\ntags: [comfort food\\, italian]\n---",
+        "---\ntags: [comfort food\\, french]\n---",
         "---\ntags: [\\[sugar]\n---",
         "---\nsource: C:\\photos\\x\n---"
     ])
@@ -114,7 +114,7 @@ struct SerializationTests {
         (source: "Add @salt@:optional now.", written: "Add @salt@? now."),
         (source: "Add @salt@:staple:staple now.", written: "Add @salt@:staple now."),
         (source: "Add @salt@?:staple now.", written: "Add @salt@:staple? now."),
-        (source: "Add @sauce@:homemade:staple now.", written: "Add @sauce@:staple:homemade now.")
+        (source: "Add @stock@:homemade:staple now.", written: "Add @stock@:staple:homemade now.")
     ])
     func writesAFlagChainInItsCanonicalOrder(source: String, written: String) {
         #expect(Recipe.read(source).serialized() == written)
@@ -122,21 +122,21 @@ struct SerializationTests {
 
     @Test
     func escapesASeparatorInAListItem() {
-        let source = "---\ntags: comfort food, italian\n---"
+        let source = "---\ntags: comfort food, french\n---"
 
-        #expect(Recipe.read(source).serialized() == "---\ntags: [comfort food\\, italian]\n---")
+        #expect(Recipe.read(source).serialized() == "---\ntags: [comfort food\\, french]\n---")
     }
 
     @Test
     func escapesABracketInAListItem() {
-        let source = "---\ntags: [italian\n---"
+        let source = "---\ntags: [french\n---"
 
-        #expect(Recipe.read(source).serialized() == "---\ntags: [\\[italian]\n---")
+        #expect(Recipe.read(source).serialized() == "---\ntags: [\\[french]\n---")
     }
 
     @Test(arguments: [
-        "---\ntags: comfort food, italian\n---",
-        "---\ntags: [italian\n---",
+        "---\ntags: comfort food, french\n---",
+        "---\ntags: [french\n---",
         "---\ntags: a]b\n---",
         "---\ntags: [a\\]\n---",
         "---\ntags: C:\\x\n---",
@@ -159,7 +159,7 @@ struct SerializationTests {
     func preservesAnUnrecognizedHeaderKeyOnRoundTrip() {
         let source = """
         ---
-        title: Toast
+        title: Tartine
         chef: Alice
         ---
         """
@@ -250,7 +250,7 @@ struct SerializationTests {
 
     @Test
     func doesNotSeparateABodyFenceLineFromAHeaderThatPrecedesIt() {
-        let source = "---\ntitle: Toast\n---\n\n---\nBring the water to a boil."
+        let source = "---\ntitle: Tartine\n---\n\n---\nBring the water to a boil."
 
         #expect(Recipe.read(source).serialized() == source)
     }
@@ -259,13 +259,13 @@ struct SerializationTests {
     func reReadingTheOutputYieldsTheSameRecipe() {
         let source = """
         ---
-        title: Garlic Pasta
+        title: Gratin Dauphinois
         servings: 2
-        tags: [italian, quick]
+        tags: [french, quick]
         ---
 
 
-        Cook @{200 g}pasta@ in a #large pot#.
+        Slice @{200 g}potatoes@ in a #gratin dish#.
 
 
         Season with @{a pinch} salt@ and serve.

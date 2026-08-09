@@ -84,7 +84,7 @@ struct ExhaustiveRoundTripTests {
             ["0", ".", "/", "-", "=", " ", "g", "}"],
             upTo: 4,
             prefix: "Add @{",
-            suffix: "} water@."
+            suffix: "} cream@."
         )
     }
 
@@ -93,7 +93,7 @@ struct ExhaustiveRoundTripTests {
         let parser = SousParser()
 
         TestSupport.expectNoFailures(strings(over: ["1", ".", "/", " "], upTo: 7).compactMap { fence -> String? in
-            let source = "Add @{\(fence)} water@."
+            let source = "Add @{\(fence)} cream@."
             guard let scaled = try? parser.parseRecipe(source).value.scaled(by: factor) else { return nil }
 
             let written = scaled.serialized()

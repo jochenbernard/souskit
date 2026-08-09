@@ -16,7 +16,7 @@ struct ValueSemanticsTests {
 
     @Test
     func comparesTwoParsesOfTheSameSource() {
-        let source = "---\ntitle: Toast\n---\n\nFry @garlic@ in a #pan#."
+        let source = "---\ntitle: Tartine\n---\n\nFry @garlic@ in a #pan#."
         let first = Self.parser.parseRecipe(source)
         let second = Self.parser.parseRecipe(source)
 

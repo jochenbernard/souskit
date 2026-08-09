@@ -46,9 +46,9 @@ struct SpanEdgeCaseTests {
 
     @Test
     func readsTwoAdjacentSpans() {
-        let parsed = SousParser().parseRecipe("Mix @salt@@pepper@ in.")
+        let parsed = SousParser().parseRecipe("Mix @salt@@thyme@ in.")
 
-        #expect(parsed.value.ingredients.map(\.name) == ["salt", "pepper"])
+        #expect(parsed.value.ingredients.map(\.name) == ["salt", "thyme"])
         #expect(parsed.diagnostics.isEmpty)
     }
 

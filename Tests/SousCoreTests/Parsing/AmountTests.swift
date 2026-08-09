@@ -4,10 +4,10 @@ import Testing
 @Suite("Amounts")
 struct AmountTests {
     @Test(arguments: [
-        (source: "Cook @{200 g} pasta@.", value: 200.0, text: "200", unit: "g"),
+        (source: "Sift @{200 g} flour@.", value: 200.0, text: "200", unit: "g"),
         (source: "Add @{2 cloves} garlic@.", value: 2.0, text: "2", unit: "cloves"),
         (source: "Mix @{1 1/2 cups} flour@.", value: 1.5, text: "1 1/2", unit: "cups"),
-        (source: "Add @{1/2 cup} sugar@.", value: 0.5, text: "1/2", unit: "cup"),
+        (source: "Add @{1/2 cup} caster sugar@.", value: 0.5, text: "1/2", unit: "cup"),
         (source: "Pour @{2 fl oz} milk@.", value: 2.0, text: "2", unit: "fl oz"),
         (source: "Add @{3.2 kg} potatoes@.", value: 3.2, text: "3.2", unit: "kg")
     ])
@@ -44,21 +44,21 @@ struct AmountTests {
 
     @Test
     func treatsAnAmountWithNoLeadingNumberAsImprecise() throws {
-        let amount = try #require(Recipe.read("Loosen with @{-2 tbsp} water@.").firstAmount)
+        let amount = try #require(Recipe.read("Loosen with @{-2 tbsp} stock@.").firstAmount)
         #expect(amount.kind.impreciseText == "-2 tbsp")
         #expect(amount.unit == nil)
     }
 
     @Test(arguments: ["\u{0663}", "\u{FF13}"])
     func treatsANonAsciiNumeralAsImprecise(digit: String) throws {
-        let amount = try #require(Recipe.read("Add @{\(digit) g} sugar@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{\(digit) g} caster sugar@.").firstAmount)
         #expect(amount.kind.impreciseText == "\(digit) g")
         #expect(amount.unit == nil)
     }
 
     @Test
     func treatsAZeroQuantityAsPrecise() throws {
-        let amount = try #require(Recipe.read("Add @{0} yeast@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{0} eggs@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
         #expect(quantity.value == 0.0)
         #expect(amount.unit == nil)
@@ -118,7 +118,7 @@ struct AmountTests {
     @Test(arguments: [
         (source: "Add @{1-2} olive oil@.", low: 1.0, high: 2.0, unit: nil),
         (source: "Add @{0.5-1.5 cups} milk@.", low: 0.5, high: 1.5, unit: "cups"),
-        (source: "Add @{1/2-1 cup} water@.", low: 0.5, high: 1.0, unit: "cup")
+        (source: "Add @{1/2-1 cup} cream@.", low: 0.5, high: 1.0, unit: "cup")
     ])
     func parsesARangeOfEveryQuantityForm(
         source: String,
@@ -222,7 +222,7 @@ struct AmountTests {
 
     @Test
     func readsTheFixedMarkerTheTrimmedContentOpensWith() throws {
-        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} baking soda@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} nutmeg@.").firstAmount)
 
         #expect(amount.isFixed)
         #expect(amount.text == "1 tsp")
@@ -263,7 +263,7 @@ struct AmountTests {
 
     @Test
     func capturesTheVerbatimFenceContentAsText() throws {
-        let amount = try #require(Recipe.read("Cook @{200 g} pasta@.").firstAmount)
+        let amount = try #require(Recipe.read("Sift @{200 g} flour@.").firstAmount)
         #expect(amount.text == "200 g")
     }
 }

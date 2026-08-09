@@ -5,32 +5,32 @@ import Testing
 struct StepGroupTests {
     @Test
     func opensAGroupOnAHeading() throws {
-        let parsed = SousParser().parseRecipe("## Sauce\nBrown the beef.")
+        let parsed = SousParser().parseRecipe("## Pastry\nRub in the butter.")
 
         let group = try #require(parsed.value.groups.first)
         #expect(parsed.value.groups.count == 1)
-        #expect(group.name == "Sauce")
-        #expect(group.steps.map(\.text) == ["Brown the beef."])
+        #expect(group.name == "Pastry")
+        #expect(group.steps.map(\.text) == ["Rub in the butter."])
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
     func attributesEveryStepUpToTheNextHeadingToItsGroup() {
         let source = """
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
 
-        Simmer it down.
+        Chill it well.
 
-        ## Topping
-        Grate the cheese.
+        ## Filling
+        Whisk the eggs.
         """
 
         let value = Recipe.read(source)
-        #expect(value.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(value.groups.map(\.name) == ["Pastry", "Filling"])
         #expect(value.groups.map({ $0.steps.map(\.text) }) == [
-            ["Brown the beef.", "Simmer it down."],
-            ["Grate the cheese."]
+            ["Rub in the butter.", "Chill it well."],
+            ["Whisk the eggs."]
         ])
     }
 
@@ -39,24 +39,24 @@ struct StepGroupTests {
         let source = """
         Warm the oven.
 
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
         """
 
         let value = Recipe.read(source)
-        #expect(value.groups.map(\.name) == [nil, "Sauce"])
+        #expect(value.groups.map(\.name) == [nil, "Pastry"])
         #expect(value.groups.first?.steps.map(\.text) == ["Warm the oven."])
     }
 
     @Test
     func holdsABodyWritingNoHeadingInOneUnnamedGroup() {
-        let value = Recipe.read("Toast the bread.\n\nSpread with butter.")
+        let value = Recipe.read("Toast the baguette.\n\nSpread with butter.")
 
         #expect(value.groups.map(\.name) == [nil])
         #expect(value.groups.first?.steps.count == 2)
     }
 
-    @Test(arguments: ["", "---\ntitle: Buttered Toast\n---", "   \n\n  "])
+    @Test(arguments: ["", "---\ntitle: Tartine Beurree\n---", "   \n\n  "])
     func holdsNoGroupWhenTheBodyIsEmpty(source: String) {
         #expect(Recipe.read(source).groups.isEmpty)
     }
@@ -65,8 +65,8 @@ struct StepGroupTests {
     func readsAHeadingNoBlankLineEndsTheStepBeforeAsProse() {
         let source = """
         Warm the oven.
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
         """
 
         let value = Recipe.read(source)
@@ -76,74 +76,74 @@ struct StepGroupTests {
 
     @Test
     func readsNoAnnotationInAHeadingReadAsProse() {
-        let parsed = SousParser().parseRecipe("Warm the oven.\n## Sauce")
+        let parsed = SousParser().parseRecipe("Warm the oven.\n## Pastry")
 
-        #expect(parsed.value.steps.map(\.text) == ["Warm the oven.\n## Sauce"])
+        #expect(parsed.value.steps.map(\.text) == ["Warm the oven.\n## Pastry"])
         #expect(parsed.value.cookware.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
     func opensAGroupOnAHeadingAnotherHeadingStandsBefore() {
-        let value = Recipe.read("## Sauce\n## Topping\nGrate the cheese.")
+        let value = Recipe.read("## Pastry\n## Filling\nWhisk the eggs.")
 
-        #expect(value.groups.map(\.name) == ["Sauce", "Topping"])
-        #expect(value.groups.map({ $0.steps.map(\.text) }) == [[], ["Grate the cheese."]])
+        #expect(value.groups.map(\.name) == ["Pastry", "Filling"])
+        #expect(value.groups.map({ $0.steps.map(\.text) }) == [[], ["Whisk the eggs."]])
     }
 
     @Test
     func keepsAHeadingThatOpensNoStep() {
         let source = """
-        ## Sauce
+        ## Pastry
 
-        ## Topping
-        Grate the cheese.
+        ## Filling
+        Whisk the eggs.
         """
 
         let value = Recipe.read(source)
-        #expect(value.groups.map(\.name) == ["Sauce", "Topping"])
+        #expect(value.groups.map(\.name) == ["Pastry", "Filling"])
         #expect(value.groups.first?.steps.isEmpty == true)
     }
 
     @Test
     func readsAHeadingAfterAWindowsLineEnding() {
-        let value = Recipe.read("## Sauce\r\nBrown the beef.")
+        let value = Recipe.read("## Pastry\r\nRub in the butter.")
 
-        #expect(value.groups.map(\.name) == ["Sauce"])
-        #expect(value.steps.map(\.text) == ["Brown the beef."])
+        #expect(value.groups.map(\.name) == ["Pastry"])
+        #expect(value.steps.map(\.text) == ["Rub in the butter."])
     }
 
     @Test
     func readsNoHeadingInsideTheHeader() {
-        let value = Recipe.read("---\n## Sauce\n---\n\nBrown the beef.")
+        let value = Recipe.read("---\n## Pastry\n---\n\nRub in the butter.")
 
         #expect(value.groups.map(\.name) == [nil])
         #expect(value.metadata.entries.count == 1)
     }
 
     @Test(arguments: [
-        (source: "## Sauce", name: "Sauce"),
-        (source: "## Rich Tomato Sauce", name: "Rich Tomato Sauce"),
-        (source: "##  Sauce", name: "Sauce"),
-        (source: "## \tSauce ", name: "Sauce"),
-        (source: "##\tSauce", name: "Sauce"),
+        (source: "## Pastry", name: "Pastry"),
+        (source: "## Sweet Shortcrust Pastry", name: "Sweet Shortcrust Pastry"),
+        (source: "##  Pastry", name: "Pastry"),
+        (source: "## \tPastry ", name: "Pastry"),
+        (source: "##\tPastry", name: "Pastry"),
         (source: "## 2", name: "2"),
-        (source: "## sauces/red", name: "sauces/red")
+        (source: "## sauces/rouille", name: "sauces/rouille")
     ])
     func readsTheTrimmedNameAfterTheMarker(source: String, name: String) {
         #expect(Recipe.read(source).groups.map(\.name) == [name])
     }
 
     @Test(arguments: [
-        "##Sauce",
+        "##Pastry",
         "## ",
         "##",
         "##   ",
         "## \t",
-        " ## Sauce",
-        "### Sauce",
-        "#Sauce#",
-        "\t## Sauce"
+        " ## Pastry",
+        "### Pastry",
+        "#Pastry#",
+        "\t## Pastry"
     ])
     func opensNoGroupOnALineThatIsNotAHeading(source: String) {
         let value = Recipe.read(source)
@@ -153,8 +153,8 @@ struct StepGroupTests {
     }
 
     @Test(arguments: [
-        (source: "## Sauce \\@ Home", name: "Sauce @ Home"),
-        (source: "## Sauce \\\\ Home", name: "Sauce \\ Home"),
+        (source: "## Pastry \\@ Home", name: "Pastry @ Home"),
+        (source: "## Pastry \\\\ Home", name: "Pastry \\ Home"),
         (source: "## a\\>b", name: "a>b"),
         (source: "## a\\#b", name: "a#b"),
         (source: "## a\\zb", name: "a\\zb")
@@ -165,9 +165,9 @@ struct StepGroupTests {
 
     @Test
     func readsNoAnnotationInsideAName() {
-        let parsed = SousParser().parseRecipe("## Sauce #pan# with @salt@ and ~5 min~")
+        let parsed = SousParser().parseRecipe("## Pastry #pan# with @salt@ and ~5 min~")
 
-        #expect(parsed.value.groups.map(\.name) == ["Sauce #pan# with @salt@ and ~5 min~"])
+        #expect(parsed.value.groups.map(\.name) == ["Pastry #pan# with @salt@ and ~5 min~"])
         #expect(parsed.value.cookware.isEmpty)
         #expect(parsed.value.ingredients.isEmpty)
         #expect(parsed.value.timers.isEmpty)
@@ -176,34 +176,34 @@ struct StepGroupTests {
 
     /// A recipe of three groups whose steps carry ingredients, cookware, timers, and references
     /// between them.
-    private var pastaBake: Recipe {
+    private var quicheLorraine: Recipe {
         Recipe.read("""
-        ## Sauce
-        Brown @{500 g} minced beef@ in a #pan# and simmer ~30 min~.
+        ## Pastry
+        Rub @{100 g} butter@ into a #mixing bowl# and chill ~30 min~.
 
-        ## Topping
-        Mix @{200 g} ricotta@ with @{50 g} parmesan@.
+        ## Filling
+        Whisk @{200 ml} cream@ with @{50 g} gruyere@.
 
         ## Assemble
-        Layer the >sauce> in a #baking dish# and dot the >topping> over it.
+        Line a #tart tin# with the >pastry> and pour in the >filling>.
         """)
     }
 
     @Test
     func attributesTheAnnotationsOfAStepToItsGroup() {
-        let groups = pastaBake.groups
+        let groups = quicheLorraine.groups
 
         #expect(groups.map({ $0.ingredients.map(\.name) }) == [
-            ["minced beef"], ["ricotta", "parmesan"], []
+            ["butter"], ["cream", "gruyere"], []
         ])
-        #expect(groups.map({ $0.cookware.map(\.name) }) == [["pan"], [], ["baking dish"]])
+        #expect(groups.map({ $0.cookware.map(\.name) }) == [["mixing bowl"], [], ["tart tin"]])
         #expect(groups.map({ $0.timers.map(\.text) }) == [["30 min"], [], []])
-        #expect(groups.map({ $0.references.map(\.target) }) == [[], [], ["sauce", "topping"]])
+        #expect(groups.map({ $0.references.map(\.target) }) == [[], [], ["pastry", "filling"]])
     }
 
     @Test
     func readsEveryStepOfEveryGroupInDocumentOrder() {
-        let value = pastaBake
+        let value = quicheLorraine
 
         #expect(value.steps.map(\.text) == value.groups.flatMap({ $0.steps.map(\.text) }))
         #expect(value.steps.count == 3)
@@ -211,35 +211,35 @@ struct StepGroupTests {
 
     @Test
     func readsTheRecipeWideListsAcrossEveryGroup() {
-        let value = pastaBake
+        let value = quicheLorraine
 
-        #expect(value.ingredients.map(\.name) == ["minced beef", "ricotta", "parmesan"])
-        #expect(value.cookware.map(\.name) == ["pan", "baking dish"])
+        #expect(value.ingredients.map(\.name) == ["butter", "cream", "gruyere"])
+        #expect(value.cookware.map(\.name) == ["mixing bowl", "tart tin"])
         #expect(value.timers.map(\.text) == ["30 min"])
-        #expect(value.references.map(\.target) == ["sauce", "topping"])
+        #expect(value.references.map(\.target) == ["pastry", "filling"])
     }
 
     @Test
     func writesEachGroupUnderItsHeading() {
         let source = """
-        ## Sauce
-        Brown the beef.
+        ## Pastry
+        Rub in the butter.
 
-        Simmer it down.
+        Chill it well.
 
-        ## Topping
-        Grate the cheese.
+        ## Filling
+        Whisk the eggs.
         """
 
         #expect(Recipe.read(source).serialized() == source)
     }
 
     @Test(arguments: [
-        "## Sauce\nBrown the beef.",
-        "Warm the oven.\n\n## Sauce\nBrown the beef.",
-        "## Sauce\n\n## Topping\nGrate the cheese.",
-        "## Sauce",
-        "---\ntitle: Pasta Bake\n---\n\n## Sauce\nBrown the beef."
+        "## Pastry\nRub in the butter.",
+        "Warm the oven.\n\n## Pastry\nRub in the butter.",
+        "## Pastry\n\n## Filling\nWhisk the eggs.",
+        "## Pastry",
+        "---\ntitle: Quiche Lorraine\n---\n\n## Pastry\nRub in the butter."
     ])
     func writesAGroupBackAsItWasRead(source: String) {
         #expect(Recipe.read(source).serialized() == source)
@@ -247,34 +247,34 @@ struct StepGroupTests {
 
     @Test
     func writesTheBlankLineAHeadingNeedsBeforeIt() {
-        var value = Recipe.read("Warm the oven.\n\n## Sauce\nBrown.")
-        value.groups[1].name = "Topping"
+        var value = Recipe.read("Warm the oven.\n\n## Pastry\nRub.")
+        value.groups[1].name = "Filling"
 
-        #expect(value.serialized() == "Warm the oven.\n\n## Topping\nBrown.")
+        #expect(value.serialized() == "Warm the oven.\n\n## Filling\nRub.")
     }
 
     @Test
     func dropsTheEscapeALineInsideAStepDoesNotNeed() {
-        let written = Recipe.read("Warm the oven.\n\\## Sauce").serialized()
+        let written = Recipe.read("Warm the oven.\n\\## Pastry").serialized()
 
-        #expect(written == "Warm the oven.\n## Sauce")
-        #expect(Recipe.read(written).steps.map(\.text) == ["Warm the oven.\n## Sauce"])
+        #expect(written == "Warm the oven.\n## Pastry")
+        #expect(Recipe.read(written).steps.map(\.text) == ["Warm the oven.\n## Pastry"])
     }
 
     @Test
     func escapesABackslashInANameThatWouldOtherwiseEscapeWhatFollowsIt() {
-        #expect(Recipe.read("## Sauce \\\\@ Home").serialized() == "## Sauce \\\\@ Home")
+        #expect(Recipe.read("## Pastry \\\\@ Home").serialized() == "## Pastry \\\\@ Home")
     }
 
     @Test(arguments: [
-        "\\## Sauce",
+        "\\## Pastry",
         "\\## @a@",
         "\\## #p#",
         "\\## ~4 h~",
         "\\## >a>",
         "Mix it,\n## then rest it.",
         "Add @a\n## b@ now.",
-        "## Sauce\nMix it,\n## then rest it.",
+        "## Pastry\nMix it,\n## then rest it.",
         "Mix.\n## @salt@ in.",
         "Use a #x\n## # now."
     ])
@@ -289,9 +289,9 @@ struct StepGroupTests {
 
     @Test
     func dropsAnEscapeANameDoesNotNeed() {
-        let written = Recipe.read("## Sauce \\@ Home").serialized()
+        let written = Recipe.read("## Pastry \\@ Home").serialized()
 
-        #expect(written == "## Sauce @ Home")
-        #expect(Recipe.read(written).groups.map(\.name) == ["Sauce @ Home"])
+        #expect(written == "## Pastry @ Home")
+        #expect(Recipe.read(written).groups.map(\.name) == ["Pastry @ Home"])
     }
 }

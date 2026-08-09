@@ -5,7 +5,7 @@ public enum Normalization {
     /// The matching form of a name: lowercased, accent-folded, trimmed, and stripped of leading
     /// connectives.
     ///
-    /// Connectives are stripped repeatedly, so `the of sauce` and `sauce` match. A name of
+    /// Connectives are stripped repeatedly, so `the of bechamel` and `bechamel` match. A name of
     /// nothing but connectives keeps them, so `the` and `a` stay distinct rather than both
     /// reducing to nothing.
     ///

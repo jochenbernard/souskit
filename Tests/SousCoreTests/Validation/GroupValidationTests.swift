@@ -21,20 +21,20 @@ struct GroupValidationTests {
     }
 
     @Test(arguments: [
-        "## Sauce\nBrown it.\n\n## sauce\nBrown it again.",
-        "## Sauce\nBrown it.\n\n## the sauce\nBrown it again.",
+        "## Filling\nBrown it.\n\n## filling\nBrown it again.",
+        "## Filling\nBrown it.\n\n## the filling\nBrown it again.",
         "## B\u{E9}chamel\nWhisk it.\n\n## Bechamel\nWhisk it again.",
-        "## Sauce\nBrown it.\n\n##  Sauce \nBrown it again."
+        "## Filling\nBrown it.\n\n##  Filling \nBrown it again."
     ])
     func reportsANameTwoHeadingsShareUnderNormalization(source: String) {
         #expect(validate(source).map(\.kind) == [.repeatedGroupName])
     }
 
     @Test(arguments: [
-        "## Sauce\nBrown it.\n\n## Topping\nGrate it.",
-        "## Sauce\nBrown it.\n\n## Sauces\nBrown them.",
+        "## Filling\nBrown it.\n\n## Garnish\nGrate it.",
+        "## Filling\nBrown it.\n\n## Fillings\nBrown them.",
         "## The\nBrown it.\n\n## A\nBrown it again.",
-        "Warm the oven.\n\n## Sauce\nBrown it."
+        "Warm the oven.\n\n## Filling\nBrown it."
     ])
     func acceptsGroupsWhoseNamesDiffer(source: String) {
         #expect(validate(source).isEmpty)
@@ -42,9 +42,9 @@ struct GroupValidationTests {
 
     @Test
     func reportsOneDiagnosticPerRepeatedName() {
-        #expect(validate("## Sauce\nOne.\n\n## sauce\nTwo.\n\n## SAUCE\nThree.").map(\.kind)
+        #expect(validate("## Filling\nOne.\n\n## filling\nTwo.\n\n## FILLING\nThree.").map(\.kind)
             == [.repeatedGroupName])
-        #expect(validate("## Sauce\nOne.\n\n## sauce\nTwo.\n\n## Top\nThree.\n\n## top\nFour.").map(\.kind)
+        #expect(validate("## Filling\nOne.\n\n## filling\nTwo.\n\n## Roux\nThree.\n\n## roux\nFour.").map(\.kind)
             == [.repeatedGroupName, .repeatedGroupName])
     }
 
@@ -61,11 +61,11 @@ struct GroupValidationTests {
     }
 
     @Test(arguments: [
-        "## Sauce\nBrown it.\n\n## Assemble\nLayer the >sauce> in a dish.",
+        "## Filling\nBrown it.\n\n## Assemble\nLayer the >filling> in a dish.",
         "## B\u{E9}chamel\nWhisk it.\n\n## Assemble\nLayer the >bechamel> in a dish.",
-        "## Sauce\nBrown it.\n\n## Assemble\nLayer the >the sauce> in a dish.",
-        "Layer the >sauce> in a dish.\n\n## Sauce\nBrown it.",
-        "## sauces/red\nBrown it.\n\n## Assemble\nLayer the >sauces/red> in a dish."
+        "## Filling\nBrown it.\n\n## Assemble\nLayer the >the filling> in a dish.",
+        "Layer the >filling> in a dish.\n\n## Filling\nBrown it.",
+        "## sauces/rouille\nBrown it.\n\n## Assemble\nLayer the >sauces/rouille> in a dish."
     ])
     func acceptsAReferenceThatMatchesAGroup(source: String) {
         #expect(validate(source).isEmpty)
@@ -75,59 +75,59 @@ struct GroupValidationTests {
     func reportsEachUnresolvedTargetOnce() {
         let source = """
         ## Assemble
-        Layer the >bechamel> in a dish, then the >ragu>, then the rest of the >the bechamel>.
+        Layer the >bechamel> in a dish, then the >ragout>, then the rest of the >the bechamel>.
         """
 
         #expect(validate(source).map(\.message) == [
             "Reference to 'bechamel' matches no group.",
-            "Reference to 'ragu' matches no group."
+            "Reference to 'ragout' matches no group."
         ])
     }
 
     @Test
     func reportsAReferenceHoldingAPathSeparator() {
-        #expect(validate("## Assemble\nLayer the >sauces/red> in a dish.").map(\.kind)
+        #expect(validate("## Assemble\nLayer the >sauces/rouille> in a dish.").map(\.kind)
             == [.unresolvedReference])
     }
 
     @Test
     func reportsAGroupThatConsumesItsOwnIntermediate() throws {
-        let diagnostics = validate("## Sauce\nStir the >sauce> again.")
+        let diagnostics = validate("## Filling\nStir the >filling> again.")
 
         #expect(diagnostics.count == 1)
         let diagnostic = try #require(diagnostics.first)
         #expect(diagnostic.kind == .referenceCycle)
         #expect(diagnostic.severity == .warning)
         #expect(diagnostic.range == nil)
-        #expect(diagnostic.message == "Group 'Sauce' consumes an intermediate that depends on it.")
+        #expect(diagnostic.message == "Group 'Filling' consumes an intermediate that depends on it.")
     }
 
     @Test
     func reportsGroupsThatConsumeEachOther() {
         let source = """
-        ## Sauce
-        Stir in the >topping>.
+        ## Filling
+        Stir in the >garnish>.
 
-        ## Topping
-        Stir in the >sauce>.
+        ## Garnish
+        Stir in the >filling>.
         """
 
         #expect(validate(source).map(\.message) == [
-            "Group 'Sauce' consumes an intermediate that depends on it."
+            "Group 'Filling' consumes an intermediate that depends on it."
         ])
     }
 
     @Test
     func reportsALoopThatRunsThroughAThirdGroup() {
         let source = """
-        ## Sauce
-        Stir in the >topping>.
+        ## Filling
+        Stir in the >garnish>.
 
-        ## Topping
-        Stir in the >base>.
+        ## Garnish
+        Stir in the >custard>.
 
-        ## Base
-        Stir in the >sauce>.
+        ## Custard
+        Stir in the >filling>.
         """
 
         #expect(validate(source).map(\.kind) == [.referenceCycle])
@@ -136,44 +136,44 @@ struct GroupValidationTests {
     @Test
     func reportsOneDiagnosticPerLoop() {
         let source = """
-        ## Sauce
-        Stir in the >topping>.
+        ## Filling
+        Stir in the >garnish>.
 
-        ## Topping
-        Stir in the >sauce>.
+        ## Garnish
+        Stir in the >filling>.
 
-        ## Base
-        Stir in the >crust>.
+        ## Custard
+        Stir in the >pastry>.
 
-        ## Crust
-        Stir in the >base>.
+        ## Pastry
+        Stir in the >custard>.
         """
 
         #expect(validate(source).map(\.message) == [
-            "Group 'Sauce' consumes an intermediate that depends on it.",
-            "Group 'Base' consumes an intermediate that depends on it."
+            "Group 'Filling' consumes an intermediate that depends on it.",
+            "Group 'Custard' consumes an intermediate that depends on it."
         ])
     }
 
     @Test(arguments: [
         """
-        ## Sauce
+        ## Filling
         Brown it.
 
-        ## Topping
-        Stir in the >sauce>.
+        ## Garnish
+        Stir in the >filling>.
 
         ## Assemble
-        Layer the >sauce> and the >topping>.
+        Layer the >filling> and the >garnish>.
         """,
         """
         ## Assemble
-        Layer the >sauce> and the >topping>.
+        Layer the >filling> and the >garnish>.
 
-        ## Sauce
+        ## Filling
         Brown it.
 
-        ## Topping
+        ## Garnish
         Grate it.
         """
     ])
@@ -189,10 +189,10 @@ struct GroupValidationTests {
         yield: 6 servings
         ---
 
-        ## Sauce
-        Stir in the >sauce> and the >bechamel>.
+        ## Filling
+        Stir in the >filling> and the >bechamel>.
 
-        ## sauce
+        ## filling
         Brown it.
         """
 
@@ -204,18 +204,18 @@ struct GroupValidationTests {
     @Test
     func reportsTwoLoopsSharingAGroupOnce() {
         let source = """
-        ## Sauce
-        Stir in the >topping> and the >base>.
+        ## Filling
+        Stir in the >garnish> and the >custard>.
 
-        ## Topping
-        Stir in the >sauce>.
+        ## Garnish
+        Stir in the >filling>.
 
-        ## Base
-        Stir in the >sauce>.
+        ## Custard
+        Stir in the >filling>.
         """
 
         #expect(validate(source).map(\.message) == [
-            "Group 'Sauce' consumes an intermediate that depends on it."
+            "Group 'Filling' consumes an intermediate that depends on it."
         ])
     }
 
@@ -277,15 +277,15 @@ struct GroupValidationTests {
     func validatesARecipeWithNoGroupProblemWithoutDiagnostics() {
         let source = """
         ---
-        title: Pasta Bake
+        title: Quiche Lorraine
         servings: 4
         ---
 
-        ## Sauce
-        Brown @{500 g} minced beef@ in a #pan#.
+        ## Filling
+        Fry @{500 g} lardons@ in a #frying pan#.
 
         ## Assemble
-        Layer the >sauce> in a #baking dish#.
+        Layer the >filling> in a #tart tin#.
         """
 
         #expect(validate(source).isEmpty)
