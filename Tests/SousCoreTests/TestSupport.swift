@@ -33,16 +33,12 @@ extension Amount.Kind {
 }
 
 extension SousParser {
-    /// The amount of the first annotated ingredient of a source, after scaling by the factor.
-    func scaledAmount(in source: String, by factor: Double) throws -> Amount? {
-        try parseRecipe(source).value.scaled(by: factor).firstAmount
-    }
-
-    /// The same as ``scaledAmount(in:by:)``, requiring that an amount is present.
+    /// The amount of the first annotated ingredient of a source, after scaling by the factor,
+    /// requiring that an amount is present.
     func amount(in source: String, scaledBy factor: Double) throws -> Amount {
-        let scaled = try scaledAmount(in: source, by: factor)
+        let scaled = try parseRecipe(source).value.scaled(by: factor)
 
-        return try #require(scaled)
+        return try #require(scaled.firstAmount)
     }
 
     /// The recipe a source describes, scaled to a target written as fence content.
@@ -60,6 +56,11 @@ extension Recipe {
     /// The amount of the first annotated ingredient.
     var firstAmount: Amount? {
         ingredients.first?.amount
+    }
+
+    /// The value of the first amount, requiring that it is a precise quantity.
+    func firstQuantityValue() throws -> Double {
+        try #require(firstAmount?.kind.preciseQuantity?.value)
     }
 
     /// The first step of the recipe.
@@ -91,26 +92,6 @@ extension Recipe {
     func reRead() -> Recipe {
         Self.read(serialized())
     }
-
-    /// A source with the given header and one ingredient of `200 g` flour.
-    static func flourRecipe(_ header: String) -> String {
-        "---\n\(header)\n---\n\nMix @{200 g} flour@."
-    }
-
-    /// The numeric value of the flour amount, requiring that it is a precise quantity.
-    func flourWeight() throws -> Double {
-        try #require(firstAmount?.kind.preciseQuantity?.value)
-    }
-
-    /// A source exercising a header, an ingredient with an amount, and cookware.
-    static let wellFormedSource = """
-    ---
-    title: Soupe a l'Oignon
-    servings: 4
-    ---
-
-    Soften @{1 kg} onions@ in a #stockpot#.
-    """
 }
 
 extension Metadata {
@@ -173,34 +154,6 @@ extension String {
 }
 
 enum TestSupport {
-    /// Sources whose layout serializing normalizes, so re-reading them is stable but their text
-    /// is not preserved byte for byte.
-    static let normalizedLayouts = [
-        "Toast the baguette.\n",
-        "Toast the baguette.\n\n",
-        "\nToast the baguette.",
-        "First step.\n\n\nSecond step.",
-        "---\n---",
-        "---\ntitle: Tartine Beurree\n---\nBody line.",
-        "Sift @{200 g}flour@.",
-        "Sift @{200 g}  flour@.",
-        "Sift @flour @.",
-        "Add @{ 200 g } flour@.",
-        "Add @{200\tg} flour@.",
-        "Wait ~40 min ~ now.",
-        "Layer the >{300 g}  bechamel> in a dish.",
-        "##  Filling\nBrown the beef.",
-        "##\tFilling\nBrown the beef.",
-        "Toast the baguette.\n   \nSpread with butter.",
-        "--- \ntitle: Tartine Beurree\n--- ",
-        "Add @{200 g}@ now.",
-        "Toast the baguette\u{2028}and butter it.",
-        "---\ntitle:  Tartine Beurree\n---",
-        "---\ntitle:\tTartine Beurree\n---",
-        "---\ntags: [french, quick] \n---",
-        "---\ntags:  [french, quick]\n---"
-    ]
-
     /// Reports the first of a batch of failures, naming how many there were.
     ///
     /// The message is an autoclosure evaluated only when the expectation fails, so indexing the

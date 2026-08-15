@@ -6,12 +6,12 @@ struct ValidationTests {
     /// The diagnostics validating a recipe with the given header and one flour ingredient
     /// produces.
     private func validate(_ header: String) -> [Diagnostic] {
-        Recipe.read(Recipe.flourRecipe(header)).validate()
+        Recipe.read(Fixtures.flourRecipe(header)).validate()
     }
 
     @Test
     func aWellFormedRecipeValidatesWithoutDiagnostics() {
-        #expect(Recipe.read(Recipe.wellFormedSource).validate().isEmpty)
+        #expect(Recipe.read(Fixtures.wellFormedSource).validate().isEmpty)
     }
 
     @Test

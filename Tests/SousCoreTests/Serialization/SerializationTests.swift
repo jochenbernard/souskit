@@ -205,7 +205,7 @@ struct SerializationTests {
         expectTheRecipeSurvivesARoundTrip(source)
     }
 
-    @Test(arguments: TestSupport.normalizedLayouts)
+    @Test(arguments: NormalizedLayouts.sources)
     func normalizingLayoutIsStable(source: String) {
         let parser = SousParser()
         let normalized = parser.parseRecipe(source).value.serialized()
@@ -213,7 +213,7 @@ struct SerializationTests {
         #expect(parser.parseRecipe(normalized).value.serialized() == normalized)
     }
 
-    @Test(arguments: TestSupport.normalizedLayouts)
+    @Test(arguments: NormalizedLayouts.sources)
     func normalizingLayoutKeepsTheContent(source: String) {
         expectTheRecipeSurvivesARoundTrip(source)
     }

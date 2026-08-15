@@ -27,8 +27,8 @@ struct TargetScalingTests {
         let target = parser.parseAmount("=8 servings")
         #expect(target.isFixed)
 
-        let scaled = try parser.parseRecipe(Recipe.flourRecipe("servings: 4")).value.scaled(to: target)
-        #expect(try scaled.flourWeight() == 400.0)
+        let scaled = try parser.parseRecipe(Fixtures.flourRecipe("servings: 4")).value.scaled(to: target)
+        #expect(try scaled.firstQuantityValue() == 400.0)
     }
 
     @Test
@@ -36,7 +36,7 @@ struct TargetScalingTests {
         let source = "---\nyield: 12 crepes\n---\n\nWhisk @{200 g} flour@ into a batter."
 
         let recipe = try SousParser().scaled(source, to: "18 crepes")
-        #expect(try recipe.flourWeight() == 300.0)
+        #expect(try recipe.firstQuantityValue() == 300.0)
         #expect(recipe.metadata.yields.map(\.text) == ["18 crepes"])
     }
 
@@ -45,7 +45,7 @@ struct TargetScalingTests {
         let source = "---\nservings: 4\n---\n\nWhisk @{200 g} flour@ into a batter."
 
         let recipe = try SousParser().scaled(source, to: "8 servings")
-        #expect(try recipe.flourWeight() == 400.0)
+        #expect(try recipe.firstQuantityValue() == 400.0)
         #expect(recipe.metadata.servings == 8.0)
     }
 
@@ -54,7 +54,7 @@ struct TargetScalingTests {
         let source = "---\nyield: [6 servings, 3.2 kg]\n---\n\nWhisk @{200 g} flour@ into a batter."
 
         let recipe = try SousParser().scaled(source, to: "1.6 kg")
-        #expect(try recipe.flourWeight() == 100.0)
+        #expect(try recipe.firstQuantityValue() == 100.0)
         #expect(recipe.metadata.yields.map(\.text) == ["3 servings", "1.6 kg"])
     }
 
@@ -62,20 +62,20 @@ struct TargetScalingTests {
     func matchesAUnitThroughTheWhitespaceAroundIt() throws {
         let source = "---\nyield: 800  g\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        #expect(try SousParser().scaled(source, to: "1000 g").flourWeight() == 250.0)
+        #expect(try SousParser().scaled(source, to: "1000 g").firstQuantityValue() == 250.0)
     }
 
     @Test
     func matchesAnEmptyUnitAgainstAnEmptyUnit() throws {
         let source = "---\nyield: 12\n---\n\nWhisk @{200 g} flour@ into a batter."
 
-        #expect(try SousParser().scaled(source, to: "18").flourWeight() == 300.0)
+        #expect(try SousParser().scaled(source, to: "18").firstQuantityValue() == 300.0)
     }
 
     @Test(arguments: ["1 kg", "18 Crepes", "18", "500 ml"])
     func refusesATargetNoDeclaredYieldStates(target: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try SousParser().scaled(Recipe.flourRecipe("servings: 4\nyield: [800 g, 12 crepes]"), to: target)
+            try SousParser().scaled(Fixtures.flourRecipe("servings: 4\nyield: [800 g, 12 crepes]"), to: target)
         }
     }
 
@@ -89,7 +89,7 @@ struct TargetScalingTests {
     @Test(arguments: ["1-2 kg", "plenty", "a lot of g"])
     func refusesATargetThatStatesNoSingleQuantity(target: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try SousParser().scaled(Recipe.flourRecipe("yield: 800 g"), to: target)
+            try SousParser().scaled(Fixtures.flourRecipe("yield: 800 g"), to: target)
         }
     }
 
@@ -99,7 +99,7 @@ struct TargetScalingTests {
     ])
     func refusesToDivideByAYieldOfZero(header: String, target: String) {
         #expect(throws: ScalingError.zeroYield) {
-            try SousParser().scaled(Recipe.flourRecipe(header), to: target)
+            try SousParser().scaled(Fixtures.flourRecipe(header), to: target)
         }
     }
 
@@ -113,20 +113,20 @@ struct TargetScalingTests {
         target: String,
         expected: Double
     ) throws {
-        #expect(try SousParser().scaled(Recipe.flourRecipe(header), to: target).flourWeight() == expected)
+        #expect(try SousParser().scaled(Fixtures.flourRecipe(header), to: target).firstQuantityValue() == expected)
     }
 
     @Test
     func looksPastAServingsValueThatStatesNoQuantity() throws {
-        let parsed = Recipe.read(Recipe.flourRecipe("servings: six\nyield: 4 servings"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("servings: six\nyield: 4 servings"))
 
-        #expect(try parsed.scaled(toServings: 8.0).flourWeight() == 400.0)
+        #expect(try parsed.scaled(toServings: 8.0).firstQuantityValue() == 400.0)
     }
 
     @Test(arguments: ["servings: =4", "yield: =4 servings"])
     func readsNoFixedMarkerInAHeaderValue(header: String) {
         #expect(throws: ScalingError.noMatchingYield) {
-            try SousParser().scaled(Recipe.flourRecipe(header), to: "8 servings")
+            try SousParser().scaled(Fixtures.flourRecipe(header), to: "8 servings")
         }
     }
 
@@ -136,9 +136,9 @@ struct TargetScalingTests {
         "yield: 4 servings\nyield: 4 servings"
     ])
     func dividesByADimensionStatedTwiceThatAgrees(header: String) throws {
-        let scaled = try SousParser().scaled(Recipe.flourRecipe(header), to: "8 servings")
+        let scaled = try SousParser().scaled(Fixtures.flourRecipe(header), to: "8 servings")
 
-        #expect(try scaled.flourWeight() == 400.0)
+        #expect(try scaled.firstQuantityValue() == 400.0)
         #expect(scaled.validate().map(\.kind) == [.repeatedYield])
     }
 
@@ -149,13 +149,13 @@ struct TargetScalingTests {
     ])
     func refusesADimensionStatedTwiceThatDisagrees(header: String) {
         #expect(throws: ScalingError.conflictingYields) {
-            try SousParser().scaled(Recipe.flourRecipe(header), to: "8 servings")
+            try SousParser().scaled(Fixtures.flourRecipe(header), to: "8 servings")
         }
     }
 
     @Test
     func refusesANumberOfServingsWhenThePortionsDisagree() {
-        let parsed = Recipe.read(Recipe.flourRecipe("servings: 4\nyield: 6 servings"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("servings: 4\nyield: 6 servings"))
 
         #expect(throws: ScalingError.conflictingYields) {
             try parsed.scaled(toServings: 8.0)
@@ -164,7 +164,7 @@ struct TargetScalingTests {
 
     @Test
     func scalesByAFactorThroughADimensionThatDisagrees() throws {
-        let parsed = Recipe.read(Recipe.flourRecipe("servings: 4\nyield: 6 servings"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("servings: 4\nyield: 6 servings"))
 
         let scaled = try parsed.scaled(by: 2.0)
         #expect(scaled.metadata["servings"] == "8")
@@ -186,21 +186,21 @@ struct TargetScalingTests {
         error: ScalingError
     ) {
         #expect(throws: error) {
-            try SousParser().scaled(Recipe.flourRecipe(header), to: target)
+            try SousParser().scaled(Fixtures.flourRecipe(header), to: target)
         }
     }
 
     @Test
     func matchesAUnitThroughTheWhitespaceAroundTheTarget() throws {
-        #expect(
-            try SousParser().scaled(Recipe.flourRecipe("yield: 12 crepes"), to: "18  crepes").flourWeight() == 300.0
-        )
+        let scaled = try SousParser().scaled(Fixtures.flourRecipe("yield: 12 crepes"), to: "18  crepes")
+
+        #expect(try scaled.firstQuantityValue() == 300.0)
     }
 
     @Test
     func refusesToDivideByAYieldThatStatesARange() {
         #expect(throws: ScalingError.noMatchingYield) {
-            try SousParser().scaled(Recipe.flourRecipe("yield: 10-12 madeleines"), to: "18 madeleines")
+            try SousParser().scaled(Fixtures.flourRecipe("yield: 10-12 madeleines"), to: "18 madeleines")
         }
     }
 
@@ -209,12 +209,12 @@ struct TargetScalingTests {
         let source = "\(header)\n\nWhisk @{200 g} flour@ into a batter."
 
         let recipe = try Recipe.read(source).scaled(toServings: 9.0)
-        #expect(try recipe.flourWeight() == 300.0)
+        #expect(try recipe.firstQuantityValue() == 300.0)
     }
 
     @Test
     func refusesANumberOfServingsWhenNoPortionsAreDeclared() {
-        let parsed = Recipe.read(Recipe.flourRecipe("yield: 800 g"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("yield: 800 g"))
 
         #expect(throws: ScalingError.noMatchingYield) {
             try parsed.scaled(toServings: 8.0)
@@ -223,7 +223,7 @@ struct TargetScalingTests {
 
     @Test
     func refusesANumberOfServingsWhenThePortionsStateARange() {
-        let parsed = Recipe.read(Recipe.flourRecipe("servings: 4-6"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("servings: 4-6"))
 
         #expect(throws: ScalingError.noMatchingYield) {
             try parsed.scaled(toServings: 8.0)
@@ -233,7 +233,7 @@ struct TargetScalingTests {
     @Test
     func refusesATargetDerivingAFactorItCouldNotWriteBack() {
         let parser = SousParser()
-        let parsed = parser.parseRecipe(Recipe.flourRecipe("yield: 800 g")).value
+        let parsed = parser.parseRecipe(Fixtures.flourRecipe("yield: 800 g")).value
         let target = parser.parseAmount(String.quantity(digits: 400) + " g")
 
         #expect(throws: ScalingError.unusableFactor) {
@@ -243,7 +243,7 @@ struct TargetScalingTests {
 
     @Test
     func refusesZeroDeclaredServings() {
-        let parsed = Recipe.read(Recipe.flourRecipe("servings: 0"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("servings: 0"))
 
         #expect(throws: ScalingError.zeroYield) {
             try parsed.scaled(toServings: 8.0)
@@ -252,7 +252,7 @@ struct TargetScalingTests {
 
     @Test(arguments: [-2.0, -0.0, Double.infinity, -Double.infinity, Double.nan])
     func refusesAServingsTargetItCouldNotWriteBack(servings: Double) {
-        let parsed = Recipe.read(Recipe.flourRecipe("servings: 4"))
+        let parsed = Recipe.read(Fixtures.flourRecipe("servings: 4"))
 
         #expect(throws: ScalingError.unusableFactor) {
             try parsed.scaled(toServings: servings)
@@ -269,9 +269,9 @@ struct TargetScalingTests {
 
     @Test
     func aTargetOfZeroScalesToNothing() throws {
-        let scaled = try Recipe.read(Recipe.flourRecipe("servings: 4")).scaled(toServings: 0.0)
+        let scaled = try Recipe.read(Fixtures.flourRecipe("servings: 4")).scaled(toServings: 0.0)
 
-        #expect(try scaled.flourWeight() == 0.0)
+        #expect(try scaled.firstQuantityValue() == 0.0)
         #expect(scaled.metadata.servings == 0.0)
     }
 }

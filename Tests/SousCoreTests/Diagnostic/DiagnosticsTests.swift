@@ -5,7 +5,7 @@ import Testing
 struct DiagnosticsTests {
     @Test
     func aWellFormedRecipeHasNoDiagnostics() {
-        #expect(SousParser().parseRecipe(Recipe.wellFormedSource).diagnostics.isEmpty)
+        #expect(SousParser().parseRecipe(Fixtures.wellFormedSource).diagnostics.isEmpty)
     }
 
     @Test
