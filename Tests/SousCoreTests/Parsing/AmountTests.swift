@@ -176,6 +176,14 @@ struct AmountTests {
         #expect(amount.unit == unit)
     }
 
+    @Test(arguments: ["1  1/2 cups", "1\t1/2 cups", "1 \t 1/2 cups"])
+    func readsAMixedNumberAcrossAnyWhitespace(fence: String) throws {
+        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
+
+        #expect(amount.kind.preciseQuantity?.value == 1.5)
+        #expect(amount.unit == "cups")
+    }
+
     @Test(arguments: [
         (fence: "\u{00BD} cup", value: 0.5, unit: "cup"),
         (fence: "1\u{00BD} cups", value: 1.5, unit: "cups"),
@@ -221,28 +229,20 @@ struct AmountTests {
     }
 
     @Test
-    func readsTheFixedMarkerTheTrimmedContentOpensWith() throws {
-        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} nutmeg@.").firstAmount)
-
-        #expect(amount.isFixed)
-        #expect(amount.text == "1 tsp")
-    }
-
-    @Test(arguments: ["1  1/2 cups", "1\t1/2 cups", "1 \t 1/2 cups"])
-    func readsAMixedNumberAcrossAnyWhitespace(fence: String) throws {
-        let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
-
-        #expect(amount.kind.preciseQuantity?.value == 1.5)
-        #expect(amount.unit == "cups")
-    }
-
-    @Test
     func readsAnEmptyFenceAsAnEmptyImpreciseAmount() throws {
         let ingredient = try #require(Recipe.read("Add @{} salt@.").firstIngredient)
         let amount = try #require(ingredient.amount)
         #expect(ingredient.name == "salt")
         #expect(amount.kind.impreciseText?.isEmpty == true)
         #expect(amount.unit == nil)
+    }
+
+    @Test
+    func readsTheFixedMarkerTheTrimmedContentOpensWith() throws {
+        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} nutmeg@.").firstAmount)
+
+        #expect(amount.isFixed)
+        #expect(amount.text == "1 tsp")
     }
 
     @Test(arguments: [

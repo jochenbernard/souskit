@@ -29,15 +29,6 @@ struct MetadataProjectionTests {
     }
 
     @Test
-    func rendersTheEditedEntriesOnSerialization() {
-        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nToast the baguette.")
-        recipe.metadata.entries.removeLast()
-
-        #expect(recipe.metadata.title == "First")
-        #expect(recipe.serialized() == "---\ntitle: First\n---\n\nToast the baguette.")
-    }
-
-    @Test
     func returnsNilFromTheSubscriptForAnAbsentKey() {
         #expect(Metadata.read("title: Tartine")["chef"] == nil)
     }
@@ -91,5 +82,14 @@ struct MetadataProjectionTests {
     @Test
     func doesNotDivideAServingsValueByAZeroDenominator() {
         #expect(Metadata.read("servings: 1/0").servings == nil)
+    }
+
+    @Test
+    func rendersTheEditedEntriesOnSerialization() {
+        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nToast the baguette.")
+        recipe.metadata.entries.removeLast()
+
+        #expect(recipe.metadata.title == "First")
+        #expect(recipe.serialized() == "---\ntitle: First\n---\n\nToast the baguette.")
     }
 }

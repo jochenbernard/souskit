@@ -95,13 +95,6 @@ struct YieldTests {
     }
 
     @Test
-    func scalingAHeaderValueDropsTheWhitespaceAroundIt() throws {
-        let recipe = try SousParser().parseRecipe("---\nservings:  6 \n---").value.scaled(by: 2.0)
-
-        #expect(recipe.metadata["servings"] == "12")
-    }
-
-    @Test
     func readsTheLeadingQuantityOfAServingsRange() {
         #expect(Metadata.read("servings: 4-6").servings == 4.0)
     }
@@ -155,6 +148,13 @@ struct YieldTests {
         let written = recipe.serialized()
         #expect(written == "---\nyield: [1 handful\\, or two]\n---")
         #expect(parser.parseRecipe(written).value.metadata == recipe.metadata)
+    }
+
+    @Test
+    func scalingAHeaderValueDropsTheWhitespaceAroundIt() throws {
+        let recipe = try SousParser().parseRecipe("---\nservings:  6 \n---").value.scaled(by: 2.0)
+
+        #expect(recipe.metadata["servings"] == "12")
     }
 
     @Test

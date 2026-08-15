@@ -63,16 +63,6 @@ struct MutatedModelTests {
         #expect(value.reRead().references.map(\.target) == ["bechamel"])
     }
 
-    @Test(arguments: ["bech amel", "sauces/rouille"])
-    func writesAReferenceTargetThatStillReadsBack(target: String) throws {
-        var value = Recipe.read("Layer the >bechamel> in a dish.")
-        var reference = try #require(value.references.first)
-        reference.target = target
-        value.groups[0].steps[0].segments[1] = .reference(reference)
-
-        #expect(value.reRead().references.map(\.target) == [target])
-    }
-
     @Test(arguments: ["sa lt"])
     func writesAnIngredientNameThatStillReadsBack(name: String) throws {
         var value = Recipe.read("Add @salt@ now.")
@@ -81,6 +71,16 @@ struct MutatedModelTests {
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(value.reRead().ingredients.map(\.name) == [name])
+    }
+
+    @Test(arguments: ["bech amel", "sauces/rouille"])
+    func writesAReferenceTargetThatStillReadsBack(target: String) throws {
+        var value = Recipe.read("Layer the >bechamel> in a dish.")
+        var reference = try #require(value.references.first)
+        reference.target = target
+        value.groups[0].steps[0].segments[1] = .reference(reference)
+
+        #expect(value.reRead().references.map(\.target) == [target])
     }
 
     @Test(arguments: ["a}b", "a\\b", "a\\}b"])

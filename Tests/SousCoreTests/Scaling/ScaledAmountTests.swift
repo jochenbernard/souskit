@@ -103,6 +103,16 @@ struct ScaledAmountTests {
     }
 
     @Test
+    func refusesARangeWithOneEndItCouldNotWriteBack() {
+        let source = "Add @{1-\(String.quantity(digits: 308)) g} cream@."
+        let recipe = Recipe.read(source)
+
+        #expect(throws: ScalingError.unwritableQuantity) {
+            try recipe.scaled(by: 10.0)
+        }
+    }
+
+    @Test
     func leavesAQuantityAlreadyPastThatRangeAlone() throws {
         let source = "Add @{\(String.quantity(digits: 400)) g} cream@."
 
@@ -136,16 +146,6 @@ struct ScaledAmountTests {
 
         #expect(amount.text == "15000000000000000.0 1/2-cup servings")
         #expect(amount.unit == "1/2-cup servings")
-    }
-
-    @Test
-    func refusesARangeWithOneEndItCouldNotWriteBack() {
-        let source = "Add @{1-\(String.quantity(digits: 308)) g} cream@."
-        let recipe = Recipe.read(source)
-
-        #expect(throws: ScalingError.unwritableQuantity) {
-            try recipe.scaled(by: 10.0)
-        }
     }
 
     @Test

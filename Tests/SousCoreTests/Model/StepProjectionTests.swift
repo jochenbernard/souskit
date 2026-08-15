@@ -45,15 +45,6 @@ struct StepProjectionTests {
     }
 
     @Test
-    func writesTwoAdjacentProseSegmentsAsOneRun() {
-        var recipe = Recipe.read("Add @salt@.")
-        recipe.groups[0].steps[0].segments = [.text("Season it"), .text("? Yes.")]
-
-        #expect(recipe.serialized() == "Season it? Yes.")
-        #expect(Recipe.read(recipe.serialized()).steps.map(\.text) == ["Season it? Yes."])
-    }
-
-    @Test
     func derivesTheStepsAndTheGroupListsFromTheGroups() {
         var recipe = Recipe.read("## Pastry\nFry @garlic@.\n\n## Filling\nAdd @salt@.")
         recipe.groups[0].steps = []
@@ -109,5 +100,14 @@ struct StepProjectionTests {
         #expect(recipe.steps[0].ingredients.isEmpty)
         #expect(recipe.steps[0].cookware.isEmpty)
         #expect(recipe.steps[0].timers.isEmpty)
+    }
+
+    @Test
+    func writesTwoAdjacentProseSegmentsAsOneRun() {
+        var recipe = Recipe.read("Add @salt@.")
+        recipe.groups[0].steps[0].segments = [.text("Season it"), .text("? Yes.")]
+
+        #expect(recipe.serialized() == "Season it? Yes.")
+        #expect(Recipe.read(recipe.serialized()).steps.map(\.text) == ["Season it? Yes."])
     }
 }

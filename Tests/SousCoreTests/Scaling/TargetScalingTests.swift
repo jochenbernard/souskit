@@ -66,6 +66,13 @@ struct TargetScalingTests {
     }
 
     @Test
+    func matchesAUnitThroughTheWhitespaceAroundTheTarget() throws {
+        let scaled = try SousParser().scaled(Fixtures.flourRecipe("yield: 12 crepes"), to: "18  crepes")
+
+        #expect(try scaled.firstQuantityValue() == 300.0)
+    }
+
+    @Test
     func matchesAnEmptyUnitAgainstAnEmptyUnit() throws {
         let source = "---\nyield: 12\n---\n\nWhisk @{200 g} flour@ into a batter."
 
@@ -188,13 +195,6 @@ struct TargetScalingTests {
         #expect(throws: error) {
             try SousParser().scaled(Fixtures.flourRecipe(header), to: target)
         }
-    }
-
-    @Test
-    func matchesAUnitThroughTheWhitespaceAroundTheTarget() throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe("yield: 12 crepes"), to: "18  crepes")
-
-        #expect(try scaled.firstQuantityValue() == 300.0)
     }
 
     @Test

@@ -53,6 +53,17 @@ struct SpanEdgeCaseTests {
     }
 
     @Test
+    func representsACookwareAnnotationAsASegment() throws {
+        let parsed = SousParser().parseRecipe("Warm a #pan# now.")
+
+        let segments = try #require(parsed.value.steps.first?.segments)
+        #expect(segments.count == 3)
+        #expect(segments.first?.proseText == "Warm a ")
+        #expect(segments.dropFirst().first?.cookwareValue?.name == "pan")
+        #expect(segments.last?.proseText == " now.")
+    }
+
+    @Test
     func doesNotOpenASpanForASigilAtTheEndOfTheText() throws {
         let parsed = SousParser().parseRecipe("Season with salt @")
 
@@ -133,16 +144,5 @@ struct SpanEdgeCaseTests {
         let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.name == "flour\\")
         #expect(parsed.diagnostics.isEmpty)
-    }
-
-    @Test
-    func representsACookwareAnnotationAsASegment() throws {
-        let parsed = SousParser().parseRecipe("Warm a #pan# now.")
-
-        let segments = try #require(parsed.value.steps.first?.segments)
-        #expect(segments.count == 3)
-        #expect(segments.first?.proseText == "Warm a ")
-        #expect(segments.dropFirst().first?.cookwareValue?.name == "pan")
-        #expect(segments.last?.proseText == " now.")
     }
 }
