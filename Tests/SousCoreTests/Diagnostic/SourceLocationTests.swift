@@ -70,7 +70,7 @@ struct SourceLocationTests {
 
     @Test
     func reportsARepeatedWarningForARepeatedUnrecognizedKey() {
-        let source = "---\nchef: Alice\nchef: Bob\n---"
+        let source = "---\nchef: Camille\nchef: Bruno\n---"
 
         let kinds = SousParser().parseRecipe(source).diagnostics.map(\.kind)
         #expect(kinds == [.repeatedScalarKey])
@@ -80,12 +80,12 @@ struct SourceLocationTests {
     func reportsEveryProblemAsAWarning() {
         let source = """
         ---
-        chef: Alice
-        chef: Bob
+        chef: Camille
+        chef: Bruno
         stray line
         ---
 
-        Fry @garlic and warm a #pan.
+        Fry @garlic and warm a #casserole.
         """
 
         let parsed = SousParser().parseRecipe(source)

@@ -57,7 +57,7 @@ struct ReadingRulesTests {
     @Test(arguments: [
         "Simmer ~40 min gently.",
         "Fry @garlic until fragrant.",
-        "Use a #pan to fry the eggs.",
+        "Use a #casserole to brown the beef.",
         "Sift @{200 g flour@ now."
     ])
     func recoversFromAnUnclosedSpan(source: String) throws {
@@ -106,7 +106,7 @@ struct ReadingRulesTests {
     }
 
     @Test(arguments: [
-        "---\nnutrition:\n  calories: 3840 kcal\n---",
+        "---\nnutrition:\n  calories: 3300 kcal\n---",
         "---\ntags:\n  - french\n---"
     ])
     func preservesConstructsFromLaterVersions(source: String) {
@@ -136,10 +136,10 @@ struct ReadingRulesTests {
 
     @Test
     func doesNotCloseASpanAcrossALineBreak() {
-        let parsed = SousParser().parseRecipe("Add @pearl\nonions@ to the pan.")
+        let parsed = SousParser().parseRecipe("Add @pearl\nonions@ to the casserole.")
 
         #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Add @pearl\nonions@ to the pan."])
+        #expect(parsed.value.steps.map(\.text) == ["Add @pearl\nonions@ to the casserole."])
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
 
@@ -157,13 +157,13 @@ struct ReadingRulesTests {
         let source = """
         Add @garlic
 
-        shallots@ to the pan.
+        shallots@ to the casserole.
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.steps.count == 2)
+        #expect(parsed.value.steps.map(\.text) == ["Add @garlic", "shallots@ to the casserole."])
         #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
+        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
     }
 
     @Test
@@ -177,7 +177,7 @@ struct ReadingRulesTests {
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.ingredients.isEmpty)
         #expect(parsed.value.steps.map(\.text) == ["Add @{200 g", "flour} butter@."])
-        #expect(parsed.diagnostics.allSatisfy({ $0.kind == .unclosedSpan }))
+        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan, .unclosedSpan])
     }
 
     @Test
@@ -201,10 +201,10 @@ struct ReadingRulesTests {
 
     @Test
     func unescapesAnEscapedClosingSigilInsideACookwareName() throws {
-        let parsed = SousParser().parseRecipe("Use a #8\\# pan#.")
+        let parsed = SousParser().parseRecipe("Use a #8\\# tin#.")
 
         let cookware = try #require(parsed.value.firstCookware)
-        #expect(cookware.name == "8# pan")
+        #expect(cookware.name == "8# tin")
         #expect(parsed.diagnostics.isEmpty)
     }
 

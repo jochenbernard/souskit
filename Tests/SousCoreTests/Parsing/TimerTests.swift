@@ -129,9 +129,9 @@ struct TimerTests {
 
     @Test
     func startsANewPartOnlyAtAWhitespaceSeparatedNumber() throws {
-        let timer = try #require(Recipe.read("Chill ~2 8oz ramekins~ before filling.").firstTimer)
+        let timer = try #require(Recipe.read("Chill ~2 20cl bowls~ before filling.").firstTimer)
         #expect(timer.kind == .compound)
-        #expect(timer.components.map(\.unit) == [nil, "oz ramekins"])
+        #expect(timer.components.map(\.unit) == [nil, "cl bowls"])
     }
 
     @Test
@@ -162,11 +162,12 @@ struct TimerTests {
     }
 
     @Test
-    func classifiesTheKindFromTheComponents() throws {
+    func classifiesATimerGivenASecondComponentAsCompound() throws {
         var timer = try #require(Recipe.read("Rest ~40 min~.").firstTimer)
-        timer.components = []
+        timer.components += [try #require(Recipe.read("Prove for ~1 h~.").firstTimer?.components.first)]
 
-        #expect(timer.kind == .qualitative)
+        #expect(timer.kind == .compound)
+        #expect(timer.components.map(\.unit) == ["min", "h"])
     }
 
     @Test

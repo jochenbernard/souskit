@@ -30,7 +30,7 @@ struct MetadataProjectionTests {
 
     @Test
     func returnsNilFromTheSubscriptForAnAbsentKey() {
-        #expect(Metadata.read("title: Tartine")["chef"] == nil)
+        #expect(Metadata.read("title: Vinaigrette")["chef"] == nil)
     }
 
     @Test
@@ -52,7 +52,7 @@ struct MetadataProjectionTests {
         (key: "title", first: "First", last: "Second"),
         (key: "language", first: "en", last: "nl"),
         (key: "version", first: "1.0", last: "1.1"),
-        (key: "source", first: "Jane", last: "Jon")
+        (key: "source", first: "Camille", last: "Bruno")
     ])
     func keepsTheLastValueOfEveryRepeatedScalarKey(
         key: String,
@@ -86,10 +86,10 @@ struct MetadataProjectionTests {
 
     @Test
     func rendersTheEditedEntriesOnSerialization() {
-        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nToast the baguette.")
+        var recipe = Recipe.read("---\ntitle: First\ntitle: Second\n---\n\nWhisk the vinegar.")
         recipe.metadata.entries.removeLast()
 
         #expect(recipe.metadata.title == "First")
-        #expect(recipe.serialized() == "---\ntitle: First\n---\n\nToast the baguette.")
+        #expect(recipe.serialized() == "---\ntitle: First\n---\n\nWhisk the vinegar.")
     }
 }

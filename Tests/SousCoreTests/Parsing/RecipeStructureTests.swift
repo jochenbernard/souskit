@@ -5,11 +5,11 @@ import Testing
 struct RecipeStructureTests {
     @Test
     func parsesASingleLineOfProseAsOneStep() throws {
-        let parsed = SousParser().parseRecipe("Toast the baguette and spread it with butter.")
+        let parsed = SousParser().parseRecipe("Whisk the vinegar and beat in the oil.")
 
         #expect(parsed.value.steps.count == 1)
         let step = try #require(parsed.value.steps.first)
-        #expect(step.text == "Toast the baguette and spread it with butter.")
+        #expect(step.text == "Whisk the vinegar and beat in the oil.")
         #expect(step.ingredients.isEmpty)
         #expect(step.cookware.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
@@ -17,7 +17,7 @@ struct RecipeStructureTests {
 
     @Test
     func aProseOnlyFileHasNoMetadata() {
-        let parsed = SousParser().parseRecipe("Toast the baguette.")
+        let parsed = SousParser().parseRecipe("Whisk the vinegar.")
 
         #expect(parsed.value.metadata.title == nil)
         #expect(parsed.value.metadata.servings == nil)
@@ -29,34 +29,34 @@ struct RecipeStructureTests {
     func parsesATitleOnlyHeaderWithNoBody() {
         let source = """
         ---
-        title: Tartine Beurree
+        title: Vinaigrette
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.metadata.title == "Tartine Beurree")
+        #expect(parsed.value.metadata.title == "Vinaigrette")
         #expect(parsed.value.steps.isEmpty)
     }
 
     @Test
     func separatesParagraphsIntoSteps() {
         let source = """
-        Toast the baguette.
+        Whisk the vinegar.
 
-        Spread with butter.
+        Beat in the oil.
         """
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.steps.count == 2)
-        #expect(parsed.value.steps.first?.text == "Toast the baguette.")
-        #expect(parsed.value.steps.last?.text == "Spread with butter.")
+        #expect(parsed.value.steps.first?.text == "Whisk the vinegar.")
+        #expect(parsed.value.steps.last?.text == "Beat in the oil.")
     }
 
     @Test
     func treatsConsecutiveNonBlankLinesAsOneStep() {
         let source = """
-        Toast the baguette
-        and spread it with butter.
+        Whisk the vinegar
+        and beat in the oil.
         """
 
         #expect(Recipe.read(source).steps.count == 1)
@@ -64,19 +64,19 @@ struct RecipeStructureTests {
 
     @Test
     func normalizesWindowsLineEndings() throws {
-        let source = "---\r\ntitle: Tartine Beurree\r\n---\r\n\r\nWarm a #pan#."
+        let source = "---\r\ntitle: Vinaigrette\r\n---\r\n\r\nWarm a #casserole#."
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.metadata.title == "Tartine Beurree")
+        #expect(parsed.value.metadata.title == "Vinaigrette")
         let step = try #require(parsed.value.steps.first)
-        #expect(step.text == "Warm a #pan#.")
-        #expect(step.cookware.map(\.name) == ["pan"])
+        #expect(step.text == "Warm a #casserole#.")
+        #expect(step.cookware.map(\.name) == ["casserole"])
     }
 
     @Test
     func normalizesLineEndingsWithinAMultiLineStep() throws {
-        let step = try #require(Recipe.read("Add @pearl\r\nonions@ to the pan.").firstStep)
-        #expect(step.text == "Add @pearl\nonions@ to the pan.")
+        let step = try #require(Recipe.read("Add @pearl\r\nonions@ to the casserole.").firstStep)
+        #expect(step.text == "Add @pearl\nonions@ to the casserole.")
     }
 
     @Test
@@ -115,29 +115,29 @@ struct RecipeStructureTests {
 
     @Test
     func separatesStepsOnALineOfOnlyWhitespace() {
-        let parsed = SousParser().parseRecipe("Toast the baguette.\n   \nSpread with butter.")
+        let parsed = SousParser().parseRecipe("Whisk the vinegar.\n   \nBeat in the oil.")
 
-        #expect(parsed.value.steps.map(\.text) == ["Toast the baguette.", "Spread with butter."])
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar.", "Beat in the oil."])
     }
 
     @Test
     func keepsTheWhitespaceAroundAStepVerbatim() {
-        let parsed = SousParser().parseRecipe("  Toast the baguette.  ")
+        let parsed = SousParser().parseRecipe("  Whisk the vinegar.  ")
 
-        #expect(parsed.value.steps.map(\.text) == ["  Toast the baguette.  "])
+        #expect(parsed.value.steps.map(\.text) == ["  Whisk the vinegar.  "])
     }
 
     @Test
     func normalizesEveryKindOfLineBreakWithinAStep() {
-        let parsed = SousParser().parseRecipe("Toast the baguette\u{2028}and butter it\u{0B}while warm.")
+        let parsed = SousParser().parseRecipe("Whisk the vinegar\u{2028}and beat in the oil\u{0B}while it thickens.")
 
-        #expect(parsed.value.steps.map(\.text) == ["Toast the baguette\nand butter it\nwhile warm."])
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar\nand beat in the oil\nwhile it thickens."])
     }
 
     @Test
     func normalizesALoneCarriageReturn() {
-        let parsed = SousParser().parseRecipe("Toast the baguette.\rSpread it.\r\rServe warm.")
+        let parsed = SousParser().parseRecipe("Whisk the vinegar.\rBeat in the oil.\r\rDress the salad.")
 
-        #expect(parsed.value.steps.map(\.text) == ["Toast the baguette.\nSpread it.", "Serve warm."])
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar.\nBeat in the oil.", "Dress the salad."])
     }
 }

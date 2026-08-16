@@ -18,11 +18,11 @@ struct IngredientFlagTests {
 
     @Test
     func readsTheNonFoodFlag() throws {
-        let parsed = SousParser().parseRecipe("Loosen with @{50 ml} water@:non-food if needed.")
+        let parsed = SousParser().parseRecipe("Weigh it down with @{500 g} baking beans@:non-food.")
 
         let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.isNonFood)
-        #expect(ingredient.amount?.unit == "ml")
+        #expect(ingredient.amount?.unit == "g")
         #expect(parsed.diagnostics.isEmpty)
     }
 
@@ -47,7 +47,7 @@ struct IngredientFlagTests {
 
     @Test
     func chainsSeveralNamedFlags() throws {
-        let ingredient = try #require(Recipe.read("Add @water@:non-food:staple now.").firstIngredient)
+        let ingredient = try #require(Recipe.read("Add @baking beans@:non-food:staple now.").firstIngredient)
         #expect(ingredient.flags.isNonFood)
         #expect(ingredient.flags.isStaple)
         #expect(!ingredient.flags.isOptional)
@@ -80,10 +80,10 @@ struct IngredientFlagTests {
 
     @Test
     func readsARepeatedUnrecognizedFlagOnce() {
-        let parsed = SousParser().parseRecipe("Add @stock@:homemade:homemade now.")
+        let parsed = SousParser().parseRecipe("Add @beef stock@:homemade:homemade now.")
 
         #expect(parsed.value.ingredients.map(\.flags.unrecognized) == [["homemade"]])
-        #expect(parsed.value.serialized() == "Add @stock@:homemade now.")
+        #expect(parsed.value.serialized() == "Add @beef stock@:homemade now.")
         #expect(parsed.diagnostics.isEmpty)
     }
 
@@ -104,13 +104,13 @@ struct IngredientFlagTests {
 
     @Test
     func readsAHyphenAsPartOfAFlagWord() throws {
-        let ingredient = try #require(Recipe.read("Add @stock@:home-made now.").firstIngredient)
+        let ingredient = try #require(Recipe.read("Add @beef stock@:home-made now.").firstIngredient)
         #expect(ingredient.flags.unrecognized == ["home-made"])
     }
 
     @Test
     func endsAFlagWordAtANumber() throws {
-        let step = try #require(Recipe.read("Add @stock@:batch-2 now.").firstStep)
+        let step = try #require(Recipe.read("Add @beef stock@:batch-2 now.").firstStep)
         #expect(step.ingredients.first?.flags.unrecognized == ["batch-"])
         #expect(step.segments.last?.proseText == "2 now.")
     }
@@ -127,7 +127,7 @@ struct IngredientFlagTests {
 
     @Test
     func readsALetterOutsideAsciiAsPartOfAFlagWord() throws {
-        let ingredient = try #require(Recipe.read("Add @stock@:cr\u{00E8}me now.").firstIngredient)
+        let ingredient = try #require(Recipe.read("Add @beef stock@:cr\u{00E8}me now.").firstIngredient)
         #expect(ingredient.flags.unrecognized == ["cr\u{00E8}me"])
     }
 
@@ -207,7 +207,7 @@ struct IngredientFlagTests {
 
     @Test
     func preservesAnUnrecognizedFlag() throws {
-        let parsed = SousParser().parseRecipe("Add @stock@:homemade now.")
+        let parsed = SousParser().parseRecipe("Add @beef stock@:homemade now.")
 
         let ingredient = try #require(parsed.value.firstIngredient)
         #expect(ingredient.flags.unrecognized == ["homemade"])
@@ -217,7 +217,7 @@ struct IngredientFlagTests {
 
     @Test
     func keepsUnrecognizedFlagsInDocumentOrder() throws {
-        let ingredient = try #require(Recipe.read("Add @stock@:homemade:staple:frozen now.").firstIngredient)
+        let ingredient = try #require(Recipe.read("Add @beef stock@:homemade:staple:frozen now.").firstIngredient)
         #expect(ingredient.flags.unrecognized == ["homemade", "frozen"])
         #expect(ingredient.flags.isStaple)
     }

@@ -30,7 +30,7 @@ struct GroupValidationTests {
     }
 
     @Test(arguments: [
-        "## Filling\nBrown it.\n\n## Garnish\nGrate it.",
+        "## Filling\nBrown it.\n\n## Rouille\nGrate it.",
         "## Filling\nBrown it.\n\n## Fillings\nBrown them.",
         "## The\nBrown it.\n\n## A\nBrown it again.",
         "Warm the oven.\n\n## Filling\nBrown it."
@@ -43,7 +43,7 @@ struct GroupValidationTests {
     func reportsOneDiagnosticPerRepeatedName() {
         #expect(validate("## Filling\nOne.\n\n## filling\nTwo.\n\n## FILLING\nThree.").map(\.kind)
             == [.repeatedGroupName])
-        #expect(validate("## Filling\nOne.\n\n## filling\nTwo.\n\n## Roux\nThree.\n\n## roux\nFour.").map(\.kind)
+        #expect(validate("## Filling\nOne.\n\n## filling\nTwo.\n\n## Pastry\nThree.\n\n## pastry\nFour.").map(\.kind)
             == [.repeatedGroupName, .repeatedGroupName])
     }
 
@@ -73,12 +73,12 @@ struct GroupValidationTests {
     func reportsEachUnresolvedTargetOnce() {
         let source = """
         ## Assemble
-        Layer the >bechamel> in a dish, then the >ragout>, then the rest of the >bechamel>.
+        Layer the >bechamel> in a dish, then the >rouille>, then the rest of the >bechamel>.
         """
 
         #expect(validate(source).map(\.message) == [
             "Reference to 'bechamel' matches no group.",
-            "Reference to 'ragout' matches no group."
+            "Reference to 'rouille' matches no group."
         ])
     }
 
@@ -104,9 +104,9 @@ struct GroupValidationTests {
     func reportsGroupsThatConsumeEachOther() {
         let source = """
         ## Filling
-        Stir in the >garnish>.
+        Stir in the >rouille>.
 
-        ## Garnish
+        ## Rouille
         Stir in the >filling>.
         """
 
@@ -119,12 +119,12 @@ struct GroupValidationTests {
     func reportsALoopThatRunsThroughAThirdGroup() {
         let source = """
         ## Filling
-        Stir in the >garnish>.
+        Stir in the >rouille>.
 
-        ## Garnish
-        Stir in the >custard>.
+        ## Rouille
+        Stir in the >bechamel>.
 
-        ## Custard
+        ## Bechamel
         Stir in the >filling>.
         """
 
@@ -135,21 +135,21 @@ struct GroupValidationTests {
     func reportsOneDiagnosticPerLoop() {
         let source = """
         ## Filling
-        Stir in the >garnish>.
+        Stir in the >rouille>.
 
-        ## Garnish
+        ## Rouille
         Stir in the >filling>.
 
-        ## Custard
+        ## Bechamel
         Stir in the >pastry>.
 
         ## Pastry
-        Stir in the >custard>.
+        Stir in the >bechamel>.
         """
 
         #expect(validate(source).map(\.message) == [
             "Group 'Filling' consumes an intermediate that depends on it.",
-            "Group 'Custard' consumes an intermediate that depends on it."
+            "Group 'Bechamel' consumes an intermediate that depends on it."
         ])
     }
 
@@ -158,20 +158,20 @@ struct GroupValidationTests {
         ## Filling
         Brown it.
 
-        ## Garnish
+        ## Rouille
         Stir in the >filling>.
 
         ## Assemble
-        Layer the >filling> and the >garnish>.
+        Layer the >filling> and the >rouille>.
         """,
         """
         ## Assemble
-        Layer the >filling> and the >garnish>.
+        Layer the >filling> and the >rouille>.
 
         ## Filling
         Brown it.
 
-        ## Garnish
+        ## Rouille
         Grate it.
         """
     ])
@@ -203,12 +203,12 @@ struct GroupValidationTests {
     func reportsTwoLoopsSharingAGroupOnce() {
         let source = """
         ## Filling
-        Stir in the >garnish> and the >custard>.
+        Stir in the >rouille> and the >bechamel>.
 
-        ## Garnish
+        ## Rouille
         Stir in the >filling>.
 
-        ## Custard
+        ## Bechamel
         Stir in the >filling>.
         """
 
@@ -242,8 +242,7 @@ struct GroupValidationTests {
         TestSupport.expectNoFailures(failures)
     }
 
-    /// The groups a cycle should be reported at, worked out independently of the implementation
-    /// so the expectation is not derived from the code it checks.
+    /// The groups a cycle should be reported at, worked out independently of the implementation.
     private static func loops(in edges: [[Int]]) -> [Int] {
         let reaches = edges.indices.map({ reached(from: $0, edges: edges) })
         var loops: [Int] = []
@@ -276,14 +275,14 @@ struct GroupValidationTests {
         let source = """
         ---
         title: Quiche Lorraine
-        servings: 4
+        servings: 6
         ---
 
         ## Filling
-        Fry @{500 g} lardons@ in a #frying pan#.
+        Fry @{200 g} lardons@ in a #frying pan#.
 
         ## Assemble
-        Layer the >filling> in a #tart tin#.
+        Pour the >filling> into a #tart tin#.
         """
 
         #expect(validate(source).isEmpty)

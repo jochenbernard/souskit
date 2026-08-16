@@ -12,14 +12,14 @@ struct DiagnosticsTests {
     func aWarningPreservesTheContentSoTheFileRemainsUsable() {
         let source = """
         ---
-        title: Tartine
+        title: Vinaigrette
         stray line
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.diagnostics.map(\.severity) == [.warning])
-        #expect(parsed.value.metadata.title == "Tartine")
+        #expect(parsed.value.metadata.title == "Vinaigrette")
         #expect(parsed.value.serialized() == source)
     }
 
@@ -45,15 +45,15 @@ struct DiagnosticsTests {
     @Test
     func describesAndLocatesEveryDiagnostic() {
         let sources = [
-            "---\nchef: Alice\nchef: Bob\nstray line\ntags: [french]\ntags: [quick]\n---",
-            "---\ntitle: Tartine Beurree",
-            "Fry @garlic and warm a #pan.",
+            "---\nchef: Camille\nchef: Bruno\nstray line\ntags: [french]\ntags: [quick]\n---",
+            "---\ntitle: Vinaigrette",
+            "Fry @garlic and warm a #casserole.",
             "Sift @{200 g flour",
             "Spread the >bechamel on top.",
             "Add @{3,2 kg} flour@.",
             "Add @{200 g}@ now.",
             "---\nservings: 3,2\n---",
-            "---\n: Alice\n---"
+            "---\n: Camille\n---"
         ]
 
         let diagnostics = sources.flatMap({ SousParser().parseRecipe($0).diagnostics })
@@ -119,7 +119,7 @@ struct DiagnosticsTests {
     func locatesAMalformedHeaderLine() throws {
         let source = """
         ---
-        title: Tartine
+        title: Vinaigrette
         stray line
         ---
         """
@@ -147,7 +147,7 @@ struct DiagnosticsTests {
 
     @Test
     func locatesAnUnterminatedHeaderAtItsOpeningFence() throws {
-        let parsed = SousParser().parseRecipe("---\ntitle: Tartine Beurree")
+        let parsed = SousParser().parseRecipe("---\ntitle: Vinaigrette")
 
         let diagnostic = try parsed.firstDiagnostic(ofKind: .unterminatedHeader)
         let range = try #require(diagnostic.range)

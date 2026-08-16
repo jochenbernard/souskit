@@ -6,7 +6,7 @@ struct NormalizationTests {
     @Test(arguments: [
         (text: "Bechamel", normalized: "bechamel"),
         (text: "BECHAMEL", normalized: "bechamel"),
-        (text: "Sweet Shortcrust Pastry", normalized: "sweet shortcrust pastry")
+        (text: "Court-Bouillon", normalized: "court-bouillon")
     ])
     func foldsCapitalization(text: String, normalized: String) {
         #expect(Normalization.normalized(text) == normalized)
@@ -15,8 +15,9 @@ struct NormalizationTests {
     @Test(arguments: [
         (text: "B\u{E9}chamel", normalized: "bechamel"),
         (text: "B\u{C9}CHAMEL", normalized: "bechamel"),
-        (text: "Cr\u{E8}me Br\u{FB}l\u{E9}e", normalized: "creme brulee"),
-        (text: "Ni\u{E7}oise", normalized: "nicoise"),
+        (text: "Cr\u{EA}pes", normalized: "crepes"),
+        (text: "Cro\u{FB}tons", normalized: "croutons"),
+        (text: "Proven\u{E7}ale", normalized: "provencale"),
         (text: "Be\u{301}chamel", normalized: "bechamel")
     ])
     func foldsAccents(text: String, normalized: String) {

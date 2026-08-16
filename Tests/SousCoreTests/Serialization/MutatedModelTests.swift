@@ -13,9 +13,9 @@ struct MutatedModelTests {
         #expect(value.reRead().ingredients.isEmpty)
     }
 
-    @Test(arguments: ["", " pan", "\tpan", "a\nb", "pan\n", "a\n\nb"])
+    @Test(arguments: ["", " casserole", "\tcasserole", "a\nb", "casserole\n", "a\n\nb"])
     func writesACookwareNameThatNoLongerReadsBackAsOne(name: String) throws {
-        var value = Recipe.read("Use a #pan# now.")
+        var value = Recipe.read("Use a #casserole# now.")
         var cookware = try #require(value.cookware.first)
         cookware.name = name
         value.groups[0].steps[0].segments[1] = .cookware(cookware)

@@ -14,14 +14,14 @@ struct ScaledYieldTests {
         target: String,
         written: String
     ) throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe(header), to: target)
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter(header), to: target)
 
         #expect(scaled.metadata["servings"] == written)
     }
 
     @Test
     func statesAYieldTargetExactly() throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe("yield: [11 crepes]"), to: "15 crepes")
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter("yield: [11 crepes]"), to: "15 crepes")
 
         #expect(scaled.metadata.yields.map(\.text) == ["15 crepes"])
     }
@@ -29,7 +29,7 @@ struct ScaledYieldTests {
     @Test
     func statesEverySpellingOfTheTargetsUnitExactly() throws {
         let scaled = try SousParser().scaled(
-            Fixtures.flourRecipe("servings: 11\nyield: [11 servings]"),
+            Fixtures.crepeBatter("servings: 11\nyield: [11 servings]"),
             to: "15 servings"
         )
 
@@ -39,7 +39,7 @@ struct ScaledYieldTests {
 
     @Test
     func statesOnlyTheEntryTheAliasIsReadFrom() throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe("servings: 4\nservings: 6"), to: "12 servings")
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter("servings: 4\nservings: 6"), to: "12 servings")
 
         #expect(scaled.metadata.entries.map(\.value) == [.scalar("8"), .scalar("12")])
         #expect(scaled.metadata.servings == 12.0)
@@ -47,16 +47,16 @@ struct ScaledYieldTests {
 
     @Test(arguments: ["servings: 0\nservings: 1", "servings: 3\nservings: 8"])
     func scalingToWhatAShadowedKeyAlreadyStatesChangesNothing(header: String) throws {
-        let parsed = Recipe.read(Fixtures.flourRecipe(header))
+        let parsed = Recipe.read(Fixtures.crepeBatter(header))
         let target = "\(parsed.metadata.servings ?? 0) servings"
 
-        #expect(try SousParser().scaled(Fixtures.flourRecipe(header), to: target) == parsed)
+        #expect(try SousParser().scaled(Fixtures.crepeBatter(header), to: target) == parsed)
     }
 
     @Test
     func statesNoTargetInAnEntryTheAliasDoesNotStandFor() throws {
         let scaled = try SousParser().scaled(
-            Fixtures.flourRecipe("servings: 4\nservings: six\nyield: [11 servings]"),
+            Fixtures.crepeBatter("servings: 4\nservings: six\nyield: [11 servings]"),
             to: "15 servings"
         )
 
@@ -67,21 +67,21 @@ struct ScaledYieldTests {
 
     @Test
     func statesTheTargetInAServingsValueThatCarriesAUnit() throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe("servings: 4 people\nservings: 8"), to: "16 servings")
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter("servings: 4 people\nservings: 8"), to: "16 servings")
 
         #expect(scaled.metadata.entries.map(\.value) == [.scalar("8 people"), .scalar("16")])
     }
 
     @Test
     func statesAServingsTargetExactly() throws {
-        let parsed = Recipe.read(Fixtures.flourRecipe("servings: 11"))
+        let parsed = Recipe.read(Fixtures.crepeBatter("servings: 11"))
 
         #expect(try parsed.scaled(toServings: 15.0).metadata["servings"] == "15")
     }
 
     @Test
     func leavesEveryOtherYieldAtTheProductTheFactorLeft() throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe("servings: 11\nyield: [3 kg]"), to: "15 servings")
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter("servings: 11\nyield: [3 kg]"), to: "15 servings")
 
         #expect(scaled.metadata["servings"] == "15")
         #expect(scaled.metadata.yields.map(\.text) == ["4.090909090909091 kg"])
@@ -90,7 +90,7 @@ struct ScaledYieldTests {
 
     @Test
     func leavesAValueStatingNoQuantityAlone() throws {
-        let scaled = try SousParser().scaled(Fixtures.flourRecipe("yield: [plenty, 11]"), to: "15")
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter("yield: [plenty, 11]"), to: "15")
 
         #expect(scaled.metadata.yields.map(\.text) == ["plenty", "15"])
     }

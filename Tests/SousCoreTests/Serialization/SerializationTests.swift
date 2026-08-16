@@ -23,42 +23,42 @@ struct SerializationTests {
     }
 
     @Test(arguments: [
-        "Toast the baguette and spread it with butter.",
+        "Whisk the vinegar and beat in the oil.",
         "Fry @garlic@ until fragrant, then add @pearl onions@.",
-        "Bring a #stockpot# of water to a boil and blanch @{200 g} potatoes@.",
+        "Bring a #stockpot# of @{2 l} fish stock@ to a simmer and poach @{1.5 kg} rockfish@.",
         "Add @{1-2 tbsp} olive oil@ and @{a pinch} salt@.",
         """
-        Toast the baguette.
+        Whisk the vinegar.
 
-        Spread with butter.
+        Beat in the oil.
         """,
         """
         ---
-        title: Sole Meuniere
+        title: Moules Marinieres
         servings: 2
         ---
 
-        Melt @{30 g} butter@ in a #frying pan#, fry @{2 cloves} garlic@.
+        Soften @{2} shallots@ in @{50 g} butter@ in a #heavy pot#.
         """,
         "Mix @salt@@thyme@ in.",
         "Simmer gently for ~40 min~, then rest ~overnight~.",
         "Bake ~8-10 min~ and rest ~1 h 30 min~.",
         "Chill ~over\\~night~ now.",
         "Wait \\~40 min here.",
-        "Stir in @{=1 tsp} nutmeg@.",
+        "Stir in @{=1 tsp} saffron@.",
         "Season with @salt@:staple and @black pepper@:staple.",
         "Scatter @thyme@? over the top.",
         "Scatter @thyme@?y over the top.",
-        "Loosen with @{50 ml} water@:non-food if needed.",
+        "Weigh it down with @{500 g} baking beans@:non-food.",
         "Add @{=10 g} salt@:staple now.",
-        "Add @water@:staple:non-food now.",
+        "Add @baking beans@:staple:non-food now.",
         "Add @salt@:staple?y here.",
-        "Add @stock@:homemade now.",
-        "Add @stock@:homemade?2 now.",
+        "Add @beef stock@:homemade now.",
+        "Add @beef stock@:homemade?2 now.",
         "Is it @salt@\\? Yes.",
         "Serve @potatoes@\\:about 200 g each.",
         "Season with @salt@:staple\\?y.",
-        "Add @stock@:homemade\\:more now.",
+        "Add @beef stock@:homemade\\:more now.",
         "Season with @salt@: to taste.",
         "Use a #{200 g} frying pan#.",
         "Add @{} salt@.",
@@ -68,15 +68,15 @@ struct SerializationTests {
         "Layer the >{300 g} bechamel> in a dish.",
         "Read the \\note here.",
         "Note the path C:\\Users, then add @garlic@.",
-        "Use a #8\\ pan#.",
+        "Use a #8\\ tin#.",
         "Path C:\\\\@garlic@ now.",
         "Add @flour\\\\@ now.",
-        "  Toast the baguette.  ",
-        "---\n: Alice\n---",
+        "  Whisk the vinegar.  ",
+        "---\n: Camille\n---",
         "---\ntitle: a: b\n---",
         "---\nprep-time: 15 min\n---",
         "---\ntitle:\n---",
-        "---\nnutrition:\n  calories: 640 kcal\n---",
+        "---\nnutrition:\n  calories: 3300 kcal\n---",
         "---\ntags: [comfort food\\, french]\n---",
         "---\ntags: [\\[sugar]\n---",
         "---\nsource: C:\\photos\\x\n---"
@@ -97,7 +97,7 @@ struct SerializationTests {
 
     @Test(arguments: [
         "\\@\\@garlic\\@ here.",
-        "\\#\\#pan\\# here.",
+        "\\#\\#tin\\# here.",
         "\\@\\@garlic\\@",
         "Mix \\@\\@a\\@ into @flour@.",
         "\\@\\@\\@a\\@"
@@ -110,11 +110,11 @@ struct SerializationTests {
     }
 
     @Test(arguments: [
-        (source: "Add @water@:non-food:staple now.", written: "Add @water@:staple:non-food now."),
+        (source: "Add @baking beans@:non-food:staple now.", written: "Add @baking beans@:staple:non-food now."),
         (source: "Add @salt@:optional now.", written: "Add @salt@? now."),
         (source: "Add @salt@:staple:staple now.", written: "Add @salt@:staple now."),
         (source: "Add @salt@?:staple now.", written: "Add @salt@:staple? now."),
-        (source: "Add @stock@:homemade:staple now.", written: "Add @stock@:staple:homemade now.")
+        (source: "Add @beef stock@:homemade:staple now.", written: "Add @beef stock@:staple:homemade now.")
     ])
     func writesAFlagChainInItsCanonicalOrder(source: String, written: String) {
         #expect(Recipe.read(source).serialized() == written)
@@ -159,8 +159,8 @@ struct SerializationTests {
     func preservesAnUnrecognizedHeaderKeyOnRoundTrip() {
         let source = """
         ---
-        title: Tartine
-        chef: Alice
+        title: Vinaigrette
+        chef: Camille
         ---
         """
 
@@ -177,10 +177,10 @@ struct SerializationTests {
 
     @Test(arguments: [
         "Add @\\{not a fence@ now.",
-        "Use a #8\\# pan#.",
+        "Use a #8\\# tin#.",
         "Add @a\\@b@ now.",
         "Email \\@user today.",
-        "Weigh a \\#5 sieve here."
+        "Weigh a \\#5 tin here."
     ])
     func reEscapesParsedEscapesForByteExactRoundTrip(source: String) {
         #expect(Recipe.read(source).serialized() == source)
@@ -222,7 +222,7 @@ struct SerializationTests {
         "---\n---\n\n---",
         "---\n---\n\n---\nBring the water to a boil.",
         "---\n---\n\n--- ",
-        "---\n---\n\n---\n\nSpread with butter."
+        "---\n---\n\n---\n\nBeat in the oil."
     ])
     func keepsABodyThatOpensWithAFenceLineInTheBody(source: String) {
         let (recipe, reRead) = roundTrip(source)
@@ -240,7 +240,7 @@ struct SerializationTests {
         "\u{FEFF}x",
         "\n\u{FEFF}",
         "\u{FEFF}\u{FEFF}x",
-        "\u{FEFF}\u{FEFF}\n\nSpread with butter."
+        "\u{FEFF}\u{FEFF}\n\nBeat in the oil."
     ])
     func keepsABodyThatOpensWithAByteOrderMarkInTheBody(source: String) {
         let (recipe, reRead) = roundTrip(source)
@@ -250,7 +250,7 @@ struct SerializationTests {
 
     @Test
     func doesNotSeparateABodyFenceLineFromAHeaderThatPrecedesIt() {
-        let source = "---\ntitle: Tartine\n---\n\n---\nBring the water to a boil."
+        let source = "---\ntitle: Vinaigrette\n---\n\n---\nBring the water to a boil."
 
         #expect(Recipe.read(source).serialized() == source)
     }
@@ -260,15 +260,15 @@ struct SerializationTests {
         let source = """
         ---
         title: Gratin Dauphinois
-        servings: 2
-        tags: [french, quick]
+        servings: 6
+        tags: [comfort food, french]
         ---
 
 
-        Slice @{200 g}potatoes@ in a #gratin dish#.
+        Slice @{1.2 kg}potatoes@ into a #gratin dish#.
 
 
-        Season with @{a pinch} salt@ and serve.
+        Pour over @{500 ml} cream@ and bake.
         """
 
         let (recipe, reRead) = roundTrip(source)

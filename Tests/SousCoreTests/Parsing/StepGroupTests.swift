@@ -50,13 +50,13 @@ struct StepGroupTests {
 
     @Test
     func holdsABodyWritingNoHeadingInOneUnnamedGroup() {
-        let value = Recipe.read("Toast the baguette.\n\nSpread with butter.")
+        let value = Recipe.read("Whisk the vinegar.\n\nBeat in the oil.")
 
         #expect(value.groups.map(\.name) == [nil])
         #expect(value.groups.first?.steps.count == 2)
     }
 
-    @Test(arguments: ["", "---\ntitle: Tartine Beurree\n---", "   \n\n  "])
+    @Test(arguments: ["", "---\ntitle: Vinaigrette\n---", "   \n\n  "])
     func holdsNoGroupWhenTheBodyIsEmpty(source: String) {
         #expect(Recipe.read(source).groups.isEmpty)
     }
@@ -123,7 +123,7 @@ struct StepGroupTests {
 
     @Test(arguments: [
         (source: "## Pastry", name: "Pastry"),
-        (source: "## Sweet Shortcrust Pastry", name: "Sweet Shortcrust Pastry"),
+        (source: "## Court-Bouillon", name: "Court-Bouillon"),
         (source: "##  Pastry", name: "Pastry"),
         (source: "## \tPastry ", name: "Pastry"),
         (source: "##\tPastry", name: "Pastry"),
@@ -165,9 +165,9 @@ struct StepGroupTests {
 
     @Test
     func readsNoAnnotationInsideAName() {
-        let parsed = SousParser().parseRecipe("## Pastry #pan# with @salt@ and ~5 min~")
+        let parsed = SousParser().parseRecipe("## Pastry #casserole# with @salt@ and ~5 min~")
 
-        #expect(parsed.value.groups.map(\.name) == ["Pastry #pan# with @salt@ and ~5 min~"])
+        #expect(parsed.value.groups.map(\.name) == ["Pastry #casserole# with @salt@ and ~5 min~"])
         #expect(parsed.value.cookware.isEmpty)
         #expect(parsed.value.ingredients.isEmpty)
         #expect(parsed.value.timers.isEmpty)
@@ -179,10 +179,10 @@ struct StepGroupTests {
     private var quicheLorraine: Recipe {
         Recipe.read("""
         ## Pastry
-        Rub @{100 g} butter@ into a #mixing bowl# and chill ~30 min~.
+        Rub @{125 g} butter@ into @{250 g} flour@ in a #mixing bowl# and rest it ~30 min~.
 
         ## Filling
-        Whisk @{200 ml} cream@ with @{50 g} gruyere@.
+        Whisk @{4} eggs@ with @{300 ml} cream@.
 
         ## Assemble
         Line a #tart tin# with the >pastry> and pour in the >filling>.
@@ -194,7 +194,7 @@ struct StepGroupTests {
         let groups = quicheLorraine.groups
 
         #expect(groups.map({ $0.ingredients.map(\.name) }) == [
-            ["butter"], ["cream", "gruyere"], []
+            ["butter", "flour"], ["eggs", "cream"], []
         ])
         #expect(groups.map({ $0.cookware.map(\.name) }) == [["mixing bowl"], [], ["tart tin"]])
         #expect(groups.map({ $0.timers.map(\.text) }) == [["30 min"], [], []])
@@ -213,7 +213,7 @@ struct StepGroupTests {
     func readsTheRecipeWideListsAcrossEveryGroup() {
         let value = quicheLorraine
 
-        #expect(value.ingredients.map(\.name) == ["butter", "cream", "gruyere"])
+        #expect(value.ingredients.map(\.name) == ["butter", "flour", "eggs", "cream"])
         #expect(value.cookware.map(\.name) == ["mixing bowl", "tart tin"])
         #expect(value.timers.map(\.text) == ["30 min"])
         #expect(value.references.map(\.target) == ["pastry", "filling"])

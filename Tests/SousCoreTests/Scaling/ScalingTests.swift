@@ -98,23 +98,22 @@ struct ScalingTests {
 
     @Test
     func leavesEveryFieldButTheYieldAndTheServingsAlone() throws {
-        let source = "---\nversion: 1.0\ntitle: 3 Onion Gratin\ncalories: 640\ntags: [4 star]\n---"
+        let source = "---\nversion: 1.0\ncalories: 550\ntags: [4 star, make-ahead]\n---"
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata.version == "1.0")
-        #expect(recipe.metadata.title == "3 Onion Gratin")
-        #expect(recipe.metadata["calories"] == "640")
-        #expect(recipe.metadata.tags == ["4 star"])
+        #expect(recipe.metadata["calories"] == "550")
+        #expect(recipe.metadata.tags == ["4 star", "make-ahead"])
     }
 
     @Test
     func leavesAHeaderValueWithNoQuantityAlone() throws {
-        let source = "---\nservings: six\nyield: plenty\ntitle: Gratin\n---"
+        let source = "---\nservings: six\nyield: plenty\ntitle: Bouillabaisse\n---"
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.metadata["servings"] == "six")
         #expect(recipe.metadata.yields.map(\.text) == ["plenty"])
-        #expect(recipe.metadata.title == "Gratin")
+        #expect(recipe.metadata.title == "Bouillabaisse")
     }
 
     @Test
@@ -127,7 +126,7 @@ struct ScalingTests {
 
     @Test
     func keepsTheTextOfAStepItDidNotChange() throws {
-        let source = "Toast the @baguette@  slowly with @{=1 tsp} butter@."
+        let source = "Whisk the @dijon mustard@ slowly with @{=1 tsp}  salt@."
 
         let recipe = try Recipe.read(source).scaled(by: 2.0)
         #expect(recipe.steps.first?.text == source)

@@ -18,7 +18,7 @@ struct HeaderFormTests {
     @Test
     func treatsAFileWithoutALeadingFenceAsHavingNoHeader() {
         let source = """
-        Toast the baguette.
+        Whisk the vinegar.
         ---
         title: X
         ---
@@ -29,37 +29,37 @@ struct HeaderFormTests {
 
     @Test
     func treatsAnIndentedOpeningFenceAsBodyText() {
-        let parsed = SousParser().parseRecipe(" ---\ntitle: Tartine\n---")
+        let parsed = SousParser().parseRecipe(" ---\ntitle: Vinaigrette\n---")
 
         #expect(parsed.value.metadata.entries.isEmpty)
         #expect(parsed.value.steps.count == 1)
     }
 
     @Test(arguments: [
-        "\n---\ntitle: Tartine\n---",
-        "\n\n---\ntitle: Tartine\n---",
-        "   \n\t\n---\ntitle: Tartine\n---"
+        "\n---\ntitle: Vinaigrette\n---",
+        "\n\n---\ntitle: Vinaigrette\n---",
+        "   \n\t\n---\ntitle: Vinaigrette\n---"
     ])
     func readsAHeaderBlankLinesStandBefore(source: String) {
         let parsed = SousParser().parseRecipe(source)
 
-        #expect(parsed.value.metadata.title == "Tartine")
+        #expect(parsed.value.metadata.title == "Vinaigrette")
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
     func ignoresALeadingByteOrderMark() {
-        let source = "\u{FEFF}---\ntitle: Tartine Beurree\n---"
+        let source = "\u{FEFF}---\ntitle: Vinaigrette\n---"
 
-        #expect(Recipe.read(source).metadata.title == "Tartine Beurree")
+        #expect(Recipe.read(source).metadata.title == "Vinaigrette")
     }
 
     @Test
     func acceptsAFenceLineWithTrailingWhitespace() {
-        let parsed = SousParser().parseRecipe("--- \ntitle: Tartine\n--- \n\nToast the baguette.")
+        let parsed = SousParser().parseRecipe("--- \ntitle: Vinaigrette\n--- \n\nWhisk the vinegar.")
 
-        #expect(parsed.value.metadata.title == "Tartine")
-        #expect(parsed.value.steps.map(\.text) == ["Toast the baguette."])
+        #expect(parsed.value.metadata.title == "Vinaigrette")
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar."])
     }
 
     @Test
@@ -75,11 +75,12 @@ struct HeaderFormTests {
     func recoversFromAnUnterminatedHeader() {
         let source = """
         ---
-        title: Tartine Beurree
+        title: Vinaigrette
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.metadata.title == "Tartine Beurree")
+        #expect(parsed.value.metadata.title == "Vinaigrette")
+        #expect(parsed.value.steps.isEmpty)
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unterminatedHeader }))
     }
 
@@ -119,35 +120,39 @@ struct HeaderFormTests {
         #expect(title.isEmpty)
     }
 
-    @Test(arguments: ["title:  Tartine", "title:\tTartine", "title: \t Tartine"])
+    @Test(arguments: ["title:  Vinaigrette", "title:\tVinaigrette", "title: \t Vinaigrette"])
     func removesTheWhitespaceSeparatingAValueFromItsKey(entry: String) {
-        #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Tartine")
+        #expect(Recipe.read("---\n\(entry)\n---").metadata.title == "Vinaigrette")
     }
 
-    @Test(arguments: ["title : Tartine", "title\t: Tartine", "title  :  Tartine"])
+    @Test(arguments: ["title : Vinaigrette", "title\t: Vinaigrette", "title  :  Vinaigrette"])
     func trimsTheWhitespaceAroundAKey(entry: String) {
         let parsed = SousParser().parseRecipe("---\n\(entry)\n---")
 
         #expect(parsed.value.metadata.entries.map(\.key) == ["title"])
-        #expect(parsed.value.metadata.title == "Tartine")
+        #expect(parsed.value.metadata.title == "Vinaigrette")
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
-    func readsALineThatOpensWithTheSeparatorAsAnEmptyKey() {
-        let parsed = SousParser().parseRecipe("---\n: Alice\n---")
+    func readsALineThatOpensWithTheSeparatorAsAnEmptyKey() throws {
+        let parsed = SousParser().parseRecipe("---\n: Camille\n---")
 
         #expect(parsed.value.metadata.entries.map(\.key) == [""])
-        #expect(parsed.value.metadata[""] == "Alice")
+        #expect(parsed.value.metadata[""] == "Camille")
         #expect(parsed.diagnostics.map(\.kind) == [.emptyHeaderKey])
+
+        let range = try #require(parsed.diagnostics.first?.range)
+        #expect(range.start.offset == 4)
+        #expect(range.end.offset == 5)
     }
 
     @Test
     func preservesAKeyThatIsNotLowercase() {
-        let parsed = SousParser().parseRecipe("---\nTitle: Tartine\n---")
+        let parsed = SousParser().parseRecipe("---\nTitle: Vinaigrette\n---")
 
         #expect(parsed.value.metadata.title == nil)
-        #expect(parsed.value.metadata["Title"] == "Tartine")
+        #expect(parsed.value.metadata["Title"] == "Vinaigrette")
         #expect(parsed.diagnostics.isEmpty)
     }
 

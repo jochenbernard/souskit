@@ -11,7 +11,7 @@ struct MalformedAmountTests {
         #expect(amount.unit == nil)
     }
 
-    @Test(arguments: ["1/0 cup", "1/0.0 cup"])
+    @Test(arguments: ["1/0 tbsp", "1/0.0 tbsp"])
     func doesNotDivideByAZeroDenominator(fence: String) throws {
         let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
 
@@ -21,10 +21,10 @@ struct MalformedAmountTests {
 
     @Test
     func readsAMixedNumberWhoseFractionDividesByZeroAsTheWholeNumberAndItsUnit() throws {
-        let amount = try #require(Recipe.read("Add @{1 1/0 cup} flour@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{1 1/0 tbsp} flour@.").firstAmount)
 
         #expect(amount.kind.preciseQuantity?.value == 1.0)
-        #expect(amount.unit == "1/0 cup")
+        #expect(amount.unit == "1/0 tbsp")
     }
 
     @Test(arguments: ["3. kg", "3.x"])
@@ -35,7 +35,7 @@ struct MalformedAmountTests {
         #expect(amount.unit == nil)
     }
 
-    @Test(arguments: ["3,2 kg", "1,000 g", "3. kg", "1/0 cup", "1/x cup", ".5", ",5", "-2 tbsp"])
+    @Test(arguments: ["3,2 kg", "1,000 g", "3. kg", "1/0 tbsp", "1/x tbsp", ".5", ",5", "-2 tbsp"])
     func warnsAboutANumberAnAmountCannotFinish(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
 

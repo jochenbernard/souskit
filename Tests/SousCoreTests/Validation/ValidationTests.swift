@@ -6,7 +6,7 @@ struct ValidationTests {
     /// The diagnostics validating a recipe with the given header and one flour ingredient
     /// produces.
     private func validate(_ header: String) -> [Diagnostic] {
-        Recipe.read(Fixtures.flourRecipe(header)).validate()
+        Recipe.read(Fixtures.crepeBatter(header)).validate()
     }
 
     @Test
@@ -16,7 +16,7 @@ struct ValidationTests {
 
     @Test
     func aProseOnlyRecipeValidatesWithoutDiagnostics() {
-        #expect(Recipe.read("Toast the baguette.").validate().isEmpty)
+        #expect(Recipe.read("Whisk the vinegar.").validate().isEmpty)
     }
 
     @Test(arguments: ["yield: 0 g", "servings: 0", "yield: [0 g, 6 servings]"])

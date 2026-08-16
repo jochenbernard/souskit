@@ -8,15 +8,15 @@ struct ValueSemanticsTests {
 
     @Test
     func sharesOneParserAcrossIsolationDomains() async {
-        let recipe = await Task.detached { Self.parser.parseRecipe("Fry @garlic@ in a #pan#.").value }.value
+        let recipe = await Task.detached { Self.parser.parseRecipe("Fry @garlic@ in a #casserole#.").value }.value
 
         #expect(recipe.ingredients.map(\.name) == ["garlic"])
-        #expect(recipe.cookware.map(\.name) == ["pan"])
+        #expect(recipe.cookware.map(\.name) == ["casserole"])
     }
 
     @Test
     func comparesTwoParsesOfTheSameSource() {
-        let source = "---\ntitle: Tartine\n---\n\nFry @garlic@ in a #pan#."
+        let source = "---\ntitle: Vinaigrette\n---\n\nFry @garlic@ in a #casserole#."
         let first = Self.parser.parseRecipe(source)
         let second = Self.parser.parseRecipe(source)
 
@@ -25,12 +25,18 @@ struct ValueSemanticsTests {
 
     @Test
     func distinguishesParsesOfDifferentSources() {
-        #expect(Self.parser.parseRecipe("Fry @garlic@.") != Self.parser.parseRecipe("Fry @onion@."))
+        #expect(Self.parser.parseRecipe("Fry @garlic@.") != Self.parser.parseRecipe("Fry @onions@."))
     }
 
     @Test
     func distinguishesParsesThatDifferOnlyInTheirDiagnostics() {
-        #expect(Self.parser.parseRecipe("Fry @garlic@.") != Self.parser.parseRecipe("Fry @garlic@ and @onion."))
+        let clean = Self.parser.parseRecipe("Fry @garlic@.")
+        var warned = clean
+        warned.diagnostics = Self.parser.parseRecipe("Fry @garlic until fragrant.").diagnostics
+
+        #expect(!warned.diagnostics.isEmpty)
+        #expect(warned.value == clean.value)
+        #expect(warned != clean)
     }
 
     @Test

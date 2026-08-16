@@ -9,14 +9,14 @@ struct MetadataTests {
         title: Quiche Lorraine
         language: en
         version: 1.0
-        servings: 4
-        source: https://example.com/quiche
+        servings: 6
+        source: https://example.com/quiche-lorraine
         """)
         #expect(metadata.title == "Quiche Lorraine")
         #expect(metadata.language == "en")
         #expect(metadata.version == "1.0")
-        #expect(metadata.servings == 4)
-        #expect(metadata.source == "https://example.com/quiche")
+        #expect(metadata.servings == 6)
+        #expect(metadata.source == "https://example.com/quiche-lorraine")
     }
 
     @Test(arguments: [
@@ -45,8 +45,8 @@ struct MetadataTests {
     }
 
     @Test(arguments: [
-        (header: "title: Tartine ", key: "title", value: "Tartine"),
-        (header: "chef: Alice ", key: "chef", value: "Alice"),
+        (header: "title: Vinaigrette ", key: "title", value: "Vinaigrette"),
+        (header: "chef: Camille ", key: "chef", value: "Camille"),
         (header: "source: https://example.com/x  ", key: "source", value: "https://example.com/x")
     ])
     func trimsTheValueOfEveryKeyRecognizedOrNot(
@@ -59,12 +59,12 @@ struct MetadataTests {
 
     @Test
     func writesAValueWithoutTheWhitespaceItNoLongerStates() {
-        #expect(Recipe.read("---\ntitle: Tartine \n---").serialized() == "---\ntitle: Tartine\n---")
+        #expect(Recipe.read("---\ntitle: Vinaigrette \n---").serialized() == "---\ntitle: Vinaigrette\n---")
     }
 
     @Test
     func tellsApartNoTwoTitlesThatDifferOnlyByTheWhitespaceAroundThem() {
-        #expect(Metadata.read("title: Tartine ").title == Metadata.read("title: Tartine").title)
+        #expect(Metadata.read("title: Vinaigrette ").title == Metadata.read("title: Vinaigrette").title)
     }
 
     @Test(arguments: ["servings: 3,2", "yield: 3,2 kg", "yield: [1 L, 1/0 kg]", "servings: .5"])
@@ -84,12 +84,12 @@ struct MetadataTests {
     func preservesAnUnrecognizedKey() {
         let source = """
         ---
-        chef: Alice
+        chef: Camille
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
-        #expect(parsed.value.metadata["chef"] == "Alice")
+        #expect(parsed.value.metadata["chef"] == "Camille")
         #expect(parsed.diagnostics.isEmpty)
     }
 
@@ -97,7 +97,7 @@ struct MetadataTests {
     func doesNotWarnAboutRecognizedKeys() {
         let source = """
         ---
-        title: Tartine
+        title: Vinaigrette
         servings: 1
         ---
         """
@@ -123,14 +123,14 @@ struct MetadataTests {
     func warnsAboutARepeatedUnrecognizedKeyAndKeepsTheLastValue() {
         let source = """
         ---
-        chef: Alice
-        chef: Bob
+        chef: Camille
+        chef: Bruno
         ---
         """
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.diagnostics.contains(where: { $0.kind == .repeatedScalarKey }))
-        #expect(parsed.value.metadata["chef"] == "Bob")
+        #expect(parsed.value.metadata["chef"] == "Bruno")
     }
 
     @Test

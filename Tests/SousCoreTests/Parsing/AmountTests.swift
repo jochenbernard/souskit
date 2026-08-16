@@ -6,8 +6,8 @@ struct AmountTests {
     @Test(arguments: [
         (source: "Sift @{200 g} flour@.", value: 200.0, text: "200", unit: "g"),
         (source: "Add @{2 cloves} garlic@.", value: 2.0, text: "2", unit: "cloves"),
-        (source: "Mix @{1 1/2 cups} flour@.", value: 1.5, text: "1 1/2", unit: "cups"),
-        (source: "Add @{1/2 cup} caster sugar@.", value: 0.5, text: "1/2", unit: "cup"),
+        (source: "Mix @{1 1/2 tbsp} flour@.", value: 1.5, text: "1 1/2", unit: "tbsp"),
+        (source: "Add @{1/2 tbsp} caster sugar@.", value: 0.5, text: "1/2", unit: "tbsp"),
         (source: "Pour @{2 fl oz} milk@.", value: 2.0, text: "2", unit: "fl oz"),
         (source: "Add @{3.2 kg} potatoes@.", value: 3.2, text: "3.2", unit: "kg")
     ])
@@ -44,7 +44,7 @@ struct AmountTests {
 
     @Test
     func treatsAnAmountWithNoLeadingNumberAsImprecise() throws {
-        let amount = try #require(Recipe.read("Loosen with @{-2 tbsp} stock@.").firstAmount)
+        let amount = try #require(Recipe.read("Loosen with @{-2 tbsp} beef stock@.").firstAmount)
         #expect(amount.kind.impreciseText == "-2 tbsp")
         #expect(amount.unit == nil)
     }
@@ -81,29 +81,29 @@ struct AmountTests {
 
     @Test
     func parsesAFractionWithADecimalNumerator() throws {
-        let amount = try #require(Recipe.read("Add @{1.5/2 cups} milk@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{1.5/2 tbsp} milk@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
         #expect(quantity.value == 0.75)
         #expect(quantity.text == "1.5/2")
-        #expect(amount.unit == "cups")
+        #expect(amount.unit == "tbsp")
     }
 
     @Test
     func parsesAFractionWithADecimalDenominator() throws {
-        let amount = try #require(Recipe.read("Add @{1/2.5 cups} milk@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{1/2.5 tbsp} milk@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
         #expect(quantity.value == 0.4)
         #expect(quantity.text == "1/2.5")
-        #expect(amount.unit == "cups")
+        #expect(amount.unit == "tbsp")
     }
 
     @Test
     func readsAFractionAsAMixedNumberOnlyAfterAWholeNumber() throws {
-        let amount = try #require(Recipe.read("Add @{1.5 1/2 cups} flour@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{1.5 1/2 tbsp} flour@.").firstAmount)
         let quantity = try #require(amount.kind.preciseQuantity)
         #expect(quantity.value == 1.5)
         #expect(quantity.text == "1.5")
-        #expect(amount.unit == "1/2 cups")
+        #expect(amount.unit == "1/2 tbsp")
     }
 
     @Test
@@ -117,8 +117,8 @@ struct AmountTests {
 
     @Test(arguments: [
         (source: "Add @{1-2} olive oil@.", low: 1.0, high: 2.0, unit: nil),
-        (source: "Add @{0.5-1.5 cups} milk@.", low: 0.5, high: 1.5, unit: "cups"),
-        (source: "Add @{1/2-1 cup} cream@.", low: 0.5, high: 1.0, unit: "cup")
+        (source: "Add @{0.5-1.5 tbsp} milk@.", low: 0.5, high: 1.5, unit: "tbsp"),
+        (source: "Add @{1/2-1 tbsp} cream@.", low: 0.5, high: 1.0, unit: "tbsp")
     ])
     func parsesARangeOfEveryQuantityForm(
         source: String,
@@ -135,13 +135,13 @@ struct AmountTests {
 
     @Test
     func parsesARangeThatStartsWithAMixedNumber() throws {
-        let amount = try #require(Recipe.read("Add @{1 1/2-2 cups} flour@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{1 1/2-2 tbsp} flour@.").firstAmount)
         let range = try #require(amount.kind.rangeQuantities)
         #expect(range.low.value == 1.5)
         #expect(range.low.text == "1 1/2")
         #expect(range.high.value == 2.0)
         #expect(range.high.text == "2")
-        #expect(amount.unit == "cups")
+        #expect(amount.unit == "tbsp")
     }
 
     @Test
@@ -176,20 +176,20 @@ struct AmountTests {
         #expect(amount.unit == unit)
     }
 
-    @Test(arguments: ["1  1/2 cups", "1\t1/2 cups", "1 \t 1/2 cups"])
+    @Test(arguments: ["1  1/2 tbsp", "1\t1/2 tbsp", "1 \t 1/2 tbsp"])
     func readsAMixedNumberAcrossAnyWhitespace(fence: String) throws {
         let amount = try #require(Recipe.read("Add @{\(fence)} flour@.").firstAmount)
 
         #expect(amount.kind.preciseQuantity?.value == 1.5)
-        #expect(amount.unit == "cups")
+        #expect(amount.unit == "tbsp")
     }
 
     @Test(arguments: [
-        (fence: "\u{00BD} cup", value: 0.5, unit: "cup"),
-        (fence: "1\u{00BD} cups", value: 1.5, unit: "cups"),
-        (fence: "1 \u{00BD} cups", value: 1.5, unit: "cups"),
+        (fence: "\u{00BD} tbsp", value: 0.5, unit: "tbsp"),
+        (fence: "1\u{00BD} tbsp", value: 1.5, unit: "tbsp"),
+        (fence: "1 \u{00BD} tbsp", value: 1.5, unit: "tbsp"),
         (fence: "2\u{00BE}", value: 2.75, unit: nil),
-        (fence: "\u{2153} cup", value: 1.0 / 3.0, unit: "cup")
+        (fence: "\u{2153} tbsp", value: 1.0 / 3.0, unit: "tbsp")
     ])
     func readsAVulgarFractionAsAQuantity(
         fence: String,
@@ -204,15 +204,15 @@ struct AmountTests {
 
     @Test
     func readsARangeBetweenVulgarFractions() throws {
-        let amount = try #require(Recipe.read("Add @{\u{00BD}-1\u{00BC} cups} flour@.").firstAmount)
+        let amount = try #require(Recipe.read("Add @{\u{00BD}-1\u{00BC} tbsp} flour@.").firstAmount)
 
         let range = try #require(amount.kind.rangeQuantities)
         #expect(range.low.value == 0.5)
         #expect(range.high.value == 1.25)
-        #expect(amount.unit == "cups")
+        #expect(amount.unit == "tbsp")
     }
 
-    @Test(arguments: ["\u{00B2} cups", "\u{216B} cups"])
+    @Test(arguments: ["\u{00B2} tbsp", "\u{216B} tbsp"])
     func readsNoQuantityFromACharacterStatingAWholeValue(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
 
@@ -239,7 +239,7 @@ struct AmountTests {
 
     @Test
     func readsTheFixedMarkerTheTrimmedContentOpensWith() throws {
-        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} nutmeg@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{ =1 tsp} saffron@.").firstAmount)
 
         #expect(amount.isFixed)
         #expect(amount.text == "1 tsp")

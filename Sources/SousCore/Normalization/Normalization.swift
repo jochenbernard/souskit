@@ -12,7 +12,7 @@ public enum Normalization {
         folded(SourceText.trimmed(folded(text.lowercased())))
     }
 
-    // Folds to a fixed point: Foundation removes one combining mark per pass.
+    // Foundation does not document how many passes reach a fixed point.
     private static func folded(_ text: String) -> String {
         var current = text
 

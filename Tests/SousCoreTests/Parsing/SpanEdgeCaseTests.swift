@@ -26,22 +26,22 @@ struct SpanEdgeCaseTests {
 
     @Test
     func doesNotReadAnAmountFenceInACookwareSpan() throws {
-        let parsed = SousParser().parseRecipe("Use a #{200 g} pan#.")
+        let parsed = SousParser().parseRecipe("Use a #{200 g} casserole#.")
 
         let cookware = try #require(parsed.value.firstCookware)
-        #expect(cookware.name == "{200 g} pan")
+        #expect(cookware.name == "{200 g} casserole")
         #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
     func closesASpanOnlyOnItsOwnSigil() throws {
-        let parsed = SousParser().parseRecipe("Use a #pan @garlic@ style#.")
+        let parsed = SousParser().parseRecipe("Use a #casserole @garlic@ style#.")
 
         let step = try #require(parsed.value.steps.first)
-        #expect(step.cookware.map(\.name) == ["pan @garlic@ style"])
+        #expect(step.cookware.map(\.name) == ["casserole @garlic@ style"])
         #expect(step.ingredients.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
-        #expect(parsed.value.serialized() == "Use a #pan @garlic@ style#.")
+        #expect(parsed.value.serialized() == "Use a #casserole @garlic@ style#.")
     }
 
     @Test
@@ -54,12 +54,12 @@ struct SpanEdgeCaseTests {
 
     @Test
     func representsACookwareAnnotationAsASegment() throws {
-        let parsed = SousParser().parseRecipe("Warm a #pan# now.")
+        let parsed = SousParser().parseRecipe("Warm a #casserole# now.")
 
         let segments = try #require(parsed.value.steps.first?.segments)
         #expect(segments.count == 3)
         #expect(segments.first?.proseText == "Warm a ")
-        #expect(segments.dropFirst().first?.cookwareValue?.name == "pan")
+        #expect(segments.dropFirst().first?.cookwareValue?.name == "casserole")
         #expect(segments.last?.proseText == " now.")
     }
 
@@ -102,10 +102,10 @@ struct SpanEdgeCaseTests {
 
     @Test
     func keepsAnOrdinaryBackslashInAName() throws {
-        let parsed = SousParser().parseRecipe("Use a #8\\ pan#.")
+        let parsed = SousParser().parseRecipe("Use a #8\\ tin#.")
 
         let cookware = try #require(parsed.value.firstCookware)
-        #expect(cookware.name == "8\\ pan")
+        #expect(cookware.name == "8\\ tin")
         #expect(parsed.diagnostics.isEmpty)
     }
 

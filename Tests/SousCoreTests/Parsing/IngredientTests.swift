@@ -74,10 +74,10 @@ struct IngredientTests {
 
     @Test
     func readsALiteralSigilInsideAFenceAsPartOfTheAmount() throws {
-        let parsed = SousParser().parseRecipe("Add @{a@b} stock@ now.")
+        let parsed = SousParser().parseRecipe("Add @{a@b} beef stock@ now.")
 
         let ingredient = try #require(parsed.value.firstIngredient)
-        #expect(ingredient.name == "stock")
+        #expect(ingredient.name == "beef stock")
         #expect(ingredient.amount?.kind.impreciseText == "a@b")
         #expect(parsed.diagnostics.isEmpty)
     }

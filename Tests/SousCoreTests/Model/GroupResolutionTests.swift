@@ -13,7 +13,7 @@ struct GroupResolutionTests {
         Whisk the eggs.
 
         ## Assemble
-        Layer the >pastry> in a dish and dot the >filling> over it.
+        Line a tin with the >pastry> and pour in the >filling>.
         """)
     }
 
@@ -41,7 +41,7 @@ struct GroupResolutionTests {
         #expect(Recipe.read("## B\u{E9}chamel\nWhisk it.").group(named: "bechamel")?.name == "B\u{E9}chamel")
     }
 
-    @Test(arguments: ["Custard", "sauces/rouille", "pastry filling"])
+    @Test(arguments: ["Bechamel", "sauces/rouille", "pastry filling"])
     func findsNoGroupForANameNoHeadingStates(name: String) {
         #expect(quicheLorraine.group(named: name) == nil)
     }
@@ -122,7 +122,7 @@ struct GroupResolutionTests {
         Whisk the eggs.
 
         ## Assemble
-        Dot the >filling> over the >pastry>.
+        Pour the >filling> onto the >pastry>.
         """)
         let assemble = try #require(value.groups.last)
 
@@ -133,7 +133,7 @@ struct GroupResolutionTests {
     func dependsOnAGroupWrittenAfterIt() throws {
         let value = Recipe.read("""
         ## Assemble
-        Layer the >pastry> in a dish.
+        Line a tin with the >pastry>.
 
         ## Pastry
         Rub in the butter.
@@ -150,7 +150,7 @@ struct GroupResolutionTests {
         Rub in the butter.
 
         ## Assemble
-        Layer the >pastry> and the >bechamel> in a dish.
+        Line a tin with the >pastry> and the >bechamel>.
         """)
         let assemble = try #require(value.groups.last)
 
@@ -167,7 +167,7 @@ struct GroupResolutionTests {
 
     @Test
     func letsTheDefaultGroupDependOnANamedGroup() throws {
-        let value = Recipe.read("Layer the >pastry> in a dish.\n\n## Pastry\nRub in the butter.")
+        let value = Recipe.read("Line a tin with the >pastry>.\n\n## Pastry\nRub in the butter.")
         let group = try #require(value.groups.first)
 
         #expect(group.name == nil)

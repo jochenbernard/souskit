@@ -13,10 +13,10 @@ struct StepProjectionTests {
 
     @Test
     func derivesTheCookwareFromTheSegments() {
-        var step = Recipe.read("Warm a #pan# and a #ladle#.").steps[0]
+        var step = Recipe.read("Warm a #casserole# and a #ladle#.").steps[0]
         step.segments.removeLast(2)
 
-        #expect(step.cookware.map(\.name) == ["pan"])
+        #expect(step.cookware.map(\.name) == ["casserole"])
     }
 
     @Test
@@ -29,7 +29,7 @@ struct StepProjectionTests {
 
     @Test
     func derivesTheReferencesFromTheSegments() {
-        var step = Recipe.read("Layer the >pastry> and the >filling>.").steps[0]
+        var step = Recipe.read("Line a tin with the >pastry> and the >filling>.").steps[0]
         step.segments.removeLast(2)
 
         #expect(step.references.map(\.target) == ["pastry"])
@@ -37,7 +37,7 @@ struct StepProjectionTests {
 
     @Test
     func derivesARecipeWideListFromTheSegments() {
-        var recipe = Recipe.read("Fry @garlic@ in a #pan#.\n\nAdd @salt@.")
+        var recipe = Recipe.read("Fry @garlic@ in a #casserole#.\n\nAdd @salt@.")
         recipe.groups[0].steps[0].segments = []
 
         #expect(recipe.ingredients.map(\.name) == ["salt"])
@@ -100,7 +100,7 @@ struct StepProjectionTests {
 
     @Test
     func readsNoAnnotationsFromAProseOnlyStep() {
-        let recipe = Recipe.read("Toast the baguette.")
+        let recipe = Recipe.read("Whisk the vinegar.")
 
         #expect(recipe.ingredients.isEmpty)
         #expect(recipe.cookware.isEmpty)

@@ -4,12 +4,12 @@ import Testing
 @Suite("Header preservation")
 struct HeaderPreservationTests {
     /// A header holding one line that is not a `key: value` entry.
-    private static let strayLineHeader = "---\ntitle: Tartine\nstray line\n---"
+    private static let strayLineHeader = "---\ntitle: Vinaigrette\nstray line\n---"
 
     @Test
     func preservesAHeaderLineWithNoSeparatorAsARawEntry() {
         let metadata = SousParser().parseRecipe(Self.strayLineHeader).value.metadata
-        #expect(metadata.title == "Tartine")
+        #expect(metadata.title == "Vinaigrette")
         #expect(metadata.entries.contains(where: { $0.value == .raw("stray line") }))
     }
 
@@ -21,14 +21,14 @@ struct HeaderPreservationTests {
 
     @Test
     func preservesANestedBlockLineAsARawEntryRatherThanAnIndentedKey() {
-        let entries = Metadata.read("nutrition:\n  calories: 640 kcal").entries
-        #expect(entries.contains(where: { $0.value == .raw("  calories: 640 kcal") }))
+        let entries = Metadata.read("nutrition:\n  calories: 3300 kcal").entries
+        #expect(entries.contains(where: { $0.value == .raw("  calories: 3300 kcal") }))
         #expect(entries.allSatisfy({ $0.key != "  calories" }))
     }
 
     @Test
     func skipsABlankHeaderLineSilently() {
-        let source = "---\ntitle: Tartine\n\nsource: Jane\n---"
+        let source = "---\ntitle: Vinaigrette\n\nsource: Camille\n---"
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.metadata.entries.map(\.key) == ["title", "source"])

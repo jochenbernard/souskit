@@ -179,9 +179,8 @@ extension Step {
 
     /// Whether writing this segment from this index would complete a heading.
     ///
-    /// The test joins what is already on the line to what is about to be written, because a
-    /// heading can be completed across two segments. Judging a segment alone would let a step
-    /// serialize into a heading and be lost.
+    /// Judging the segment against what is already on the line avoids escaping one that only
+    /// looks like a heading in isolation.
     private static func opensHeading(
         _ characters: [Character],
         at index: Int,

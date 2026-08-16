@@ -140,15 +140,15 @@ struct ReferenceTests {
 
     @Test
     func readsTheShorthandFlagAfterAReference() throws {
-        let reference = try #require(Recipe.read("Serve with >beurre-blanc>? on the side.").firstReference)
+        let reference = try #require(Recipe.read("Serve with >court-bouillon>? on the side.").firstReference)
 
-        #expect(reference.target == "beurre-blanc")
+        #expect(reference.target == "court-bouillon")
         #expect(reference.flags.isOptional)
     }
 
     @Test
     func readsAChainOfNamedFlagsAfterAReference() throws {
-        let reference = try #require(Recipe.read("Serve with >beurre-blanc>:optional:staple now.").firstReference)
+        let reference = try #require(Recipe.read("Serve with >court-bouillon>:optional:staple now.").firstReference)
 
         #expect(reference.flags.isOptional)
         #expect(reference.flags.isStaple)
@@ -156,7 +156,7 @@ struct ReferenceTests {
 
     @Test
     func preservesAnUnrecognizedFlagOnAReference() throws {
-        let parsed = SousParser().parseRecipe("Serve with >beurre-blanc>:homemade now.")
+        let parsed = SousParser().parseRecipe("Serve with >court-bouillon>:homemade now.")
 
         #expect(try #require(parsed.value.references.first).flags.unrecognized == ["homemade"])
         #expect(parsed.diagnostics.isEmpty)
@@ -168,21 +168,21 @@ struct ReferenceTests {
         ## Assemble
         Layer the >bechamel> in a dish.
 
-        Dot the >topping> over it.
+        Dot the >rouille> over it.
         """)
 
         let group = try #require(value.groups.first)
-        #expect(group.steps.map({ $0.references.map(\.target) }) == [["bechamel"], ["topping"]])
-        #expect(group.references.map(\.target) == ["bechamel", "topping"])
-        #expect(value.references.map(\.target) == ["bechamel", "topping"])
+        #expect(group.steps.map({ $0.references.map(\.target) }) == [["bechamel"], ["rouille"]])
+        #expect(group.references.map(\.target) == ["bechamel", "rouille"])
+        #expect(value.references.map(\.target) == ["bechamel", "rouille"])
     }
 
     @Test(arguments: [
         "Spread the >bechamel> on top.",
-        "Layer the >{300 g} mirepoix> in a dish.",
+        "Layer the >{300 g} rouille> in a dish.",
         "Spread the >{half} bechamel> over it.",
-        "Serve with >beurre-blanc>? on the side.",
-        "Serve with >beurre-blanc>:staple? on the side.",
+        "Serve with >court-bouillon>? on the side.",
+        "Serve with >court-bouillon>:staple? on the side.",
         ">bechamel> goes in first.",
         "Spread the >sauces/rouille> on top."
     ])

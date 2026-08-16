@@ -1,16 +1,18 @@
 enum Fixtures {
-    /// A source exercising a header, an ingredient with an amount, and cookware.
+    /// A reduction of ``Recipes/boeufBourguignon``, exercising a header, an ingredient with an
+    /// amount, and cookware.
     static let wellFormedSource = """
     ---
-    title: Soupe a l'Oignon
-    servings: 4
+    title: Boeuf Bourguignon
+    servings: 6
     ---
 
-    Soften @{1 kg} onions@ in a #stockpot#.
+    Brown @{150 g} lardons@ in a #casserole# for ~5 min~.
     """
 
-    /// A source with the given header and one ingredient of `200 g` flour.
-    static func flourRecipe(_ header: String) -> String {
-        "---\n\(header)\n---\n\nMix @{200 g} flour@."
+    /// The opening of ``Recipes/crepes`` under the given header, whose one amount is `200 g` of
+    /// flour.
+    static func crepeBatter(_ header: String) -> String {
+        "---\n\(header)\n---\n\nWhisk @{200 g} flour@ into a batter."
     }
 }

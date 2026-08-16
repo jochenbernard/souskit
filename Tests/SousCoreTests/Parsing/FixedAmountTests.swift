@@ -5,7 +5,7 @@ import Testing
 struct FixedAmountTests {
     @Test
     func readsTheMarkerBeforeAPreciseQuantity() throws {
-        let parsed = SousParser().parseRecipe("Stir in @{=1 tsp} nutmeg@.")
+        let parsed = SousParser().parseRecipe("Stir in @{=1 tsp} saffron@.")
 
         let amount = try #require(parsed.value.firstAmount)
         #expect(amount.isFixed)
@@ -31,7 +31,7 @@ struct FixedAmountTests {
         (fence: "=0.5 tsp", value: 0.5)
     ])
     func readsTheMarkerBeforeEveryQuantityForm(fence: String, value: Double) throws {
-        let amount = try #require(Recipe.read("Stir in @{\(fence)} nutmeg@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{\(fence)} saffron@.").firstAmount)
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == value)
         #expect(amount.unit == "tsp")
@@ -54,7 +54,7 @@ struct FixedAmountTests {
 
     @Test(arguments: ["= 1 tsp", "=  1 tsp", "=\t1 tsp"])
     func readsTheMarkerWhateverSeparatesItFromTheAmount(fence: String) throws {
-        let amount = try #require(Recipe.read("Stir in @{\(fence)} nutmeg@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{\(fence)} saffron@.").firstAmount)
 
         #expect(amount.isFixed)
         #expect(amount.kind.preciseQuantity?.value == 1.0)
@@ -69,7 +69,7 @@ struct FixedAmountTests {
         (fence: "=", text: "")
     ])
     func readsTheMarkerBeforeAnImpreciseAmount(fence: String, text: String) throws {
-        let amount = try #require(Recipe.read("Stir in @{\(fence)} nutmeg@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{\(fence)} saffron@.").firstAmount)
 
         #expect(amount.isFixed)
         #expect(amount.kind.impreciseText == text)
@@ -79,16 +79,16 @@ struct FixedAmountTests {
 
     @Test(arguments: ["1 =tsp", "a =pinch"])
     func fixesNoAmountWhoseMarkerOpensNothing(fence: String) throws {
-        let amount = try #require(Recipe.read("Stir in @{\(fence)} nutmeg@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{\(fence)} saffron@.").firstAmount)
 
         #expect(!amount.isFixed)
         #expect(amount.text == fence)
     }
 
     @Test(arguments: [
-        (source: "Stir in @{= 1 tsp} nutmeg@.", written: "Stir in @{=1 tsp} nutmeg@."),
-        (source: "Stir in @{=a pinch} nutmeg@.", written: "Stir in @{=a pinch} nutmeg@."),
-        (source: "Stir in @{==1 tsp} nutmeg@.", written: "Stir in @{==1 tsp} nutmeg@.")
+        (source: "Stir in @{= 1 tsp} saffron@.", written: "Stir in @{=1 tsp} saffron@."),
+        (source: "Stir in @{=a pinch} saffron@.", written: "Stir in @{=a pinch} saffron@."),
+        (source: "Stir in @{==1 tsp} saffron@.", written: "Stir in @{==1 tsp} saffron@.")
     ])
     func writesTheMarkerBackFromTheAmountItFixed(source: String, written: String) {
         #expect(Recipe.read(source).serialized() == written)
@@ -116,7 +116,7 @@ struct FixedAmountTests {
 
     @Test
     func keepsAMarkerAfterTheQuantityInTheUnit() throws {
-        let amount = try #require(Recipe.read("Stir in @{1 =tsp} nutmeg@.").firstAmount)
+        let amount = try #require(Recipe.read("Stir in @{1 =tsp} saffron@.").firstAmount)
         #expect(amount.kind.preciseQuantity?.value == 1.0)
         #expect(amount.unit == "=tsp")
     }
