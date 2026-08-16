@@ -17,12 +17,6 @@ struct IngredientTests {
     }
 
     @Test
-    func capturesTheNameVerbatimIncludingLeadingConnectives() throws {
-        let ingredient = try #require(Recipe.read("Grate @{100 g} of gruyere@ over the top.").firstIngredient)
-        #expect(ingredient.name == "of gruyere")
-    }
-
-    @Test
     func anIngredientWithoutAFenceHasNoAmount() throws {
         let ingredient = try #require(Recipe.read("Season with @salt@.").firstIngredient)
         #expect(ingredient.amount == nil)

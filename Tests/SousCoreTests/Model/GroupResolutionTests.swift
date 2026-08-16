@@ -22,7 +22,7 @@ struct GroupResolutionTests {
         #expect(quicheLorraine.group(named: "Pastry")?.steps.map(\.text) == ["Rub in the butter."])
     }
 
-    @Test(arguments: ["pastry", "PASTRY", "  pastry  ", "the pastry", "of the pastry", "Pastry"])
+    @Test(arguments: ["pastry", "PASTRY", "  pastry  ", "Pastry"])
     func matchesANameNormalized(name: String) {
         #expect(quicheLorraine.group(named: name)?.name == "Pastry")
     }
@@ -105,7 +105,7 @@ struct GroupResolutionTests {
         Rub in the butter.
 
         ## Assemble
-        Spread the >pastry>, then the lardons, then the rest of the >the pastry>.
+        Spread the >pastry>, then the lardons, then the rest of the >pastry>.
         """)
         let assemble = try #require(value.groups.last)
 

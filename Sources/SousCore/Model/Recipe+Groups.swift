@@ -1,8 +1,8 @@
 extension Recipe {
     /// Finds the first group whose heading matches the given name.
     ///
-    /// Names are matched normalized: case, accents, surrounding whitespace, and leading
-    /// connectives (`a`, `an`, `of`, `the`) do not affect the result.
+    /// Names are matched normalized: case, accents, and surrounding whitespace do not affect the
+    /// result.
     ///
     /// - Parameter name: The group name to match.
     /// - Returns: The matching group, or `nil` when no heading matches.

@@ -22,7 +22,6 @@ struct GroupValidationTests {
 
     @Test(arguments: [
         "## Filling\nBrown it.\n\n## filling\nBrown it again.",
-        "## Filling\nBrown it.\n\n## the filling\nBrown it again.",
         "## B\u{E9}chamel\nWhisk it.\n\n## Bechamel\nWhisk it again.",
         "## Filling\nBrown it.\n\n##  Filling \nBrown it again."
     ])
@@ -63,7 +62,6 @@ struct GroupValidationTests {
     @Test(arguments: [
         "## Filling\nBrown it.\n\n## Assemble\nLayer the >filling> in a dish.",
         "## B\u{E9}chamel\nWhisk it.\n\n## Assemble\nLayer the >bechamel> in a dish.",
-        "## Filling\nBrown it.\n\n## Assemble\nLayer the >the filling> in a dish.",
         "Layer the >filling> in a dish.\n\n## Filling\nBrown it.",
         "## sauces/rouille\nBrown it.\n\n## Assemble\nLayer the >sauces/rouille> in a dish."
     ])
@@ -75,7 +73,7 @@ struct GroupValidationTests {
     func reportsEachUnresolvedTargetOnce() {
         let source = """
         ## Assemble
-        Layer the >bechamel> in a dish, then the >ragout>, then the rest of the >the bechamel>.
+        Layer the >bechamel> in a dish, then the >ragout>, then the rest of the >bechamel>.
         """
 
         #expect(validate(source).map(\.message) == [

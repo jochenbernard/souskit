@@ -1,8 +1,7 @@
 extension Recipe {
     /// One warning per name carried by more than one heading, reported at the first occurrence.
     ///
-    /// Names are compared normalized, so two headings differing only in case or a leading
-    /// connective collide.
+    /// Names are compared normalized, so two headings differing only in case collide.
     func repeatedGroupNames() -> [Diagnostic] {
         Repetition.firstOfEachRepeated(in: groups.compactMap(\.name), by: Normalization.normalized)
             .map({ Diagnostic(.repeatedGroupName, "Recipe has more than one group named '\($0)'.") })

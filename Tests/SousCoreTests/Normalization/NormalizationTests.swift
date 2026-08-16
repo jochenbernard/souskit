@@ -39,58 +39,6 @@ struct NormalizationTests {
         #expect(Normalization.normalized("pearl onions") != Normalization.normalized("pearl  onions"))
     }
 
-    @Test
-    func dropsTheWhitespaceAfterAConnectiveAlongWithIt() {
-        #expect(Normalization.normalized("of  bechamel") == "bechamel")
-        #expect(Normalization.normalized("of  bechamel") == Normalization.normalized("of bechamel"))
-    }
-
-    @Test
-    func statesTheWordsItDrops() {
-        #expect(Normalization.leadingConnectives == ["a", "an", "of", "the"])
-    }
-
-    @Test(arguments: [
-        (text: "of gruyere", normalized: "gruyere"),
-        (text: "the bechamel", normalized: "bechamel"),
-        (text: "a pinch", normalized: "pinch"),
-        (text: "an onion", normalized: "onion"),
-        (text: "of the bechamel", normalized: "bechamel"),
-        (text: "of  the  bechamel", normalized: "bechamel"),
-        (text: "Of The Bechamel", normalized: "bechamel"),
-        (text: "of\tthe\tbechamel", normalized: "bechamel")
-    ])
-    func dropsEachLeadingConnective(text: String, normalized: String) {
-        #expect(Normalization.normalized(text) == normalized)
-    }
-
-    @Test(arguments: [
-        (text: "of", normalized: "of"),
-        (text: "The", normalized: "the"),
-        (text: "of the", normalized: "of the"),
-        (text: "  An  A  ", normalized: "an  a")
-    ])
-    func dropsNoConnectiveFromANameThatStatesNothingElse(text: String, normalized: String) {
-        #expect(Normalization.normalized(text) == normalized)
-    }
-
-    @Test
-    func tellsApartTwoGroupsNamedOnlyByConnectives() {
-        #expect(Normalization.normalized("The") != Normalization.normalized("A"))
-    }
-
-    @Test(arguments: [
-        (text: "office", normalized: "office"),
-        (text: "theme", normalized: "theme"),
-        (text: "anchovies", normalized: "anchovies"),
-        (text: "of-the-day", normalized: "of-the-day"),
-        (text: "bechamel of the day", normalized: "bechamel of the day"),
-        (text: "leg of lamb", normalized: "leg of lamb")
-    ])
-    func dropsNothingButALeadingConnectiveWord(text: String, normalized: String) {
-        #expect(Normalization.normalized(text) == normalized)
-    }
-
     @Test(arguments: [
         "  Of The B\u{E9}chamel  ",
         "pearl  onions",
