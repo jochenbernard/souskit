@@ -91,6 +91,14 @@ struct StepProjectionTests {
     }
 
     @Test
+    func separatesTheAnnotationKindsWithinAStep() {
+        let step = Recipe.read("Melt @{30 g} butter@ in a #frying pan#.").steps[0]
+
+        #expect(step.ingredients.map(\.name) == ["butter"])
+        #expect(step.cookware.map(\.name) == ["frying pan"])
+    }
+
+    @Test
     func readsNoAnnotationsFromAProseOnlyStep() {
         let recipe = Recipe.read("Toast the baguette.")
 

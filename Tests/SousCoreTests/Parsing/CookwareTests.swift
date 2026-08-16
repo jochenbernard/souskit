@@ -19,11 +19,4 @@ struct CookwareTests {
     func trimsTheWhitespaceAroundAName(span: String) throws {
         #expect(try #require(Recipe.read("Bring a \(span) to a boil.").firstCookware).name == "heavy pot")
     }
-
-    @Test
-    func extractsIngredientsAndCookwareFromTheSameStep() throws {
-        let step = try #require(Recipe.read("Melt @{30 g} butter@ in a #frying pan#.").firstStep)
-        #expect(step.ingredients.map(\.name) == ["butter"])
-        #expect(step.cookware.map(\.name) == ["frying pan"])
-    }
 }
