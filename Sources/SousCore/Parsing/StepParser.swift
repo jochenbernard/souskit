@@ -1,101 +1,76 @@
-// Scans one paragraph into a step: ordered prose and annotation segments.
-//
-// A sigil opens a span only when immediately followed by a non-whitespace character. A
-// span that is never closed, or an amount fence with no closing brace, degrades to
-// literal text with a warning, so the surrounding paragraph still reads.
-
+/// Reads one paragraph into a step of prose and annotation segments.
 enum StepParser {
-    /// The result of scanning a span: a well-formed annotation, or literal text recovered
-    /// from a span that is not well-formed.
+    /// The result of scanning a span.
     ///
-    /// Recovered text carries the warning the recovery earned rather than reporting it, so
-    /// every diagnostic a paragraph produces is recorded in the one place that reads them.
+    /// A span that is not well-formed becomes literal text carrying the warning it earned, so
+    /// every diagnostic a paragraph produces is appended in one place.
     private enum Span {
-        case literal(String, next: Int, warning: Diagnostic? = nil)
-        case named(name: String, amount: Amount?, next: Int)
+        case literal(String, next: Int, warnings: [Diagnostic] = [])
+        case named(name: String, amount: Amount?, next: Int, warnings: [Diagnostic] = [])
     }
 
-    /// Finds the brace an amount fence closes on, remembering what it has already looked at.
-    ///
-    /// A fence closes on the first `}` in the paragraph, so a paragraph holding none would
-    /// have every fence in it walk to the end. Remembering the region already found to hold
-    /// no brace keeps each character looked at once, however many fences ask. A question
-    /// starting outside that region simply starts over, so an answer never depends on the
-    /// order the questions arrive in.
-    private struct FenceSearch {
-        /// The bounds of the region known to hold no closing brace.
-        private var searchedFrom = 0
-        private var searchedTo = 0
+    /// What reading the amount fence at the front of a span produced.
+    private struct Fence {
+        /// The amount the fence declares, or `nil` when the span opens with none.
+        let amount: Amount?
 
-        mutating func closingBrace(in characters: [Character], from start: Int) -> Int? {
-            var cursor = start
+        /// The index the name begins at, past the fence when the span opens with one.
+        let nameStart: Int
 
-            if start >= searchedFrom, start <= searchedTo {
-                cursor = searchedTo
-            } else {
-                searchedFrom = start
-            }
-
-            while cursor < characters.count, characters[cursor] != AmountFence.closing {
-                cursor += 1
-            }
-            searchedTo = cursor
-
-            return cursor < characters.count ? cursor : nil
-        }
+        /// The warnings reading the fence produced.
+        let warnings: [Diagnostic]
     }
 
-    /// Where a paragraph sits in the source, so offsets within it can be reported.
-    struct Origin {
-        /// The paragraph's own offset from the start of the source. An offset within the
-        /// paragraph adds to it, because a line break is one character in both.
-        var start: Int
-        var map: SourceMap
-
-        func range(offset: Int, length: Int) -> SourceRange {
-            map.range(fromOffset: start + offset, length: length)
-        }
-    }
-
-    static func parse(_ text: String, origin: Origin, diagnostics: inout [Diagnostic]) -> Step {
+    /// The step a paragraph describes. An unclosed span, or an amount fence with no closing
+    /// brace, is recovered as literal text with a warning, so the paragraph still reads.
+    static func parse(
+        _ text: String,
+        origin: Origin,
+        diagnostics: inout [Diagnostic]
+    ) -> Step {
         let characters = Array(text)
         var segments: [Segment] = []
         var prose = ""
         var cursor = 0
-        // One search serves the whole paragraph, which is the span a fence's brace is looked
-        // for in, so no two fences walk the same text.
+        // One search serves the whole paragraph, so no two fences scan the same text.
         var fences = FenceSearch()
 
         while cursor < characters.count {
             let character = characters[cursor]
 
-            // A backslash produces the literal character, so the escape is resolved and the
-            // backslash dropped. Serialization escapes the character again where needed.
-            if opensEscape(characters, at: cursor, end: characters.count) {
+            if SourceText.opensEscape(in: characters, at: cursor) {
                 prose.append(characters[cursor + 1])
                 cursor += 2
                 continue
             }
 
             if let annotation = Annotation(rawValue: character), opensSpan(characters, at: cursor) {
-                switch scanSpan(characters, from: cursor, as: annotation, fences: &fences, origin: origin) {
-                case let .literal(literal, next, warning):
-                    if let warning { diagnostics.append(warning) }
+                switch scanSpan(
+                    characters,
+                    from: cursor,
+                    as: annotation,
+                    fences: &fences,
+                    origin: origin
+                ) {
+                case let .literal(literal, next, warnings):
+                    diagnostics.append(contentsOf: warnings)
                     prose += literal
                     cursor = next
-                case let .named(name, amount, next):
+                case let .named(name, amount, next, warnings):
+                    diagnostics.append(contentsOf: warnings)
                     flush(&prose, into: &segments)
                     cursor = next
-                    // An annotation that takes flags reads the chain following its closing
-                    // sigil, so the cursor moves on past that chain too.
                     let flags = FlagParser.parse(
                         after: annotation,
                         in: characters,
-                        from: &cursor,
-                        origin: origin,
-                        diagnostics: &diagnostics
+                        from: &cursor
                     )
-                    segments.append(annotated(annotation, name: name, amount: amount, flags: flags))
+                    segments.append(annotated(
+                        annotation,
+                        name: name,
+                        amount: amount,
+                        flags: flags
+                    ))
                 }
                 continue
             }
@@ -109,8 +84,8 @@ enum StepParser {
         return Step(segments: segments, text: text)
     }
 
-    /// The segment a well-formed span stands for. Only the annotations that carry an amount or
-    /// flags are given them; the others read their content alone.
+    /// The segment a well-formed span becomes. Only annotations that take them receive an amount
+    /// and flags.
     private static func annotated(
         _ annotation: Annotation,
         name: String,
@@ -118,49 +93,34 @@ enum StepParser {
         flags: Flags
     ) -> Segment {
         switch annotation {
-        case .ingredient: .ingredient(Ingredient(name: name, amount: amount, flags: flags))
+        case .ingredient: .ingredient(Ingredient(
+            name: name,
+            amount: amount,
+            flags: flags
+        ))
         case .cookware: .cookware(Cookware(name: name))
         case .timer: .timer(TimerParser.parse(name))
-        case .reference: .reference(Reference(target: name, amount: amount, flags: flags))
+        case .reference: .reference(Reference(
+            target: name,
+            amount: amount,
+            flags: flags
+        ))
         }
     }
 
+    /// Appends the accumulated prose as a segment and clears it.
     private static func flush(_ prose: inout String, into segments: inout [Segment]) {
         guard !prose.isEmpty else { return }
         segments.append(.text(prose))
         prose = ""
     }
 
+    /// Whether a sigil at this index opens a span.
     private static func opensSpan(_ characters: [Character], at index: Int) -> Bool {
         Annotation.opensSpan(before: SourceText.character(in: characters, at: index + 1))
     }
 
-    /// Whether an escape begins at the given index, within the given end. A trailing
-    /// backslash escapes nothing, so it is ordinary text.
-    private static func opensEscape(_ characters: [Character], at index: Int, end: Int) -> Bool {
-        characters[index] == SourceText.escape
-            && index + 1 < end
-            && SourceText.isEscapable(characters[index + 1])
-    }
-
-    /// Finds the span's closing sigil, skipping any escape so `\@` inside `@...@` stays
-    /// part of the name rather than closing it.
-    private static func closingSigil(_ sigil: Character, in characters: [Character], from start: Int) -> Int? {
-        var cursor = start
-        while cursor < characters.count {
-            if opensEscape(characters, at: cursor, end: characters.count) {
-                cursor += 2
-                continue
-            }
-            if characters[cursor] == sigil { return cursor }
-            cursor += 1
-        }
-        return nil
-    }
-
-    /// Scans one annotation span that opens at `start`. A well-formed span becomes a named
-    /// annotation; an unclosed span, or an amount fence with no closing brace, degrades to
-    /// literal text with a warning so the surrounding paragraph still reads.
+    /// Scans one annotation span opening at `start`.
     private static func scanSpan(
         _ characters: [Character],
         from start: Int,
@@ -168,66 +128,177 @@ enum StepParser {
         fences: inout FenceSearch,
         origin: Origin
     ) -> Span {
-        let sigil = annotation.sigil
-        let contentStart = start + 1
-        var nameStart = contentStart
-        var amount: Amount?
-
-        // Every sigil is inert between the braces, the span's own included, so the fence is
-        // read first and the closing sigil is looked for after it.
-        if annotation.allowsAmount, characters[contentStart] == AmountFence.opening {
-            guard let closingBrace = fences.closingBrace(in: characters, from: contentStart + 1) else {
-                return degradedFence(characters, from: start, as: annotation, origin: origin)
-            }
-
-            amount = AmountParser.parse(String(characters[(contentStart + 1)..<closingBrace]))
-            nameStart = closingBrace + 1
-
-            // One space usually separates the fence from the name, but it is optional.
-            if nameStart < characters.count, characters[nameStart] == " " { nameStart += 1 }
-        }
-
-        guard let closingSigil = closingSigil(sigil, in: characters, from: nameStart) else {
-            return .literal(
-                String(characters[start]),
-                next: start + 1,
-                warning: .warning(
-                    .unclosedSpan,
-                    "\(annotation.noun) span is missing a closing sigil.",
-                    at: origin.range(offset: start, length: 1)
-                )
+        guard
+            let fence = scanFence(
+                characters,
+                from: start + 1,
+                as: annotation,
+                fences: &fences,
+                origin: origin
+            )
+        else {
+            return degradedFence(
+                characters,
+                from: start,
+                as: annotation,
+                origin: origin
             )
         }
 
-        let name = SourceText.unescaped(characters[nameStart..<closingSigil], escaping: SourceText.isEscapable)
+        guard
+            let closing = closingSigil(
+                annotation.sigil,
+                in: characters,
+                from: fence.nameStart
+            )
+        else {
+            let unclosed = Diagnostic(
+                .unclosedSpan,
+                "\(annotation.noun) span is missing a closing sigil.",
+                at: origin.range(offset: start, length: 1)
+            )
 
-        // A span that names nothing is ordinary text, not an annotation of nothing.
-        guard !name.isEmpty else {
-            return .literal(String(characters[start...closingSigil]), next: closingSigil + 1)
+            return .literal(
+                String(characters[start]),
+                next: start + 1,
+                warnings: [unclosed]
+            )
         }
 
-        return .named(name: name, amount: amount, next: closingSigil + 1)
+        return span(
+            characters,
+            in: start...closing,
+            fence: fence,
+            as: annotation,
+            origin: origin
+        )
     }
 
-    /// Recovers from an amount fence that never closes, which makes the whole span not
-    /// well-formed. The span degrades to literal text, bounded by its closing sigil when it
-    /// has one and by the opening sigil alone when it has none.
+    /// The fence a span opens with, or `nil` when the fence never closes.
+    ///
+    /// Every sigil is inert between the braces, so the fence is read before the closing sigil is
+    /// looked for.
+    private static func scanFence(
+        _ characters: [Character],
+        from contentStart: Int,
+        as annotation: Annotation,
+        fences: inout FenceSearch,
+        origin: Origin
+    ) -> Fence? {
+        guard annotation.allowsAmount, characters[contentStart] == AmountFence.opening else {
+            return Fence(
+                amount: nil,
+                nameStart: contentStart,
+                warnings: []
+            )
+        }
+
+        guard let closingBrace = fences.closingBrace(in: characters, from: contentStart + 1) else {
+            return nil
+        }
+
+        let text = SourceText.unescaped(
+            characters[(contentStart + 1)..<closingBrace],
+            escaping: SourceText.isEscapable
+        )
+        var warnings: [Diagnostic] = []
+
+        if let defect = AmountParser.defect(in: text) {
+            warnings.append(Diagnostic(
+                .malformedQuantity,
+                defect.message,
+                at: origin.range(offset: contentStart, length: closingBrace - contentStart + 1)
+            ))
+        }
+
+        return Fence(
+            amount: AmountParser.parse(text),
+            nameStart: closingBrace + 1,
+            warnings: warnings
+        )
+    }
+
+    /// The span a closed pair of sigils encloses.
+    ///
+    /// A span naming nothing is recovered as literal text rather than becoming an unnamed
+    /// annotation. Discarding an amount along with it is warned about.
+    private static func span(
+        _ characters: [Character],
+        in bounds: ClosedRange<Int>,
+        fence: Fence,
+        as annotation: Annotation,
+        origin: Origin
+    ) -> Span {
+        let name = SourceText.trimmed(
+            SourceText.unescaped(characters[fence.nameStart..<bounds.upperBound], escaping: SourceText.isEscapable)
+        )
+
+        guard !name.isEmpty else {
+            var warnings = fence.warnings
+            if fence.amount != nil {
+                warnings.append(Diagnostic(
+                    .unnamedAnnotation,
+                    "\(annotation.noun) span has an amount but no name.",
+                    at: origin.range(offset: bounds.lowerBound, length: bounds.count)
+                ))
+            }
+
+            return .literal(
+                String(characters[bounds]),
+                next: bounds.upperBound + 1,
+                warnings: warnings
+            )
+        }
+
+        return .named(
+            name: name,
+            amount: fence.amount,
+            next: bounds.upperBound + 1,
+            warnings: fence.warnings
+        )
+    }
+
+    /// Recovers a span whose amount fence never closes.
+    ///
+    /// The span becomes literal text bounded by its closing sigil when it has one, and by the
+    /// opening sigil alone when it has none.
     private static func degradedFence(
         _ characters: [Character],
         from start: Int,
         as annotation: Annotation,
         origin: Origin
     ) -> Span {
-        let end = closingSigil(annotation.sigil, in: characters, from: start + 1) ?? start
+        let end = closingSigil(
+            annotation.sigil,
+            in: characters,
+            from: start + 1
+        ) ?? start
+
+        let unclosed = Diagnostic(
+            .unclosedSpan,
+            "Amount fence is missing a closing brace.",
+            at: origin.range(offset: start, length: end - start + 1)
+        )
 
         return .literal(
             String(characters[start...end]),
             next: end + 1,
-            warning: .warning(
-                .unclosedSpan,
-                "Amount fence is missing a closing brace.",
-                at: origin.range(offset: start, length: end - start + 1)
-            )
+            warnings: [unclosed]
         )
+    }
+
+    /// The index of the span's closing sigil, or `nil` when the line holds none.
+    private static func closingSigil(
+        _ sigil: Character,
+        in characters: [Character],
+        from start: Int
+    ) -> Int? {
+        let end = SourceText.firstUnescaped(
+            sigil,
+            in: characters,
+            from: start
+        )
+
+        return end < characters.count && characters[end] == sigil ? end : nil
     }
 }

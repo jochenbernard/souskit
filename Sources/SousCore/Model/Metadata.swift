@@ -1,90 +1,83 @@
-/// A recipe's metadata header: typed accessors over an ordered raw store.
+/// The metadata header of a recipe.
+///
+/// ``entries`` is the store. The named accessors are views onto it, so editing an entry moves
+/// what they report.
 public struct Metadata: Equatable, Hashable, Sendable {
-    /// A single raw header entry.
+    /// One line of the header.
     public struct Entry: Equatable, Hashable, Sendable {
-        /// The value of a header entry: a scalar, a list, or a verbatim line.
-        ///
-        /// Which case a key takes is the field's, not the value's: a list field always reads a
-        /// list and every other key a scalar. Setting the other case leaves the typed accessor
-        /// reading nothing while the entry still writes what it holds, so the header no longer
-        /// reads back as itself.
+        /// What an entry holds.
         public enum Value: Equatable, Hashable, Sendable {
-            /// A single literal value.
+            /// A single value, trimmed.
             case scalar(String)
 
-            /// An inline list of literal values, each with its escapes resolved.
+            /// The items of a list-valued key.
             case list([String])
 
-            /// A header line that is not a top-level `key: value` entry, preserved verbatim.
+            /// A line that could not be read as `key: value`, preserved exactly as written,
+            /// leading whitespace included. Its entry's ``Entry/key`` is empty.
             case raw(String)
         }
 
-        /// The entry's key. A preserved line has no key of its own, so it is empty for every
-        /// `raw` value, as it is for a line that opens with the separator.
+        /// The key, trimmed, or empty for a ``Value/raw(_:)`` entry.
         public var key: String
 
-        /// The entry's value.
+        /// What this entry holds.
         public var value: Value
     }
 
-    /// Every header entry in document order, including unrecognized keys and repeats.
-    ///
-    /// The entries are the store the typed accessors read, so editing them moves the accessors with them.
+    /// Every header line, in document order, unrecognized and malformed lines included.
     public var entries: [Entry]
 
-    /// The `title` field, the recipe's name.
+    /// The `title` value, or `nil` when the header omits it.
     public var title: String? {
         entries.lastScalar(HeaderField.title)
     }
 
-    /// The `language` field, a short content-language code.
+    /// The `language` value, or `nil` when the header omits it.
     public var language: String? {
         entries.lastScalar(HeaderField.language)
     }
 
-    /// The `version` field, the language version the file targets.
+    /// The `version` value, or `nil` when the header omits it.
     public var version: String? {
         entries.lastScalar(HeaderField.version)
     }
 
-    /// The `servings` field, the number of portions the recipe makes.
-    ///
-    /// It is read as the value's leading numeric quantity, or `nil` when the value has no leading number.
+    /// The leading number of the `servings` value, or `nil` when the header omits it or the
+    /// value opens with no usable number.
     public var servings: Double? {
         entries.lastScalar(HeaderField.servings)
             .flatMap({ AmountParser.parse(unfenced: $0).kind.values.first })
     }
 
-    /// The `yield` field, the amounts the recipe makes.
-    ///
-    /// Repeated `yield` entries combine, their amounts appended in document order. A `servings`
-    /// value states a portion yield through ``servings`` and is not listed here.
+    /// The `yield` items, read as amounts, merged across every `yield` entry in document order.
     public var yields: [Amount] {
         entries.mergedList(HeaderField.yield).map({ AmountParser.parse(unfenced: $0) })
     }
 
-    /// The `tags` field, a list of free-form labels.
-    ///
-    /// Repeated `tags` entries combine, their items appended in document order.
+    /// The `tags` items, merged across every `tags` entry in document order.
     public var tags: [String] {
         entries.mergedList(HeaderField.tags)
     }
 
-    /// The `source` field, where the recipe came from.
+    /// The `source` value, or `nil` when the header omits it.
     public var source: String? {
         entries.lastScalar(HeaderField.source)
     }
 
-    /// The last scalar value written for the given key, or `nil` when the key holds no scalar value.
+    /// The value of any scalar key, recognized or not.
+    ///
+    /// A repeated key reports its last occurrence, matching the named accessors.
+    ///
+    /// - Parameter key: The header key to look up.
+    /// - Returns: The value, or `nil` when no scalar entry carries that key.
     public subscript(key: String) -> String? {
         entries.lastScalar(key)
     }
 }
 
-// The lookups every typed accessor and the subscript are built from, so no reading of the
-// raw store is written twice.
-
 extension [Metadata.Entry] {
+    /// The value of the last scalar entry carrying the given key.
     func lastScalar(_ key: String) -> String? {
         for entry in reversed() where entry.key == key {
             if case let .scalar(value) = entry.value { return value }
@@ -93,14 +86,12 @@ extension [Metadata.Entry] {
         return nil
     }
 
-    /// A repeated list key accumulates: the items of every occurrence are concatenated in
-    /// document order, rather than the last occurrence overwriting the earlier ones.
+    /// The items of every list entry carrying the given key, in document order.
     func mergedList(_ key: String) -> [String] {
-        var items: [String] = []
-        for entry in self where entry.key == key {
-            if case let .list(values) = entry.value { items += values }
-        }
+        flatMap { entry -> [String] in
+            guard entry.key == key, case let .list(values) = entry.value else { return [] }
 
-        return items
+            return values
+        }
     }
 }

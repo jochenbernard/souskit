@@ -1,81 +1,36 @@
 extension Recipe {
-    /// Renders the recipe back to Sous source text.
+    /// The recipe as Sous source text.
     ///
-    /// Content is preserved, while incidental layout such as repeated blank lines is
-    /// normalized, so re-reading the result yields the same recipe.
+    /// Content is preserved and incidental layout such as repeated blank lines is normalized, so
+    /// re-reading the result yields the same recipe.
     ///
-    /// - Returns: The recipe rendered as Sous source text.
+    /// - Returns: The recipe as Sous source text.
     public func serialized() -> String {
+        let hasHeader = !metadata.entries.isEmpty
         var blocks: [String] = []
 
-        if !metadata.entries.isEmpty {
-            blocks.append(Self.rendered(metadata))
+        if hasHeader {
+            blocks.append(metadata.serialized())
         }
 
-        let body = groups.map(\.rendered).filter({ !$0.isEmpty })
+        let body = groups.map({ $0.serialized() }).filter({ !$0.isEmpty })
         if !body.isEmpty {
             blocks.append(body.joined(separator: "\n\n"))
         }
 
         let text = blocks.joined(separator: "\n\n")
+        guard !hasHeader else { return text }
 
-        // With no header block in front of it, a body that starts the file is read as whatever
-        // that position means, so a blank line keeps it in the body where it belongs.
-        guard metadata.entries.isEmpty, Self.opensAsAnotherConstruct(text) else { return text }
+        // A recipe with no header whose body would open a header fence or a byte order mark needs
+        // something in front, or re-reading would take that opening line as a header.
+        if Self.opensAHeader(text) { return "\(metadata.serialized())\n\n\(text)" }
+        if text.hasPrefix(SourceText.byteOrderMark) { return "\n\(text)" }
 
-        return "\n" + text
+        return text
     }
 
-    /// Whether text starting the file would be read as something other than body prose: a fence
-    /// line opens a header, and a byte-order mark is taken for the file's own and dropped.
-    private static func opensAsAnotherConstruct(_ text: String) -> Bool {
-        text.hasPrefix(SourceText.byteOrderMark)
-            || SourceText.isFence(text.prefix(while: { !$0.isNewline }))
-    }
-
-    private static func rendered(_ metadata: Metadata) -> String {
-        var lines = [SourceText.fence]
-
-        for entry in metadata.entries {
-            switch entry.value {
-            case let .scalar(value):
-                lines.append(line(entry.key, value))
-            case let .list(items):
-                // A list of nothing has no inline form, so it writes as the key alone, which
-                // leaves a block list a later version introduces sitting under that key.
-                lines.append(line(entry.key, items.isEmpty ? "" : rendered(items)))
-            case let .raw(line):
-                lines.append(line)
-            }
-        }
-
-        lines.append(SourceText.fence)
-
-        return lines.joined(separator: "\n")
-    }
-
-    /// An entry as one line. An empty value ends the line at the separator, where a trailing
-    /// space would be incidental layout.
-    private static func line(_ key: String, _ value: String) -> String {
-        value.isEmpty ? "\(key):" : "\(key): \(value)"
-    }
-
-    /// Renders a list value in the inline form, which every item survives because the
-    /// characters the list gives a meaning of its own are escaped inside it.
-    private static func rendered(_ items: [String]) -> String {
-        "[\(items.map(escapedItem).joined(separator: ", "))]"
-    }
-
-    /// Escapes each character an inline list reads as its own structure, so an item holding a
-    /// separator, a bracket, or a backslash reads back verbatim.
-    private static func escapedItem(_ item: String) -> String {
-        var result = ""
-
-        for character in item {
-            if SourceText.isEscapableInList(character) { result.append(SourceText.escape) }
-            result.append(character)
-        }
-
-        return result
+    /// Whether the first non-blank line of the text is a header fence.
+    private static func opensAHeader(_ text: String) -> Bool {
+        SourceText.lines(of: text).first(where: { !SourceText.isBlank($0) }).map(HeaderFence.matches) ?? false
     }
 }

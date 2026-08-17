@@ -1,21 +1,15 @@
-/// A reference annotated in a step with the `>...>` sigils, consuming what a group produced.
+/// A reference to an intermediate produced by another group, written `>name>` or
+/// `>{amount}name>`.
 public struct Reference: Equatable, Hashable, Sendable {
-    /// What the reference consumes, captured with nothing stripped and each escape resolved.
+    /// The group name written in the reference, trimmed of surrounding whitespace.
     ///
-    /// It names a group of the same file, matched normalized, so `bechamel` consumes what a
-    /// group named `Bechamel` produced.
-    ///
-    /// Writing wraps the target in its sigils, so a target that is empty or that holds a blank
-    /// line writes text a reader takes for prose rather than for a reference, and reading
-    /// produces neither. A target opening with whitespace writes such text too, unless an
-    /// amount fence stands between it and the opening sigil, which is where reading does
-    /// produce one.
+    /// Reading a recipe does not resolve the name. ``Recipe/validate()`` reports
+    /// ``Diagnostic/Kind/unresolvedReference`` when no group carries it.
     public var target: String
 
-    /// The portion of the intermediate the reference consumes, or `nil` when no amount fence is
-    /// present, which consumes the whole of it.
+    /// The amount consumed, from the annotation's fence, or `nil` when it has none.
     public var amount: Amount?
 
-    /// The flags attached after the reference's closing sigil.
+    /// The flags written after the closing sigil.
     public var flags: Flags
 }

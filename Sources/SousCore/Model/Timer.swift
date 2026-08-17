@@ -1,37 +1,27 @@
-/// A timer annotated in a step with the `~...~` sigils.
+/// A timer annotated in a step, written `~40 min~` or `~until golden~`.
 public struct Timer: Equatable, Hashable, Sendable {
-    /// The form a timer's duration takes.
+    /// The form a timer takes, derived from its components.
     public enum Kind: Equatable, Hashable, Sendable {
-        /// A single quantity and unit, as in `40 min`.
+        /// One component holding a single quantity, such as `40 min`.
         case precise
 
-        /// A low and a high quantity, as in `8-10 min`.
+        /// One component holding a range, such as `30-40 min`.
         case range
 
-        /// Two or more quantity-and-unit parts, as in `1 h 30 min`.
+        /// More than one component, such as `1 h 30 min`.
         case compound
 
-        /// Words carrying no numeric value, as in `overnight`.
+        /// One component with no usable number, such as `until golden`, or no component at all.
         case qualitative
     }
 
-    /// The timer's numeric parts, in document order.
-    ///
-    /// A qualitative duration has none, a precise or range duration has one, and a compound duration has two or more.
+    /// The amounts the timer is written as, in the order written.
     public var components: [Amount]
 
-    /// The timer's content, captured with nothing stripped and each escape resolved.
-    ///
-    /// It is the text a qualitative duration displays, and the only property writing a timer
-    /// emits. ``components`` were read from it, so changing them states something the written
-    /// timer does not.
-    ///
-    /// Writing wraps the text in its sigils, so text that is empty, that opens with
-    /// whitespace, or that holds a blank line writes text a reader takes for prose rather than
-    /// for a timer, and reading produces none of them.
+    /// The timer as written, without its sigils and trimmed.
     public var text: String
 
-    /// The form this duration takes, classified from the components.
+    /// The form this timer takes.
     public var kind: Kind {
         switch components.count {
         case 0:

@@ -1,99 +1,116 @@
-// Shared, Foundation-free helpers for looking at raw Sous source text.
-
+/// Character-level helpers shared by the parsers and the serializers.
 enum SourceText {
-    /// The mark a UTF-8 file may open with. Reading and writing share it, so a mark a reader
-    /// takes for the file's own is one a writer keeps out of that position.
     static let byteOrderMark = "\u{FEFF}"
 
-    /// A leading byte-order mark is ignored, so a header still counts as starting the file.
-    /// One anywhere else is ordinary text.
+    /// The text without a leading byte order mark.
     static func withoutByteOrderMark(_ text: String) -> String {
         text.hasPrefix(byteOrderMark) ? String(text.dropFirst()) : text
     }
 
-    /// Splits on any newline, so a CRLF file reads the same as an LF one. Swift treats
-    /// "\r\n" as a single character, which a plain "\n" separator would never match.
+    /// The lines of the text, splitting on any character Unicode breaks a line on and keeping
+    /// empty lines.
     static func lines(of text: String) -> [Substring] {
         text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
     }
 
+    /// Whether the line is empty or holds only whitespace.
     static func isBlank(_ line: Substring) -> Bool {
         line.allSatisfy(\.isWhitespace)
     }
 
-    /// The line that opens and closes a metadata header. Reading and writing share it, so
-    /// a fence a reader recognizes is a fence a writer produces.
-    static let fence = "---"
-
-    /// A fence line is exactly three hyphens, optionally followed by trailing whitespace.
-    static func isFence(_ line: Substring) -> Bool {
-        withoutTrailingWhitespace(line) == fence
-    }
-
-    private static func withoutTrailingWhitespace(_ text: Substring) -> Substring {
+    /// The text without trailing whitespace.
+    static func withoutTrailingWhitespace(_ text: Substring) -> Substring {
         guard let last = text.lastIndex(where: { !$0.isWhitespace }) else { return text.prefix(0) }
 
         return text[...last]
     }
 
+    /// The text without leading or trailing whitespace.
     static func trimmed(_ text: String) -> String {
         String(withoutTrailingWhitespace(text[...]).drop(while: \.isWhitespace))
     }
 
+    /// Whether the character is an ASCII digit.
+    ///
+    /// A quantity is read from ASCII digits only, so digits from other scripts are not numbers
+    /// here.
     static func isDigit(_ character: Character) -> Bool {
         character.isASCII && character.isNumber
     }
 
-    /// The character at the given position, or `nil` when the text holds no such position.
-    ///
-    /// Every rule that looks at the character after another asks through this one lookup, so
-    /// no call site states its own bound and none can be off by one.
+    /// The character at the index, or `nil` when the index is out of bounds.
     static func character(in characters: [Character], at index: Int) -> Character? {
         characters.indices.contains(index) ? characters[index] : nil
     }
 
-    /// The character a backslash escapes with. Reading and writing share it, so the character
-    /// a reader drops before a literal is the one a writer puts there.
+    /// The index after the run of characters satisfying the predicate.
+    static func run(
+        in characters: [Character],
+        from start: Int,
+        while predicate: (Character) -> Bool
+    ) -> Int {
+        var cursor = start
+        while cursor < characters.count, predicate(characters[cursor]) { cursor += 1 }
+
+        return cursor
+    }
+
     static let escape: Character = "\\"
 
-    /// Whether a backslash before the character produces that character literally. The
-    /// backslash is itself escapable, so a literal one can sit directly before a sigil.
-    ///
-    /// Reading and writing share this one set, so an escape a reader resolves is an escape
-    /// a writer produces.
+    /// Whether a backslash before this character forms an escape.
     static func isEscapable(_ character: Character) -> Bool {
         escapable.contains(character)
     }
 
-    /// A reader escapes exactly the characters it gives a meaning to: the sigils it opens a
-    /// span on, the brace that opens an amount fence, the two that open a flag, and the
-    /// backslash itself. A sigil a later version introduces is none of them, so a backslash
-    /// before one is ordinary text and is kept, which is what carries the escape through to
-    /// the reader that does give that sigil a meaning.
     private static let escapable: Set<Character> = Set(Annotation.allCases.map(\.sigil))
-        .union([Flag.separator, Flag.shorthand, AmountFence.opening, escape])
+        .union(Flag.shorthands)
+        .union([Flag.separator, AmountFence.opening, AmountFence.closing, escape])
 
-    /// Whether the character would escape the one after it, which is what makes a literal
-    /// backslash need an escape of its own. Every writer asks through this one rule, so none
-    /// of them states where a backslash is bare and where it is not.
-    static func escapesFollowing(_ character: Character, before following: Character?) -> Bool {
-        character == escape && (following.map(isEscapable) ?? false)
-    }
-
-    /// Whether a backslash before the character produces that character literally inside an
-    /// inline list value. A list's structure is its brackets and its separating comma rather
-    /// than the body's sigils, so it escapes its own set.
+    /// Whether a backslash before this character forms an escape inside an inline list.
     static func isEscapableInList(_ character: Character) -> Bool {
         listEscapable.contains(character)
     }
 
     private static let listEscapable: Set<Character> = [",", "[", "]", escape]
 
-    /// Resolves each escape to the literal character it produces, dropping the backslash.
-    /// A backslash before a character the context does not escape, or before nothing at
-    /// all, is ordinary text and is kept.
+    /// Whether the character opens an escape, given the character after it.
+    static func escapesFollowing(_ character: Character, before following: Character?) -> Bool {
+        character == escape && (following.map(isEscapable) ?? false)
+    }
+
+    /// Whether an escape begins at this index. A trailing backslash escapes nothing.
+    static func opensEscape(in characters: [Character], at index: Int) -> Bool {
+        escapesFollowing(characters[index], before: character(in: characters, at: index + 1))
+    }
+
+    /// The index of the first unescaped occurrence of the character, or the index the line ends at
+    /// when it holds none.
     ///
-    /// The body and an inline list escape different sets, so each passes its own.
+    /// An escape is stepped over whole, so `\@` inside `@...@` stays part of the name. The search
+    /// stops at a line break, so a span closes on the line it opens on or not at all.
+    static func firstUnescaped(
+        _ character: Character,
+        in characters: [Character],
+        from start: Int
+    ) -> Int {
+        var cursor = start
+
+        while cursor < characters.count, !characters[cursor].isNewline {
+            if opensEscape(in: characters, at: cursor) {
+                cursor += 2
+                continue
+            }
+            if characters[cursor] == character { return cursor }
+            cursor += 1
+        }
+
+        return cursor
+    }
+
+    /// The characters with escapes resolved.
+    ///
+    /// A backslash before a character the predicate rejects is kept, so it stays literal text
+    /// rather than disappearing.
     static func unescaped(
         _ characters: some Sequence<Character>,
         escaping isEscapable: (Character) -> Bool
@@ -115,5 +132,35 @@ enum SourceText {
         if escaping { result.append(escape) }
 
         return result
+    }
+
+    /// The characters with a backslash inserted before each one the predicate accepts.
+    static func escaped(
+        _ characters: some Sequence<Character>,
+        escaping needsEscape: (Character) -> Bool
+    ) -> String {
+        var result = ""
+
+        for character in characters {
+            if needsEscape(character) { result.append(escape) }
+            result.append(character)
+        }
+
+        return result
+    }
+
+    /// Each character paired with whether a backslash escapes it.
+    static func escapeScanned(
+        _ characters: some Sequence<Character>
+    ) -> [(character: Character, isEscaped: Bool)] {
+        var scanned: [(character: Character, isEscaped: Bool)] = []
+        var escaping = false
+
+        for character in characters {
+            scanned.append((character, escaping))
+            escaping = !escaping && character == escape
+        }
+
+        return scanned
     }
 }

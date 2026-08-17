@@ -1,18 +1,14 @@
-// The inline annotations version 0.4 reads, and the sigil rules that govern them.
-//
-// Reading and writing share this one table, so the sigil a writer wraps a span in is the
-// sigil a reader opens it on, and a sigil a later version activates is added once.
-
+/// The four kinds of annotation span, identified by the sigil that delimits them.
 enum Annotation: Character, CaseIterable {
     case ingredient = "@"
     case cookware = "#"
     case timer = "~"
     case reference = ">"
 
-    /// The sigil that opens and closes the span.
+    /// The character opening and closing this annotation's span.
     var sigil: Character { rawValue }
 
-    /// The name used to describe the span in a diagnostic.
+    /// The capitalized name used in diagnostic messages.
     var noun: String {
         switch self {
         case .ingredient: "Ingredient"
@@ -22,7 +18,7 @@ enum Annotation: Character, CaseIterable {
         }
     }
 
-    /// Whether the span may open with an `{...}` amount fence.
+    /// Whether this annotation may carry an amount fence.
     var allowsAmount: Bool {
         switch self {
         case .ingredient, .reference: true
@@ -30,7 +26,7 @@ enum Annotation: Character, CaseIterable {
         }
     }
 
-    /// Whether a chain of flags may follow the span's closing sigil.
+    /// Whether this annotation may carry flags after its closing sigil.
     var allowsFlags: Bool {
         switch self {
         case .ingredient, .reference: true
@@ -38,13 +34,15 @@ enum Annotation: Character, CaseIterable {
         }
     }
 
-    /// A sigil opens a span only when it is immediately followed by a non-whitespace
-    /// character, so `bake @ 180C` and a line beginning `# ` stay ordinary text.
+    /// Whether a sigil opens a span, given the character after it.
+    ///
+    /// A sigil followed by whitespace or by nothing is ordinary text, so prose such as
+    /// `Bake @ 180C` opens no span.
     static func opensSpan(before following: Character?) -> Bool {
         following.map({ !$0.isWhitespace }) ?? false
     }
 
-    /// The span this annotation writes around the given content.
+    /// Wraps content in this annotation's sigils.
     func span(around content: String) -> String {
         "\(sigil)\(content)\(sigil)"
     }

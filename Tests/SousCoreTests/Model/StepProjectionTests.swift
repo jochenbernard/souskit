@@ -1,0 +1,138 @@
+import SousCore
+import Testing
+
+@Suite("Step projection")
+struct StepProjectionTests {
+    @Test
+    func derivesTheIngredientsFromTheSegments() {
+        var step = Recipe.read("Fry @garlic@ and add @pearl onions@.").steps[0]
+        step.segments.removeLast(2)
+
+        #expect(step.ingredients.map(\.name) == ["garlic"])
+    }
+
+    @Test
+    func derivesTheCookwareFromTheSegments() {
+        var step = Recipe.read("Warm a #casserole# and a #ladle#.").steps[0]
+        step.segments.removeLast(2)
+
+        #expect(step.cookware.map(\.name) == ["casserole"])
+    }
+
+    @Test
+    func derivesTheTimersFromTheSegments() {
+        var step = Recipe.read("Simmer ~40 min~ and rest ~10 min~.").steps[0]
+        step.segments.removeLast(2)
+
+        #expect(step.timers.map(\.text) == ["40 min"])
+    }
+
+    @Test
+    func derivesTheReferencesFromTheSegments() {
+        var step = Recipe.read("Line a tin with the >pastry> and the >filling>.").steps[0]
+        step.segments.removeLast(2)
+
+        #expect(step.references.map(\.target) == ["pastry"])
+    }
+
+    @Test
+    func derivesARecipeWideListFromTheSegments() {
+        var recipe = Recipe.read("Fry @garlic@ in a #casserole#.\n\nAdd @salt@.")
+        recipe.groups[0].steps[0].segments = []
+
+        #expect(recipe.ingredients.map(\.name) == ["salt"])
+        #expect(recipe.cookware.isEmpty)
+    }
+
+    @Test
+    func derivesTheStepsAndTheGroupListsFromTheGroups() {
+        var recipe = Recipe.read("## Pastry\nFry @garlic@.\n\n## Filling\nAdd @salt@.")
+        recipe.groups[0].steps = []
+
+        #expect(recipe.steps.map(\.text) == ["Add @salt@."])
+        #expect(recipe.groups[0].ingredients.isEmpty)
+        #expect(recipe.ingredients.map(\.name) == ["salt"])
+    }
+
+    @Test
+    func collectsIngredientsAcrossStepsInDocumentOrder() {
+        let source = """
+        Fry @garlic@ and add @pearl onions@.
+
+        Finish with @{50 g} gruyere@.
+        """
+
+        let ingredients = Recipe.read(source).ingredients
+        #expect(ingredients.map(\.name) == ["garlic", "pearl onions", "gruyere"])
+    }
+
+    @Test
+    func collectsCookwareAcrossStepsInDocumentOrder() {
+        let source = """
+        Bring a #stockpot# of water to a boil.
+
+        Warm a #frying pan# and a #ladle#.
+        """
+
+        let cookware = Recipe.read(source).cookware
+        #expect(cookware.map(\.name) == ["stockpot", "frying pan", "ladle"])
+    }
+
+    @Test
+    func collectsTimersAcrossStepsInDocumentOrder() {
+        let source = """
+        Simmer ~40 min~ gently.
+
+        Rest ~overnight~ before slicing.
+        """
+
+        let timers = Recipe.read(source).timers
+        #expect(timers.map(\.text) == ["40 min", "overnight"])
+    }
+
+    @Test
+    func collectsTheAnnotationsOfAGroupAcrossItsStepsInDocumentOrder() throws {
+        let value = Recipe.read("""
+        ## Court-Bouillon
+        Soften @{2} fennel bulbs@ in a #stockpot# for ~10 min~.
+
+        Add @{800 g} tomatoes@ and @{1 strip} orange zest@ with a #ladle#.
+
+        Pour in @{2 l} fish stock@, then simmer it ~30 min~ in a #heavy pot#.
+        """)
+        let group = try #require(value.groups.first)
+
+        #expect(group.ingredients.map(\.name) == ["fennel bulbs", "tomatoes", "orange zest", "fish stock"])
+        #expect(group.cookware.map(\.name) == ["stockpot", "ladle", "heavy pot"])
+        #expect(group.timers.map(\.text) == ["10 min", "30 min"])
+    }
+
+    @Test
+    func separatesTheAnnotationKindsWithinAStep() {
+        let step = Recipe.read("Melt @{30 g} butter@ in a #frying pan#.").steps[0]
+
+        #expect(step.ingredients.map(\.name) == ["butter"])
+        #expect(step.cookware.map(\.name) == ["frying pan"])
+    }
+
+    @Test
+    func readsNoAnnotationsFromAProseOnlyStep() {
+        let recipe = Recipe.read("Whisk the vinegar.")
+
+        #expect(recipe.ingredients.isEmpty)
+        #expect(recipe.cookware.isEmpty)
+        #expect(recipe.timers.isEmpty)
+        #expect(recipe.steps[0].ingredients.isEmpty)
+        #expect(recipe.steps[0].cookware.isEmpty)
+        #expect(recipe.steps[0].timers.isEmpty)
+    }
+
+    @Test
+    func writesTwoAdjacentProseSegmentsAsOneRun() {
+        var recipe = Recipe.read("Add @salt@.")
+        recipe.groups[0].steps[0].segments = [.text("Season it"), .text("? Yes.")]
+
+        #expect(recipe.serialized() == "Season it? Yes.")
+        #expect(Recipe.read(recipe.serialized()).steps.map(\.text) == ["Season it? Yes."])
+    }
+}

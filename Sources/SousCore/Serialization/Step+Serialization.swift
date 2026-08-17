@@ -1,47 +1,69 @@
-// Renders one step back to source text, escaping exactly what the reader would otherwise
-// read as something other than the text it stands for.
-//
-// The sigils and the opener rule come from the shared annotation table, so the writer
-// never restates a rule the reader owns.
-
 extension Step {
-    var rendered: String {
-        Self.rendered(segments)
+    /// Where the output has reached, so a segment can tell whether it is starting a line.
+    ///
+    /// A heading is decided by the shape of a whole output line, not by one segment in
+    /// isolation, so the text written so far travels with the position.
+    private enum Position {
+        /// Still on the step's first line, carrying what has been written to it.
+        case firstLine([Character])
+
+        /// Past a line break, where no heading can open.
+        case insideStep
+
+        /// The position after one more character is written.
+        func continued(by character: Character) -> Self {
+            guard case let .firstLine(written) = self else { return .insideStep }
+
+            return .firstLine(written + [character])
+        }
     }
 
-    /// Segments render on their own, so a step can be built already stating the text it now
-    /// holds rather than being given a placeholder and corrected.
-    static func rendered(_ segments: [Segment]) -> String {
+    /// The step as Sous source text.
+    func serialized() -> String {
+        Self.serialized(segments)
+    }
+
+    /// The segments as Sous source text, escaping whatever would otherwise read back as
+    /// something else.
+    static func serialized(_ segments: [Segment]) -> String {
         var result = ""
 
         for index in segments.indices {
+            let position = Self.position(after: result)
+
             switch segments[index] {
             case let .text(text):
-                // A run of prose is one segment, so whatever follows it opens with a sigil.
-                // Escaping ahead of anything else would be harmless, so the test stays simple.
-                result += Self.escapedProse(
+                result += Self.renderedProse(
                     text,
-                    afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
-                    beforeAnnotation: index + 1 < segments.count,
-                    // A heading is decided by the whole line, and what an earlier segment wrote
-                    // stands on it, so the run is judged against the line it continues.
-                    lineSoFar: Self.lineSoFar(in: result)
+                    at: index,
+                    in: segments,
+                    at: position
                 )
             case let .ingredient(ingredient):
-                result += Self.rendered(
+                result += Self.renderedSpan(
                     ingredient.name,
                     as: .ingredient,
+                    at: position,
                     amount: ingredient.amount,
                     flags: ingredient.flags
                 )
             case let .cookware(cookware):
-                result += Self.rendered(cookware.name, as: .cookware)
+                result += Self.renderedSpan(
+                    cookware.name,
+                    as: .cookware,
+                    at: position
+                )
             case let .timer(timer):
-                result += Self.rendered(timer.text, as: .timer)
+                result += Self.renderedSpan(
+                    timer.text,
+                    as: .timer,
+                    at: position
+                )
             case let .reference(reference):
-                result += Self.rendered(
+                result += Self.renderedSpan(
                     reference.target,
                     as: .reference,
+                    at: position,
                     amount: reference.amount,
                     flags: reference.flags
                 )
@@ -51,71 +73,95 @@ extension Step {
         return result
     }
 
-    /// The span an annotation is written as: its fence, when it carries an amount, then its
-    /// escaped name, then the chain of flags attached to it.
-    ///
-    /// One composition serves every annotation, so what an annotation may carry is asked of
-    /// the shared table rather than stated again per kind. An annotation that carries neither
-    /// an amount nor a flag passes neither.
-    private static func rendered(
+    /// Renders a prose segment, told whether a flag chain precedes it and an annotation follows.
+    private static func renderedProse(
+        _ text: String,
+        at index: Int,
+        in segments: [Segment],
+        at position: Position
+    ) -> String {
+        escapedProse(
+            text,
+            afterFlags: index > 0 && segments[index - 1].annotation?.allowsFlags == true,
+            beforeAnnotation: index + 1 < segments.count,
+            at: position
+        )
+    }
+
+    /// Renders one annotation span, with its fence and flag chain.
+    private static func renderedSpan(
         _ name: String,
         as annotation: Annotation,
+        at position: Position,
         amount: Amount? = nil,
         flags: Flags = .empty
     ) -> String {
-        // The fence and the name are separated by a space, so a leading brace in the name
-        // cannot open a second fence and needs no escape.
-        var content = escapedName(name, in: annotation, afterAmount: amount != nil)
+        var content = escapedName(
+            name,
+            in: annotation,
+            afterAmount: amount != nil,
+            at: position.continued(by: annotation.sigil)
+        )
         if let amount {
-            content = "\(AmountFence.around(amount.text)) \(content)"
+            content = "\(AmountFence.around(escapedAmount(amount))) \(content)"
         }
 
-        return annotation.span(around: content) + rendered(flags)
+        return annotation.span(around: content) + renderedFlags(flags)
     }
 
-    /// Writes the flag chain in one canonical order: the named flags, then the unrecognized
-    /// ones as they were written, and last of all the optional shorthand.
-    ///
-    /// The shorthand comes last because a flag word runs on through the letters after it, so
-    /// a named flag written directly before prose that starts with one would read back as a
-    /// single unrecognized flag. The shorthand is one character and cannot be run into.
-    private static func rendered(_ flags: Flags) -> String {
+    /// The fence content with its closing brace escaped, so an amount holding one does not close
+    /// the fence early.
+    private static func escapedAmount(_ amount: Amount) -> String {
+        let characters = Array(AmountFence.content(of: amount))
         var result = ""
 
-        for flag in Flag.allCases where flag != .shorthanded && flags[keyPath: flag.property] {
-            result += Flag.written(flag.rawValue)
+        for index in characters.indices {
+            let character = characters[index]
+            let following = SourceText.character(in: characters, at: index + 1)
+
+            if character == AmountFence.closing || SourceText.escapesFollowing(character, before: following) {
+                result.append(SourceText.escape)
+            }
+            result.append(character)
         }
-        for word in flags.unrecognized {
-            result += Flag.written(word)
-        }
-        if flags[keyPath: Flag.shorthanded.property] { result.append(Flag.shorthand) }
 
         return result
     }
 
-    /// Escapes each occurrence of the span's own closing sigil in a name, a backslash that
-    /// would otherwise escape what follows it, a leading brace where it could otherwise open an
-    /// amount fence, and a line of the name that would otherwise open a heading, so the name
-    /// re-reads verbatim.
-    private static func escapedName(_ name: String, in annotation: Annotation, afterAmount: Bool = false) -> String {
+    /// The flag chain, flags written as words first, then unrecognized ones, then shorthands.
+    private static func renderedFlags(_ flags: Flags) -> String {
+        let worded = Flag.allCases
+            .filter({ $0.shorthand == nil && flags[keyPath: $0.property] })
+            .map({ Flag.written($0.rawValue) })
+            .joined()
+        let unrecognized = flags.unrecognized.map(Flag.written).joined()
+        let shorthands = String(Flag.allCases.compactMap({ flags[keyPath: $0.property] ? $0.shorthand : nil }))
+
+        return worded + unrecognized + shorthands
+    }
+
+    /// The name with its own sigil escaped, plus a leading brace that would otherwise open a
+    /// fence, plus anything that would open a heading.
+    private static func escapedName(
+        _ name: String,
+        in annotation: Annotation,
+        afterAmount: Bool,
+        at position: Position
+    ) -> String {
         let characters = Array(name)
         let escapesLeadingBrace = annotation.allowsAmount && !afterAmount
         var result = ""
 
         for index in characters.indices {
             let character = characters[index]
-            // The closing sigil follows the last character, and a sigil is escapable, so a
-            // name ending in a backslash escapes it.
             let following = SourceText.character(in: characters, at: index + 1) ?? annotation.sigil
             let escaped = character == annotation.sigil
                 || SourceText.escapesFollowing(character, before: following)
                 || (escapesLeadingBrace && index == 0 && character == AmountFence.opening)
-                // The sigil that opens the span stands on the line before the name, and the
-                // closing one, with any flag after it, continues the name's last line.
                 || opensHeading(
                     characters,
                     at: index,
-                    lineSoFar: [annotation.sigil],
+                    at: position,
                     followedByContent: true
                 )
 
@@ -126,66 +172,41 @@ extension Step {
         return result
     }
 
-    /// The characters already written on the line the next segment continues, which is what a
-    /// heading opening across a segment boundary is judged against.
-    private static func lineSoFar(in text: String) -> [Character] {
-        Array(text.reversed().prefix(while: { !$0.isNewline }).reversed())
+    /// The position reached after writing the given output.
+    private static func position(after text: String) -> Position {
+        text.contains(where: \.isNewline) ? .insideStep : .firstLine(Array(text))
     }
 
-    /// Whether the content at this position would be read as a group heading rather than as the
-    /// text it stands for.
+    /// Whether writing this segment from this index would complete a heading.
     ///
-    /// A heading is decided by the shape of a whole line, and a run of content holds only part
-    /// of one: what an earlier segment wrote stands before it, and what a later segment writes
-    /// continues its last line and can state the name. What a line has to look like is asked of
-    /// the shared table rather than restated here. Escaping the run's first character of that
-    /// line is what keeps the line prose, and the escape reads back as the character, so the
-    /// content survives either way.
-    ///
-    /// - Parameters:
-    ///   - lineSoFar: What stands on the line before the run: the text written so far for a run
-    ///     of prose, and the opening sigil for a name. The sigil stands for the whole line
-    ///     before a name, because a name can supply neither half of a marker a segment before
-    ///     it began: a sigil opens no span before whitespace, so a name never opens with the
-    ///     space, and a fence between the two opens no heading either.
-    ///   - followedByContent: Whether a further segment continues the run's last line.
+    /// Judging the segment against what is already on the line keeps a step from serializing
+    /// into a heading and being read back as one.
     private static func opensHeading(
         _ characters: [Character],
         at index: Int,
-        lineSoFar: [Character],
+        at position: Position,
         followedByContent: Bool
     ) -> Bool {
-        // Only a line start can open a heading, and deciding that first is what keeps the line
-        // read once per line rather than once per character.
-        let before: [Character]
+        guard index == 0, case let .firstLine(written) = position else { return false }
 
-        if index == 0 {
-            before = lineSoFar
-        } else if characters[index - 1].isNewline {
-            before = []
-        } else {
-            return false
-        }
-
-        let line = characters[index...].prefix(while: { !$0.isNewline })
+        let line = characters.prefix(while: { !$0.isNewline })
 
         return Heading.opens(
-            before + line,
+            written + line,
             continuedByContent: followedByContent && line.endIndex == characters.endIndex
         )
     }
 
-    /// Escapes a prose character that would otherwise be read as something else: a sigil that
-    /// would open a span, a character that would open a flag where a chain may follow, a
-    /// backslash that would escape the character after it, or a line that would open a heading.
+    /// Prose with every character escaped that would otherwise open a span, an escape, a flag
+    /// chain, or a heading.
     ///
-    /// Whether a character needs an escape depends on whether the one after it gets one, so
-    /// the run is decided from its end backwards.
+    /// Scanned back to front: whether a sigil opens a span depends on what follows it, including
+    /// whether that character is itself escaped.
     private static func escapedProse(
         _ text: String,
         afterFlags: Bool,
         beforeAnnotation: Bool,
-        lineSoFar: [Character]
+        at position: Position
     ) -> String {
         let characters = Array(text)
         var escapes = [Bool](repeating: false, count: characters.count)
@@ -199,13 +220,12 @@ extension Step {
             ) || opensHeading(
                 characters,
                 at: index,
-                lineSoFar: lineSoFar,
+                at: position,
                 followedByContent: beforeAnnotation
             )
         }
 
-        // A flag chain reads on from the closing sigil, so only the character right after one
-        // can open a flag, and only there does prose need the escape.
+        // Prose following a flag chain must not begin with something the chain would swallow.
         if afterFlags, let first = characters.first {
             escapes[0] = escapes[0]
                 || Flag.opens(first, followedBy: SourceText.character(in: characters, at: 1))
@@ -220,18 +240,16 @@ extension Step {
         return result
     }
 
-    /// Whether a prose character needs an escape, given the character that follows it in the
-    /// output and whether that character is itself escaped there. The last character of a run
-    /// is followed by the annotation's opening sigil, when one follows, and by nothing
-    /// otherwise.
+    /// Whether a prose character needs escaping.
+    ///
+    /// A character at the very end of a segment is judged by whether an annotation follows, since
+    /// that annotation's sigil becomes the character after it.
     private static func needsEscape(
         _ character: Character,
         followedBy following: Character?,
         escaped: Bool,
         beforeAnnotation: Bool
     ) -> Bool {
-        // A backslash escapes whatever follows it, so a literal one is escaped in turn. An
-        // annotation opens with a sigil, which is escapable.
         if character == SourceText.escape {
             guard let following else { return beforeAnnotation }
 
@@ -241,11 +259,6 @@ extension Step {
         guard Annotation(rawValue: character) != nil else { return false }
         guard let following else { return beforeAnnotation }
 
-        // A sigil opens a span when a non-whitespace character follows it. An adjacent pair
-        // of identical sigils is left alone, because the reader closes the span the first one
-        // opens on the second one at once and keeps both as text. That holds only while the
-        // second stays unescaped: escaping it lets the span reach past it and swallow the
-        // text beyond.
         return Annotation.opensSpan(before: following) && (following != character || escaped)
     }
 }

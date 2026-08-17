@@ -1,35 +1,32 @@
-/// An amount written in an amount fence (`{...}`).
+/// An amount such as `200 g` or `1-2 tbsp`, read from an amount fence or from a header value.
 public struct Amount: Equatable, Hashable, Sendable {
     /// The form an amount takes.
     public enum Kind: Equatable, Hashable, Sendable {
-        /// A single numeric quantity.
+        /// A single quantity, such as the `200` of `200 g`. The unit is held by ``Amount/unit``.
         case precise(Quantity)
 
-        /// A range between a low and a high quantity.
+        /// A low and a high quantity, such as the `1` and `2` of `1-2 tbsp`.
         case range(Quantity, Quantity)
 
-        /// A textual amount with no leading number, captured verbatim.
+        /// An amount with no usable leading number, such as `a pinch` or `1,5 l`.
+        /// Scaling leaves it unchanged.
         case imprecise(String)
     }
 
     /// The form this amount takes.
     public var kind: Kind
 
-    /// The unit, captured verbatim. It is `nil` for an imprecise amount and may be empty when a quantity has no unit.
+    /// The unit, trimmed of the whitespace separating it from the quantity, or `nil` when the
+    /// amount carries none.
     public var unit: String?
 
-    /// Whether an `=` before the quantity marks the amount as fixed, holding it constant when the recipe is scaled.
+    /// Whether the fence's `=` marker holds this amount constant when the recipe is scaled.
     public var isFixed: Bool
 
-    /// The verbatim text the amount was read from: the content of an amount fence, without its
-    /// braces, or the one part of a timer it states.
+    /// The amount as written, trimmed: a fence's content without its braces or `=` marker, or
+    /// the header value it was read from.
     ///
-    /// It is the only property writing an amount emits. ``kind``, ``unit``, and ``isFixed`` were
-    /// read from it, so changing one of them states something the written amount does not.
-    /// Scaling changes them together, taking the amount from reading its regenerated text back.
-    ///
-    /// Writing wraps the text in the fence's braces, so text holding a closing brace closes
-    /// that fence early, and text holding a blank line ends the paragraph the span needs.
-    /// Reading produces neither.
+    /// Serializing an annotation wraps this in braces, so ``kind`` and ``unit`` alone do not
+    /// determine what is written back. Scaling regenerates all three together.
     public var text: String
 }

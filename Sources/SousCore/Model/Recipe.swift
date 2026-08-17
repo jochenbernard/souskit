@@ -1,14 +1,12 @@
-/// A parsed Sous recipe: its metadata header and its ordered body groups.
+/// A parsed Sous recipe: its metadata header and its body groups.
 public struct Recipe: Equatable, Hashable, Sendable {
-    /// The recipe's metadata header.
+    /// The metadata header.
     public var metadata: Metadata
 
-    /// The recipe's body groups, in document order.
+    /// The body groups, in document order.
     ///
-    /// The groups are the store the step and annotation lists read, so editing them moves the
-    /// lists with them. A body opening with steps rather than with a heading holds them in an
-    /// unnamed group, so a file writing no heading at all holds one group, and a file with no
-    /// body holds none.
+    /// A body opening with steps rather than a heading holds them in a group whose
+    /// ``StepGroup/name`` is `nil`. A recipe with no body holds no group.
     public var groups: [StepGroup]
 
     /// The steps of every group, in document order.
@@ -18,21 +16,21 @@ public struct Recipe: Equatable, Hashable, Sendable {
 
     /// The ingredients annotated across every step, in document order.
     public var ingredients: [Ingredient] {
-        steps.flatMap(\.ingredients)
+        steps.ingredients
     }
 
     /// The cookware annotated across every step, in document order.
     public var cookware: [Cookware] {
-        steps.flatMap(\.cookware)
+        steps.cookware
     }
 
     /// The timers annotated across every step, in document order.
     public var timers: [Timer] {
-        steps.flatMap(\.timers)
+        steps.timers
     }
 
     /// The references annotated across every step, in document order.
     public var references: [Reference] {
-        steps.flatMap(\.references)
+        steps.references
     }
 }

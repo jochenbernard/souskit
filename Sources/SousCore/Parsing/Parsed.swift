@@ -1,9 +1,12 @@
-/// The result of a parse: the recovered value and any diagnostics.
+/// A parsed value together with the diagnostics produced while reading it.
+///
+/// Parsing always succeeds, so a value is always present. Diagnostics report what was wrong with
+/// the source, not whether the value is usable.
 public struct Parsed<Value> {
-    /// The parsed value. It is always present, because parsing recovers tolerantly.
+    /// The parsed value.
     public var value: Value
 
-    /// The diagnostics produced while parsing.
+    /// The problems found while parsing, in the order they were found.
     public var diagnostics: [Diagnostic]
 }
 

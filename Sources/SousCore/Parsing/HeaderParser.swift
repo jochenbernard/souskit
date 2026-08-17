@@ -1,40 +1,49 @@
-// Splits a recipe into its optional metadata header and its body, and reads the header
-// into typed accessors over an ordered raw store.
-//
-// Values are literal text with no type coercion. Which keys are recognized, and which of them
-// read a list, comes from the shared field table. Everything else is preserved and warned
-// about, never dropped.
-
+/// Splits the metadata header from the body and reads its entries.
 enum HeaderParser {
+    /// Splits the source into header lines and body lines.
+    ///
+    /// The header opens on the first non-blank line when that line is a `---` fence, so a recipe
+    /// may begin with blank lines. A header that never closes takes the rest of the file and is
+    /// warned about, leaving no body.
     static func split(
         _ lines: [Substring],
         map: SourceMap,
         diagnostics: inout [Diagnostic]
     ) -> (header: [Substring], body: [Substring]) {
-        guard let first = lines.first, SourceText.isFence(first) else {
+        guard
+            let opening = lines.firstIndex(where: { !SourceText.isBlank($0) }),
+            HeaderFence.matches(lines[opening])
+        else {
             return (header: [], body: lines)
         }
 
-        if let closing = lines.dropFirst().firstIndex(where: SourceText.isFence) {
-            return (header: Array(lines[1..<closing]), body: Array(lines[(closing + 1)...]))
+        if let closing = lines[(opening + 1)...].firstIndex(where: HeaderFence.matches) {
+            return (header: Array(lines[(opening + 1)..<closing]), body: Array(lines[(closing + 1)...]))
         }
 
-        // No closing fence: recover by reading to the end of the file so an obvious title is not lost.
-        diagnostics.append(.warning(
+        diagnostics.append(Diagnostic(
             .unterminatedHeader,
             "Header is missing a closing fence.",
-            at: map.range(from: first.startIndex, length: first.count)
+            at: map.range(from: lines[opening].startIndex, length: lines[opening].count)
         ))
 
-        return (header: Array(lines.dropFirst()), body: [])
+        return (header: Array(lines[(opening + 1)...]), body: [])
     }
 
-    /// The typed accessors are views over the raw store, so reading the header is reading
-    /// its entries; nothing else is accumulated alongside them.
-    static func parse(_ lines: [Substring], map: SourceMap, diagnostics: inout [Diagnostic]) -> Metadata {
-        Metadata(entries: entries(in: lines, map: map, diagnostics: &diagnostics))
+    /// The metadata the header lines describe.
+    static func parse(
+        _ lines: [Substring],
+        map: SourceMap,
+        diagnostics: inout [Diagnostic]
+    ) -> Metadata {
+        Metadata(entries: entries(
+            in: lines,
+            map: map,
+            diagnostics: &diagnostics
+        ))
     }
 
+    /// One entry per non-blank header line, in document order.
     private static func entries(
         in lines: [Substring],
         map: SourceMap,
@@ -44,71 +53,128 @@ enum HeaderParser {
         var seenKeys: Set<String> = []
 
         for line in lines {
-            // A blank line is insignificant layout, so it is dropped rather than preserved.
-            if SourceText.isBlank(line) { continue }
-
-            // A top-level entry has no leading whitespace and a `key: value` separator.
-            // Anything else, including an indented nesting or block-list line from a later
-            // version, is preserved verbatim and warned about rather than reshaped or dropped.
-            let isIndented = line.first?.isWhitespace ?? false
-            guard !isIndented, let field = self.entry(in: line) else {
-                entries.append(Metadata.Entry(key: "", value: .raw(String(line))))
-                diagnostics.append(.warning(
-                    .malformedHeaderLine,
-                    "Header line is not a top-level 'key: value' entry.",
-                    at: map.range(from: line.startIndex, length: line.count)
-                ))
+            guard
+                let read = entry(
+                    from: line,
+                    map: map,
+                    seenKeys: &seenKeys
+                )
+            else {
                 continue
             }
 
-            let keyRange = map.range(from: line.startIndex, length: field.key.count)
-            let isList = HeaderField.lists.contains(field.key)
-
-            entries.append(Metadata.Entry(
-                key: field.key,
-                value: isList ? .list(list(in: field.value)) : .scalar(field.value)
-            ))
-
-            // An unknown key is preserved and warned about, whether scalar or repeated.
-            if !HeaderField.isRecognized(field.key) {
-                diagnostics.append(.warning(
-                    .unknownHeaderKey,
-                    "Unrecognized header key '\(field.key)'.",
-                    at: keyRange
-                ))
-            }
-
-            // A repeated key keeps every occurrence; the last-wins accessors interpret the
-            // latest. A list key repeat is distinguished so consumers can switch on it.
-            if !seenKeys.insert(field.key).inserted {
-                diagnostics.append(.warning(
-                    isList ? .repeatedListKey : .repeatedScalarKey,
-                    "Repeated header key '\(field.key)'.",
-                    at: keyRange
-                ))
-            }
+            entries.append(read.entry)
+            diagnostics.append(contentsOf: read.diagnostics)
         }
 
         return entries
     }
 
-    /// A key ends at the first colon followed by a space or the end of the line, so a
-    /// colon inside a value such as a URL does not split it.
-    private static func entry(in line: Substring) -> (key: String, value: String)? {
+    /// The entry a header line describes, or `nil` when the line is blank.
+    ///
+    /// An indented line, or one with no `key: value`, is preserved verbatim under an empty key so
+    /// nothing is lost, and is warned about. An unrecognized or repeated key is warned about and
+    /// kept.
+    private static func entry(
+        from line: Substring,
+        map: SourceMap,
+        seenKeys: inout Set<String>
+    ) -> (entry: Metadata.Entry, diagnostics: [Diagnostic])? {
+        if SourceText.isBlank(line) { return nil }
+
+        let isIndented = line.first?.isWhitespace ?? false
+        guard !isIndented, let field = field(in: line) else {
+            let diagnostic = Diagnostic(
+                .malformedHeaderLine,
+                "Header line is not a top-level 'key: value' entry.",
+                at: map.range(from: line.startIndex, length: line.count)
+            )
+
+            return (Metadata.Entry(key: "", value: .raw(String(line))), [diagnostic])
+        }
+
+        let keyRange = map.range(from: line.startIndex, length: max(field.key.count, 1))
+        let isList = HeaderField.lists.contains(field.key)
+        var diagnostics: [Diagnostic] = []
+
+        if field.key.isEmpty {
+            diagnostics.append(Diagnostic(
+                .emptyHeaderKey,
+                "Header line has a value but no key.",
+                at: keyRange
+            ))
+        }
+
+        if !seenKeys.insert(field.key).inserted {
+            diagnostics.append(Diagnostic(
+                isList ? .repeatedListKey : .repeatedScalarKey,
+                "Repeated header key '\(field.key)'.",
+                at: keyRange
+            ))
+        }
+
+        let value: Metadata.Entry.Value = isList ? .list(list(in: field.value)) : .scalar(field.value)
+        diagnostics += malformedQuantities(
+            of: value,
+            under: field.key,
+            at: map.range(from: valueStart(of: field.value, in: line), length: field.value.count)
+        )
+
+        return (Metadata.Entry(key: field.key, value: value), diagnostics)
+    }
+
+    /// The index the trimmed value begins at within its line.
+    private static func valueStart(of value: String, in line: Substring) -> Substring.Index {
+        line.index(SourceText.withoutTrailingWhitespace(line).endIndex, offsetBy: -value.count)
+    }
+
+    /// Warnings for any defective quantity under a key read as an amount.
+    private static func malformedQuantities(
+        of value: Metadata.Entry.Value,
+        under key: String,
+        at range: SourceRange?
+    ) -> [Diagnostic] {
+        guard HeaderField.amounts.contains(key) else { return [] }
+
+        return amounts(of: value).compactMap({ AmountParser.defect(in: $0, fenced: false) })
+            .map { defect in
+                Diagnostic(
+                    .malformedQuantity,
+                    defect.message,
+                    at: range
+                )
+            }
+    }
+
+    /// The texts to read as amounts for a value.
+    private static func amounts(of value: Metadata.Entry.Value) -> [String] {
+        switch value {
+        case let .scalar(text): [text]
+        case let .list(items): items
+        case .raw: []
+        }
+    }
+
+    /// The key and value a line describes, split on the first colon followed by whitespace or
+    /// ending the line.
+    ///
+    /// A colon inside a value, as in a URL, does not split the line, because the colon that
+    /// splits must be followed by whitespace.
+    private static func field(in line: Substring) -> (key: String, value: String)? {
         for colon in line.indices where line[colon] == ":" {
             let afterColon = line.index(after: colon)
-            let key = String(line[..<colon])
+            let key = SourceText.trimmed(String(line[..<colon]))
 
             if afterColon == line.endIndex { return (key, "") }
-            if line[afterColon] == " " { return (key, String(line[line.index(after: afterColon)...])) }
+            if line[afterColon].isWhitespace {
+                return (key, SourceText.trimmed(String(line[afterColon...])))
+            }
         }
 
         return nil
     }
 
-    /// Only a list-valued field reads `[...]` as a list; elsewhere the brackets are literal.
-    /// A value that is not a well-formed inline list is one literal item, so `tags: italian`
-    /// is the one-item list `italian`.
+    /// The items of a list value: an inline `[a, b]` list, or the whole value as one item.
     private static func list(in value: String) -> [String] {
         let trimmed = SourceText.trimmed(value)
 
@@ -119,34 +185,24 @@ enum HeaderParser {
         return items(in: trimmed.dropFirst().dropLast())
     }
 
-    /// A well-formed inline list opens with `[` and closes on the first `]` that an escape
-    /// does not produce, which must be the value's last character. Anything past that `]`
-    /// leaves the value unclosed, so it reads as one literal item instead.
+    /// Whether the value is a well-formed inline list: bracketed, with the closing bracket last
+    /// and unescaped.
     private static func isInlineList(_ value: String) -> Bool {
         guard value.hasPrefix("[") else { return false }
 
-        var escaping = false
-
-        for index in value.indices.dropFirst() {
-            if escaping {
-                escaping = false
-            } else if value[index] == SourceText.escape {
-                escaping = true
-            } else if value[index] == "]" {
-                return value.index(after: index) == value.endIndex
-            }
+        let scanned = SourceText.escapeScanned(value)
+        guard let closing = scanned.firstIndex(where: { $0.character == "]" && !$0.isEscaped }) else {
+            return false
         }
 
-        return false
+        return closing == scanned.count - 1
     }
 
-    /// Splits the content between the brackets on its unescaped commas. Items are trimmed of
-    /// surrounding whitespace, and an empty item, such as one left by a stray or trailing
-    /// comma, is dropped.
+    /// The items between an inline list's brackets, split on unescaped commas and trimmed.
+    /// Empty items are dropped.
     private static func items(in content: Substring) -> [String] {
         var items: [String] = []
         var item = ""
-        var escaping = false
 
         func endItem() {
             let value = SourceText.unescaped(SourceText.trimmed(item), escaping: SourceText.isEscapableInList)
@@ -154,16 +210,12 @@ enum HeaderParser {
             item = ""
         }
 
-        for character in content {
-            if escaping {
-                escaping = false
-            } else if character == SourceText.escape {
-                escaping = true
-            } else if character == "," {
+        for (character, isEscaped) in SourceText.escapeScanned(content) {
+            if character == ",", !isEscaped {
                 endItem()
-                continue
+            } else {
+                item.append(character)
             }
-            item.append(character)
         }
 
         endItem()
