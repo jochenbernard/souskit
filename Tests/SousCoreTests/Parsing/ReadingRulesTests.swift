@@ -67,6 +67,7 @@ struct ReadingRulesTests {
         #expect(step.ingredients.isEmpty)
         #expect(step.cookware.isEmpty)
         #expect(step.timers.isEmpty)
+        #expect(step.segments.map(\.proseText) == [source])
         let diagnostic = try #require(parsed.diagnostics.first(where: { $0.kind == .unclosedSpan }))
         #expect(diagnostic.severity == .warning)
     }
@@ -187,6 +188,7 @@ struct ReadingRulesTests {
         let step = try #require(parsed.value.steps.first)
         #expect(step.ingredients.isEmpty)
         #expect(step.text == "Sift @{200 g flour")
+        #expect(step.segments.map(\.proseText) == ["Sift @{200 g flour"])
         #expect(parsed.diagnostics.contains(where: { $0.kind == .unclosedSpan }))
     }
 

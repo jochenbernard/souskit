@@ -23,6 +23,18 @@ struct MutatedModelTests {
         #expect(value.reRead().cookware.isEmpty)
     }
 
+    @Test
+    func writesAnEmptiedNameOpeningAStepWithoutOpeningAHeading() throws {
+        var value = Recipe.read("#casserole# holds the sauce.")
+        var cookware = try #require(value.cookware.first)
+        cookware.name = ""
+        value.groups[0].steps[0].segments[0] = .cookware(cookware)
+
+        let written = value.reRead()
+        #expect(written.groups.map(\.name) == [nil])
+        #expect(written.steps.count == 1)
+    }
+
     @Test(arguments: ["", " 40 min", "\t40 min", "a\nb", "40 min\n", "a\n\nb"])
     func writesATimerTextThatNoLongerReadsBackAsOne(text: String) throws {
         var value = Recipe.read("Wait ~40 min~ now.")
@@ -145,6 +157,14 @@ struct MutatedModelTests {
         value.groups[0].name = name
 
         #expect(value.reRead().groups.map(\.name) == [name])
+    }
+
+    @Test(arguments: ["\n---", "   \n---"])
+    func writesAStepWhoseFirstNonBlankLineIsAFenceLineSoItStillReadsBack(prose: String) {
+        var value = Recipe.read("Brown the beef.")
+        value.groups[0].steps[0].segments = [.text(prose)]
+
+        #expect(value.reRead().steps.map(\.text) == ["---"])
     }
 
     @Test

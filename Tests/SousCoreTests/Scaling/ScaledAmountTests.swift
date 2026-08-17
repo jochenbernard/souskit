@@ -70,7 +70,8 @@ struct ScaledAmountTests {
         (factor: 0.0000025, text: "0.0000025 g"),
         (factor: 1e16, text: "10000000000000000 g"),
         (factor: 1e20, text: "100000000000000000000 g"),
-        (factor: 1.5e20, text: "150000000000000000000 g")
+        (factor: 1.5e20, text: "150000000000000000000 g"),
+        (factor: 9.999999999999998e+15, text: "9999999999999998 g")
     ])
     func writesAScaledValuePositionallyAtEveryMagnitude(factor: Double, text: String) throws {
         #expect(try SousParser().amount(in: "Add @{1 g} cream@.", scaledBy: factor).text == text)

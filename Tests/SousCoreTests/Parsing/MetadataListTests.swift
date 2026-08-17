@@ -97,6 +97,11 @@ struct MetadataListTests {
     }
 
     @Test
+    func readsAValueWhoseBracketsOpenPastItsFirstCharacterAsASingleItem() {
+        #expect(Metadata.read("tags: comfort food [french]").tags == ["comfort food [french]"])
+    }
+
+    @Test
     func readsAListKeyWithNoValueAsNoItems() {
         #expect(Metadata.read("tags:").tags.isEmpty)
     }

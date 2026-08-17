@@ -50,6 +50,14 @@ struct TargetScalingTests {
     }
 
     @Test
+    func scalesARecipeWhoseHeaderCarriesMoreKeysAfterItsServings() throws {
+        let scaled = try Recipe.read(Recipes.crepes).scaled(toServings: 8.0)
+
+        #expect(scaled.metadata["servings"] == "8")
+        #expect(try scaled.firstQuantityValue() == 400.0)
+    }
+
+    @Test
     func countsServingsAsAYieldInPortions() throws {
         let source = "---\nservings: 4\n---\n\nWhisk @{200 g} flour@ into a batter."
 
@@ -96,13 +104,20 @@ struct TargetScalingTests {
     }
 
     @Test
+    func refusesATargetOnlyATagMatches() {
+        #expect(throws: ScalingError.noMatchingYield) {
+            try SousParser().scaled(Fixtures.crepeBatter("tags: [12 crepes]"), to: "18 crepes")
+        }
+    }
+
+    @Test
     func refusesARecipeThatDeclaresNothingToDivideBy() {
         #expect(throws: ScalingError.noMatchingYield) {
             try SousParser().scaled("Mix @{200 g} flour@.", to: "400 g")
         }
     }
 
-    @Test(arguments: ["1-2 kg", "plenty", "a lot of g"])
+    @Test(arguments: ["1-2 g", "1-2 kg", "plenty", "a lot of g"])
     func refusesATargetThatStatesNoSingleQuantity(target: String) {
         #expect(throws: ScalingError.noMatchingYield) {
             try SousParser().scaled(Fixtures.crepeBatter("yield: 800 g"), to: target)
@@ -146,6 +161,15 @@ struct TargetScalingTests {
         }
     }
 
+    @Test
+    func readsNoFixedMarkerInAHeaderValueItRestates() throws {
+        let header = "servings: =4\nyield: [6 servings, =8 servings]"
+
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter(header), to: "12 servings")
+        #expect(scaled.metadata["servings"] == "=4")
+        #expect(scaled.metadata.yields.map(\.text) == ["12 servings", "=8 servings"])
+    }
+
     @Test(arguments: [
         "servings: 4\nyield: 4 servings",
         "yield: [4 servings, 4.0 servings]",
@@ -161,7 +185,8 @@ struct TargetScalingTests {
     @Test(arguments: [
         "servings: 4\nyield: 6 servings",
         "yield: [4 servings, 6 servings]",
-        "yield: [4 servings, 4-6 servings]"
+        "yield: [4 servings, 4-6 servings]",
+        "yield: [4-6 servings, 8-10 servings]"
     ])
     func refusesADimensionStatedTwiceThatDisagrees(header: String) {
         #expect(throws: ScalingError.conflictingYields) {

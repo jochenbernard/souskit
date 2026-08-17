@@ -179,8 +179,8 @@ extension Step {
 
     /// Whether writing this segment from this index would complete a heading.
     ///
-    /// Judging the segment against what is already on the line avoids escaping one that only
-    /// looks like a heading in isolation.
+    /// Judging the segment against what is already on the line keeps a step from serializing
+    /// into a heading and being read back as one.
     private static func opensHeading(
         _ characters: [Character],
         at index: Int,

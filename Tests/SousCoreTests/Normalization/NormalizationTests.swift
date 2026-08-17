@@ -27,6 +27,7 @@ struct NormalizationTests {
     @Test(arguments: [
         (text: "  Bechamel  ", normalized: "bechamel"),
         (text: "\tBechamel\n", normalized: "bechamel"),
+        (text: "Bechamel\t\u{301}", normalized: "bechamel"),
         (text: "   ", normalized: ""),
         (text: "", normalized: "")
     ])
@@ -46,6 +47,7 @@ struct NormalizationTests {
         "",
         "of",
         "caf\u{FEFF}\u{0301}\u{0301}",
+        "\u{1E9A}\u{0301}\u{0301}\u{0301}",
         "e\u{0301}\u{0301}\u{0301}",
         "\u{2028}\u{1F3FF}\u{0486}",
         "of \u{1F3FF}\u{0486}"

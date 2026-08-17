@@ -135,6 +135,34 @@ struct TimerTests {
     }
 
     @Test
+    func startsANewPartAfterAUnitOfMoreThanOneCharacter() throws {
+        let timer = try #require(Recipe.read("Rest ~2 days 3 h~ before shaping.").firstTimer)
+        #expect(timer.kind == .compound)
+        #expect(timer.components.map(\.text) == ["2 days", "3 h"])
+    }
+
+    @Test
+    func readsANumberNoWhitespacePrecedesAsPartOfTheComponentBeforeIt() throws {
+        let timer = try #require(Recipe.read("Rest ~1h30min~ before slicing.").firstTimer)
+        #expect(timer.kind == .precise)
+        #expect(timer.components.map(\.text) == ["1h30min"])
+    }
+
+    @Test
+    func readsAFinalComponentOfASingleCharacter() throws {
+        let timer = try #require(Recipe.read("Rest ~1 h 2~ before slicing.").firstTimer)
+        #expect(timer.kind == .compound)
+        #expect(timer.components.map(\.text) == ["1 h", "2"])
+    }
+
+    @Test
+    func readsALeadingFixedMarkerInATimerAsOrdinaryText() throws {
+        let timer = try #require(Recipe.read("Simmer ~=40 min~ gently.").firstTimer)
+        #expect(timer.kind == .qualitative)
+        #expect(timer.components.map(\.text) == ["=40 min"])
+    }
+
+    @Test
     func doesNotReadAnAmountFenceInATimer() throws {
         let parsed = SousParser().parseRecipe("Wait ~{40 min}~ now.")
 

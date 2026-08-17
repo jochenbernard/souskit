@@ -103,6 +103,17 @@ struct RecipeStructureTests {
         #expect(segments.last?.proseText == " until fragrant.")
     }
 
+    @Test(arguments: [
+        (source: "@salt@ to taste.", prose: [nil, " to taste."]),
+        (source: "Season with @salt@", prose: ["Season with ", nil]),
+        (source: "Season with @salt@@black pepper@.", prose: ["Season with ", nil, nil, "."])
+    ])
+    func readsNoEmptyProseSegmentBesideAnAnnotation(source: String, prose: [String?]) throws {
+        let step = try #require(Recipe.read(source).firstStep)
+
+        #expect(step.segments.map(\.proseText) == prose)
+    }
+
     @Test(arguments: ["", "   ", "\n\n"])
     func readsAFileWithNoContentAsAnEmptyRecipe(source: String) {
         let parsed = SousParser().parseRecipe(source)

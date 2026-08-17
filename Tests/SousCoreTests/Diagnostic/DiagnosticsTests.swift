@@ -100,6 +100,15 @@ struct DiagnosticsTests {
     }
 
     @Test
+    func locatesAnUnclosedAmountFenceAtItsOpeningSigilAlone() throws {
+        let parsed = SousParser().parseRecipe("Sift @{200 g flour")
+
+        let range = try #require(parsed.firstDiagnostic(ofKind: .unclosedSpan).range)
+        #expect(range.start.offset == 5)
+        #expect(range.end.offset == 6)
+    }
+
+    @Test
     func locatesTheRepeatedOccurrenceOfAScalarKey() throws {
         let source = """
         ---
@@ -113,6 +122,15 @@ struct DiagnosticsTests {
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 3)
         #expect(range.start.column == 1)
+    }
+
+    @Test
+    func locatesARepeatedHeaderKeyAtTheKeyItRepeats() throws {
+        let parsed = SousParser().parseRecipe("---\ntitle: First\ntitle: Second\n---")
+
+        let range = try #require(parsed.firstDiagnostic(ofKind: .repeatedScalarKey).range)
+        #expect(range.start.offset == 17)
+        #expect(range.end.offset == 22)
     }
 
     @Test
@@ -133,6 +151,15 @@ struct DiagnosticsTests {
     }
 
     @Test
+    func locatesAMalformedHeaderLineAcrossTheWholeLine() throws {
+        let parsed = SousParser().parseRecipe("---\nstray line\n---")
+
+        let range = try #require(parsed.firstDiagnostic(ofKind: .malformedHeaderLine).range)
+        #expect(range.start.offset == 4)
+        #expect(range.end.offset == 14)
+    }
+
+    @Test
     func locatesAnUnclosedReferenceSpan() throws {
         let parsed = SousParser().parseRecipe("Spread the >bechamel on top.")
 
@@ -145,14 +172,111 @@ struct DiagnosticsTests {
         #expect(diagnostic.severity == .warning)
     }
 
+    @Test(arguments: [
+        "---\nservings: 3,2\n---",
+        "---\nservings: 3,2  \n---",
+        "---\nservings: 3,2\n---\n\nWhisk the vinegar."
+    ])
+    func locatesAMalformedQuantityAtTheHeaderValueItWasReadFrom(source: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        let diagnostic = try parsed.firstDiagnostic(ofKind: .malformedQuantity)
+        let range = try #require(diagnostic.range)
+        #expect(range.start.line == 2)
+        #expect(range.start.column == 11)
+        #expect(range.start.offset == 14)
+        #expect(range.end.offset == 17)
+    }
+
     @Test
-    func locatesAnUnterminatedHeaderAtItsOpeningFence() throws {
-        let parsed = SousParser().parseRecipe("---\ntitle: Vinaigrette")
+    func locatesAMalformedQuantityAtTheAmountFenceItWasReadFrom() throws {
+        let parsed = SousParser().parseRecipe("Add @{3,2 kg} flour@.")
+
+        let range = try #require(parsed.firstDiagnostic(ofKind: .malformedQuantity).range)
+        #expect(range.start.offset == 5)
+        #expect(range.end.offset == 13)
+    }
+
+    @Test
+    func locatesAnUnnamedAnnotationAcrossTheWholeSpan() throws {
+        let parsed = SousParser().parseRecipe("Add @{200 g}@ now.")
+
+        let range = try #require(parsed.firstDiagnostic(ofKind: .unnamedAnnotation).range)
+        #expect(range.start.offset == 4)
+        #expect(range.end.offset == 13)
+    }
+
+    @Test(arguments: ["---\ntitle: Vinaigrette", "---"])
+    func locatesAnUnterminatedHeaderAtItsOpeningFence(source: String) throws {
+        let parsed = SousParser().parseRecipe(source)
 
         let diagnostic = try parsed.firstDiagnostic(ofKind: .unterminatedHeader)
         let range = try #require(diagnostic.range)
         #expect(range.start.line == 1)
         #expect(range.start.column == 1)
         #expect(range.start.offset == 0)
+        #expect(range.end.offset == 3)
+    }
+
+    @Test(arguments: [
+        (source: "Fry @garlic until fragrant.", message: "Ingredient span is missing a closing sigil."),
+        (source: "Warm a #casserole now.", message: "Cookware span is missing a closing sigil."),
+        (source: "Simmer ~40 min now.", message: "Timer span is missing a closing sigil."),
+        (source: "Spread the >bechamel on top.", message: "Reference span is missing a closing sigil.")
+    ])
+    func namesTheAnnotationItReports(source: String, message: String) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        #expect(try parsed.firstDiagnostic(ofKind: .unclosedSpan).message == message)
+    }
+
+    @Test
+    func readsAFenceThatClosesOnTheLastCharacterAsAClosedFence() throws {
+        let parsed = SousParser().parseRecipe("Add @{200 g}")
+
+        #expect(try parsed.firstDiagnostic(ofKind: .unclosedSpan).message
+            == "Ingredient span is missing a closing sigil.")
+    }
+
+    @Test(arguments: [
+        (
+            source: "Add @{200 g}@ now.",
+            kind: Diagnostic.Kind.unnamedAnnotation,
+            message: "Ingredient span has an amount but no name."
+        ),
+        (
+            source: "Sift @{200 g flour",
+            kind: .unclosedSpan,
+            message: "Amount fence is missing a closing brace."
+        ),
+        (
+            source: "---\ntitle: Vinaigrette",
+            kind: .unterminatedHeader,
+            message: "Header is missing a closing fence."
+        ),
+        (
+            source: "---\nstray line\n---",
+            kind: .malformedHeaderLine,
+            message: "Header line is not a top-level 'key: value' entry."
+        ),
+        (
+            source: "---\ntitle: First\ntitle: Second\n---",
+            kind: .repeatedScalarKey,
+            message: "Repeated header key 'title'."
+        ),
+        (
+            source: "---\n: Camille\n---",
+            kind: .emptyHeaderKey,
+            message: "Header line has a value but no key."
+        )
+    ])
+    func describesTheProblemItReports(
+        source: String,
+        kind: Diagnostic.Kind,
+        message: String
+    ) throws {
+        let parsed = SousParser().parseRecipe(source)
+
+        #expect(try parsed.firstDiagnostic(ofKind: kind).message == message)
     }
 }

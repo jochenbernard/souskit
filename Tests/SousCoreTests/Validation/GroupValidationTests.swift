@@ -83,6 +83,13 @@ struct GroupValidationTests {
     }
 
     @Test
+    func reportsATargetTwoReferencesShareUnderNormalizationOnce() {
+        let source = "## Assemble\nLayer the >Bechamel> in a dish, then the rest of the >bechamel>."
+
+        #expect(validate(source).map(\.message) == ["Reference to 'Bechamel' matches no group."])
+    }
+
+    @Test
     func reportsAReferenceHoldingAPathSeparator() {
         #expect(validate("## Assemble\nLayer the >sauces/rouille> in a dish.").map(\.kind)
             == [.unresolvedReference])
@@ -184,7 +191,7 @@ struct GroupValidationTests {
         let source = """
         ---
         servings: 4
-        yield: 6 servings
+        yield: [6 servings, 0 g]
         ---
 
         ## Filling
@@ -195,7 +202,7 @@ struct GroupValidationTests {
         """
 
         #expect(validate(source).map(\.kind) == [
-            .repeatedYield, .repeatedGroupName, .unresolvedReference, .referenceCycle
+            .repeatedYield, .zeroYield, .repeatedGroupName, .unresolvedReference, .referenceCycle
         ])
     }
 

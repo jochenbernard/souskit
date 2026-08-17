@@ -29,7 +29,7 @@ struct ValidationTests {
         #expect(diagnostic.severity == .warning)
     }
 
-    @Test(arguments: ["yield: 0.5 kg", "servings: 4", "yield: a pinch"])
+    @Test(arguments: ["yield: 0.5 kg", "servings: 4", "yield: a pinch", "yield: 0-5 g"])
     func reportsNoYieldOfZeroWhereNoneIsStated(header: String) {
         #expect(validate(header).isEmpty)
     }
@@ -88,6 +88,11 @@ struct ValidationTests {
     }
 
     @Test
+    func ignoresATagThatReadsAsAYield() {
+        #expect(validate("tags: [12 crepes, 18 crepes]").isEmpty)
+    }
+
+    @Test
     func reportsEachDimensionInDocumentOrder() {
         let diagnostics = validate("yield: [5 L, 4 L]\nservings: 4\nyield: [6 servings]")
 
@@ -114,6 +119,18 @@ struct ValidationTests {
         )
     ])
     func namesTheDimensionItReports(header: String, message: String) {
+        #expect(validate(header).map(\.message) == [message])
+    }
+
+    @Test(arguments: [
+        (header: "yield: 0 g", message: "Header declares a yield of zero in 'g', which can divide no target."),
+        (header: "yield: [0]", message: "Header declares a yield of zero, which can divide no target."),
+        (
+            header: "servings: 0",
+            message: "Header declares a yield of zero in 'servings', which can divide no target."
+        )
+    ])
+    func namesTheDimensionOfAYieldOfZero(header: String, message: String) {
         #expect(validate(header).map(\.message) == [message])
     }
 

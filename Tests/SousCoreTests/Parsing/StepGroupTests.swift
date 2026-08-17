@@ -61,6 +61,14 @@ struct StepGroupTests {
         #expect(Recipe.read(source).groups.isEmpty)
     }
 
+    @Test(arguments: [" ", "   ", "\t"])
+    func opensAGroupAfterALineHoldingOnlyWhitespace(separator: String) {
+        let value = Recipe.read("Warm the oven.\n\(separator)\n## Pastry\nRub in the butter.")
+
+        #expect(value.groups.map(\.name) == [nil, "Pastry"])
+        #expect(value.groups.last?.steps.map(\.text) == ["Rub in the butter."])
+    }
+
     @Test
     func readsAHeadingNoBlankLineEndsTheStepBeforeAsProse() {
         let source = """

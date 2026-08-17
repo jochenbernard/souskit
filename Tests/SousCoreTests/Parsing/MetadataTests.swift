@@ -75,7 +75,13 @@ struct MetadataTests {
         #expect(parsed.value.metadata.entries.count == 1)
     }
 
-    @Test(arguments: ["title: 3,2 kg", "source: 1/0", "servings: six", "servings: 6 people"])
+    @Test(arguments: [
+        "title: 3,2 kg",
+        "source: 1/0",
+        "servings: six",
+        "servings: 6 people",
+        "servings: =3,2"
+    ])
     func reportsNothingForAValueStatingNoNumberItCannotFinish(header: String) {
         #expect(SousParser().parseRecipe("---\n\(header)\n---").diagnostics.isEmpty)
     }

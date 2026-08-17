@@ -125,7 +125,7 @@ enum HeaderParser {
 
     /// The index the trimmed value begins at within its line.
     private static func valueStart(of value: String, in line: Substring) -> Substring.Index {
-        line.index(line.endIndex, offsetBy: -value.count)
+        line.index(SourceText.withoutTrailingWhitespace(line).endIndex, offsetBy: -value.count)
     }
 
     /// Warnings for any defective quantity under a key read as an amount.

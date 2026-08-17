@@ -183,6 +183,14 @@ struct ScalingTests {
         """)
     }
 
+    @Test
+    func keepsTheStepsOfAGroupInTheOrderTheyWereRead() throws {
+        let source = "Mix @{200 g} flour@.\n\nWhisk @{4} eggs@ into it."
+
+        let scaled = try Recipe.read(source).scaled(by: 2.0)
+        #expect(scaled.steps.map(\.text) == ["Mix @{400 g} flour@.", "Whisk @{8} eggs@ into it."])
+    }
+
     @Test(arguments: [
         (source: "Layer the >{300 g} bechamel> in a dish.", text: "Layer the >{600 g} bechamel> in a dish."),
         (source: "Layer the >{=300 g} bechamel> in a dish.", text: "Layer the >{=300 g} bechamel> in a dish."),

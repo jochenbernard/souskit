@@ -89,6 +89,25 @@ struct ScaledYieldTests {
     }
 
     @Test
+    func leavesTheServingsAtTheProductWhenTheTargetCarriesAnotherUnit() throws {
+        let header = "servings: 6\nyield: [1.8 kg]"
+        let scaled = try SousParser().scaled(Fixtures.crepeBatter(header), to: "3.6 kg")
+
+        #expect(scaled.metadata["servings"] == "12")
+        #expect(scaled.metadata.yields.map(\.text) == ["3.6 kg"])
+    }
+
+    @Test
+    func keepsAYieldAlreadyStatingTheTargetAsItWasWritten() throws {
+        let source = Fixtures.crepeBatter("yield: [1/2 l]")
+        let parsed = Recipe.read(source)
+        let scaled = try SousParser().scaled(source, to: "0.5 l")
+
+        #expect(scaled.metadata.yields.map(\.text) == ["1/2 l"])
+        #expect(scaled == parsed)
+    }
+
+    @Test
     func leavesAValueStatingNoQuantityAlone() throws {
         let scaled = try SousParser().scaled(Fixtures.crepeBatter("yield: [plenty, 11]"), to: "15")
 

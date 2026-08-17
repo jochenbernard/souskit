@@ -212,6 +212,14 @@ struct AmountTests {
         #expect(amount.unit == "tbsp")
     }
 
+    @Test
+    func readsNoQuantityFromAFractionCharacterCarryingACombiningMark() {
+        let parsed = SousParser().parseRecipe("Add @{\u{00BD}\u{301} tsp} flour@.")
+
+        #expect(parsed.value.firstAmount?.kind.impreciseText == "\u{00BD}\u{301} tsp")
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
     @Test(arguments: ["\u{00B2} tbsp", "\u{216B} tbsp"])
     func readsNoQuantityFromACharacterStatingAWholeValue(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")

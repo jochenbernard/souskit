@@ -91,6 +91,23 @@ struct StepProjectionTests {
     }
 
     @Test
+    func collectsTheAnnotationsOfAGroupAcrossItsStepsInDocumentOrder() throws {
+        let value = Recipe.read("""
+        ## Court-Bouillon
+        Soften @{2} fennel bulbs@ in a #stockpot# for ~10 min~.
+
+        Add @{800 g} tomatoes@ and @{1 strip} orange zest@ with a #ladle#.
+
+        Pour in @{2 l} fish stock@, then simmer it ~30 min~ in a #heavy pot#.
+        """)
+        let group = try #require(value.groups.first)
+
+        #expect(group.ingredients.map(\.name) == ["fennel bulbs", "tomatoes", "orange zest", "fish stock"])
+        #expect(group.cookware.map(\.name) == ["stockpot", "ladle", "heavy pot"])
+        #expect(group.timers.map(\.text) == ["10 min", "30 min"])
+    }
+
+    @Test
     func separatesTheAnnotationKindsWithinAStep() {
         let step = Recipe.read("Melt @{30 g} butter@ in a #frying pan#.").steps[0]
 

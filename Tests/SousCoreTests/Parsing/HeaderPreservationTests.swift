@@ -26,9 +26,9 @@ struct HeaderPreservationTests {
         #expect(entries.allSatisfy({ $0.key != "  calories" }))
     }
 
-    @Test
-    func skipsABlankHeaderLineSilently() {
-        let source = "---\ntitle: Vinaigrette\n\nsource: Camille\n---"
+    @Test(arguments: ["", "   ", "\t"])
+    func skipsABlankHeaderLineSilently(line: String) {
+        let source = "---\ntitle: Vinaigrette\n\(line)\nsource: Camille\n---"
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.metadata.entries.map(\.key) == ["title", "source"])

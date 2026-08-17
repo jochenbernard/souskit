@@ -44,7 +44,25 @@ struct MalformedAmountTests {
         #expect(parsed.diagnostics.map(\.kind) == [.malformedQuantity])
     }
 
-    @Test(arguments: ["a pinch", "half", "to taste", "-", "."])
+    @Test(arguments: [
+        (
+            fence: "3,2 kg",
+            message: "Amount has a decimal point it cannot use; write a decimal as '.' between digits."
+        ),
+        (
+            fence: " 3,2 kg ",
+            message: "Amount has a decimal point it cannot use; write a decimal as '.' between digits."
+        ),
+        (fence: "1/0 tbsp", message: "Amount has a fraction with a missing or zero denominator."),
+        (fence: ".5", message: "Amount opens as a number with no leading digit; write one, as in '0.5'.")
+    ])
+    func describesTheNumberAnAmountCannotFinish(fence: String, message: String) throws {
+        let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
+
+        #expect(try parsed.firstDiagnostic(ofKind: .malformedQuantity).message == message)
+    }
+
+    @Test(arguments: ["a pinch", "half", "to taste", "-", ".", ". a", ", a", "- a"])
     func readsAnImpreciseAmountStatingNoNumberWithoutReporting(fence: String) {
         let parsed = SousParser().parseRecipe("Add @{\(fence)} flour@.")
 
