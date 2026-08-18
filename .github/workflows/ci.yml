@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Swift 6.3 is required by the swift-tools-version in Package.swift.
+  XCODE_VERSION: "26.6"
+
+jobs:
+  test:
+    name: Test (macOS)
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Select the Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Restore the dependency cache
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-deps-xcode${{ env.XCODE_VERSION }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-deps-xcode${{ env.XCODE_VERSION }}-
+
+      - name: Run the test suite
+        run: swift test
+
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iOS
+            destination: generic/platform=iOS Simulator
+          - platform: macCatalyst
+            destination: platform=macOS,variant=Mac Catalyst
+          - platform: tvOS
+            destination: generic/platform=tvOS Simulator
+          - platform: visionOS
+            destination: generic/platform=visionOS Simulator
+          - platform: watchOS
+            destination: generic/platform=watchOS Simulator
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Select the Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Restore the dependency cache
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-deps-xcode${{ env.XCODE_VERSION }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-deps-xcode${{ env.XCODE_VERSION }}-
+
+      - name: Build the package
+        run: |
+          xcodebuild build \
+            -scheme SousKit-Package \
+            -destination '${{ matrix.destination }}' \
+            -quiet
