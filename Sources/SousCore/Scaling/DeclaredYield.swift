@@ -7,6 +7,9 @@ struct DeclaredYield {
     var kind: Amount.Kind
 
     /// The form a unit is matched in, so a target and a yield compare alike.
+    ///
+    /// Trimmed, not normalized as group names are: case separates units, so `T` is a tablespoon
+    /// where `t` is a teaspoon, and `mg` is a milligram where `Mg` is a megagram.
     static func matching(_ unit: String?) -> String {
         SourceText.trimmed(unit ?? "")
     }
