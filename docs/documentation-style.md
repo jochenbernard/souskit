@@ -1,223 +1,179 @@
 # Documentation style
 
-This document governs every comment in this repository: public DocC comments, internal and
-private doc comments, and inline comments, in `Sources` and in `Tests` alike. Its purpose is to
-keep documentation stating what a symbol is and what it guarantees, in one voice, at a length the
-reader can absorb. Documentation that argues for the design, narrates the code, or reads as a
-riddle costs more attention than it returns. Read this document before writing or editing any
-comment, and follow it exactly.
+This guide governs every comment under `Sources` and `Tests`: public DocC
+documentation, internal and private doc comments, and inline comments. A good
+comment says what a symbol is and what it guarantees, in one voice, at a length
+a reader absorbs in one pass. The failures it exists to prevent are the comment
+that argues for the design, the comment that narrates the code, and the comment
+that poses a riddle; each costs the reader more attention than it returns.
 
-## The three rules
+## Rule 1: the summary is the contract
 
-### Rule 1: the summary states the contract
+A summary is a single sentence giving what the symbol is, or what it does. The
+reasoning that produced the design belongs in the commit message; failing that,
+it belongs nowhere. A reader comes to use the symbol correctly, not to review
+its history.
 
-One sentence saying what the symbol is, or what it does. It may not contain the reasoning that
-produced it.
+Never restate the symbol's name, and never dodge the restatement with a
+synonym. The synonym is the worse failure: it leaves the codebase with two
+nouns for one concept, and a reader cannot tell whether they denote different
+things.
 
-The reasoning belongs in a commit message, or nowhere. A reader reaching for a symbol wants to
-know how to use it correctly, not how it came to be shaped that way.
-
-Do not restate the name, and do not reach for a synonym to avoid restating it. `SourceLocation`
-documented as "a location in the source" says nothing. Documented as "a position in the source"
-it is worse, because the codebase now carries two nouns for one concept and a reader cannot tell
-whether they mean different things. Say what the symbol holds or does instead:
+Rejected, for `SourceLocation` in
+`Sources/SousCore/Diagnostic/SourceLocation.swift`:
 
 ```swift
-// Before
 /// A single position in the source.
+```
 
-// After
+"Position" is "location" in disguise. The accepted summary carries the
+contract:
+
+```swift
 /// Where something sits in the source, given as a line, a column, and a character offset.
 ```
 
-### Rule 2: no anthropomorphism
+## Rule 2: no anthropomorphism
 
-Code does not state, ask for, or owe, and does not have things of its own. A parser reads, a
-property holds, a function returns, a value is trimmed.
+Code does not state, ask for, owe, or possess. Describe what it does: a parser
+reads, a property holds, a function returns, a value is trimmed.
 
-Banned outright:
+| Banned         | Write instead                |
+| -------------- | ---------------------------- |
+| states         | is, holds, contains, reports |
+| asks, asks for | requires, takes              |
+| owes           | returns, provides            |
+| which is what  | end the sentence             |
+| nobody wrote   | name the actual condition    |
+| of its own     | delete it                    |
 
-| Banned | Use instead |
-|--------|-------------|
-| `states` | `is`, `holds`, `contains`, `reports` |
-| `asks`, `asks for` | `requires`, `takes` |
-| `owes` | `returns`, `provides` |
-| `which is what` | end the sentence |
-| `nobody wrote` | name the actual condition |
-| `of its own` | delete it |
+`so the` and `rather than` are restricted: admissible when they carry
+information, never as connective filler between clauses already clear without
+them. To test one, delete the phrase along with the clause it introduces.
+Losing a fact means keep it; losing only rhythm means it was filler.
 
-Restricted. These are permitted only where they carry information, never as connective filler
-joining two clauses that were already clear apart:
+## Rule 3: a second paragraph must earn its place
 
-* `so the`
-* `rather than`
+Every paragraph after the summary faces one question: does it change what a
+caller writes? If not, cut it.
 
-The test for a restricted phrase: delete it and the clause it introduces. If the reader loses a
-fact, keep it. If they lose only rhythm, it was filler.
+- A public symbol gets the summary plus at most one short paragraph, admissible
+  only where observable behavior would otherwise surprise a caller.
+- An internal or private symbol gets one line. The sole exception is a trap
+  note.
+- An inline comment gets one line, for what the code below cannot convey, and
+  never narrates the next statement.
 
-### Rule 3: a second paragraph must earn its place
+A paragraph correctly cut, from `Amount.isFixed` in
+`Sources/SousCore/Model/Amount.swift`. The cut paragraph made three points: the
+`=` marker opens the fence, it fixes an imprecise amount as readily as a
+numeric one, and on an imprecise amount, which scaling never moves, it records
+only intent. A design argument; no caller writes anything differently for it.
+What survived:
 
-The test is whether it changes what a caller writes. If it does not, cut it.
+```swift
+    /// Whether the fence's `=` marker holds this amount constant when the recipe is scaled.
+    public var isFixed: Bool
+```
 
-| Symbol kind | Budget |
-|-------------|--------|
-| Public | A summary, plus at most one short paragraph, and only where a caller would otherwise be surprised by observable behavior. |
-| Internal and private | One line. |
-| Inline | One line, flagging only what the following code cannot convey. Never a narration of the next statement. |
+A second paragraph correctly kept, on `ScalingError.unusableFactor` in
+`Sources/SousCore/Scaling/ScalingError.swift`:
+
+```swift
+    /// The factor is negative, or is not a finite number.
+    ///
+    /// Zero is permitted; negative zero is not.
+    case unusableFactor
+```
+
+That second line teaches the caller that zero is safe to pass and negative
+zero is not; the case name conveys neither, and a wrong guess produces an
+error. The paragraph originally went on to explain why, and Rule 3 cut that
+part.
+
+### Trap notes
+
+An internal symbol may record why the obvious simpler implementation is wrong.
+That is the one thing a maintainer cannot recover from the code, and it earns
+space nothing else gets: one line, extended only where the invariant the trap
+turns on must sit beside it. The note names the trap, never the history; it is
+no route back to a design argument. From `FenceSearch` in
+`Sources/SousCore/Parsing/FenceSearch.swift`:
+
+```swift
+/// Finds the brace an amount fence closes on, remembering the region already searched.
+///
+/// Memoized: a line holding no closing brace would otherwise have every fence on it scan to the
+/// line end, which is quadratic. A search starting outside the remembered region starts over, so
+/// the answer never depends on the order the questions arrive in.
+```
+
+The trap is the fresh scan per fence; the extension is the invariant the
+memoization turns on, and its `so the` carries a fact. A second instance sits
+on `DeclaredYield.matching(_:)` in
+`Sources/SousCore/Scaling/DeclaredYield.swift`, where the trap is normalizing
+units the way group names are and conflating `T` with `t`.
 
 ## DocC structured sections
 
-Rule 3 governs prose. It does not govern DocC's structured sections.
-
-Keep `- Parameter` and `- Returns` on every public symbol that takes a parameter or returns a
-value, including where the tag only restates the name and type. Xcode Quick Help renders those
-sections, and a symbol missing them reads as undocumented there even when its summary is complete.
-
-```swift
-/// Parses the content of an amount fence into an amount.
-///
-/// - Parameter text: The fence content to parse.
-/// - Returns: The parsed amount.
-public func parseAmount(_ text: String) -> Amount {
-```
-
-## Trap notes
-
-Internal code sometimes holds knowledge of why the obvious simpler implementation is wrong. Keep
-it, capped at one line, under the same rule that governs everything else: keep what the reader
-cannot get from the code. For an internal helper the reader is a maintainer, and what they cannot
-get by reading is why this shape and not the obvious one.
-
-A trap note states the trap, not the history. It is not a place to reintroduce design argument.
+Rule 3 governs prose only. Every public symbol taking a parameter or returning
+a value carries `- Parameter` and `- Returns` sections, even where a tag only
+restates a name and a type: Xcode Quick Help renders these sections, and a
+symbol without them reads as undocumented there however complete its summary
+is. From `Normalization.normalized(_:)` in
+`Sources/SousCore/Normalization/Normalization.swift`, whole:
 
 ```swift
-// Memoized: a per-fence scan is quadratic on a line holding no closing brace.
-private struct FenceSearch {
+    /// The matching form of a name: lowercased, accent-folded, and trimmed.
+    ///
+    /// This is idempotent: normalizing an already normalized name returns it unchanged.
+    ///
+    /// - Parameter text: The name to reduce.
+    /// - Returns: The matching form.
+    public static func normalized(_ text: String) -> String {
 ```
 
 ## Test files
 
-Test method names and `@Suite` display names carry the documentation. They are already
-descriptive, so prose blocks above suites and cases are removed.
-
-A comment survives in a test file only where a name cannot convey why the case exists. In
-practice that means a regression against a specific past bug, or a non-obvious reason the case is
-written the way it is.
-
-```swift
-// Regression: `\## @a@` used to serialize as a group heading, destroying the step.
-@Test
-func escapesAHeadingAcrossSegments() throws {
-```
-
-Shared helpers in a test support file are ordinary internal symbols and take a one-line summary
-under Rule 3.
+Test method names and `@Suite` display names are the documentation, and no
+prose blocks sit above suites or cases. A comment is admissible only where a
+name cannot carry why the case exists: a regression against a specific past
+bug, or a non-obvious reason for the shape the case takes. Shared helpers in a
+test support file are ordinary internal symbols, governed by Rule 3.
 
 ## Mechanics
 
-* ASCII only. No character outside the printable ASCII range in any comment.
-* No em-dash constructions, neither the character nor a double hyphen standing in for one.
-* Maximum line length 120, enforced by SwiftLint.
-* Every public declaration must carry a doc comment. SwiftLint's `missing_docs` rule enforces
-  this, because `.swiftlint.yml` sets `opt_in_rules: all`.
-* Some comments are directives rather than documentation, and are exempt from everything above:
-  `// swift-tools-version:` in `Package.swift`, and any `// swiftlint:` comment.
+The first two rules below also cover the Markdown files in this repository,
+this document included.
 
-## Worked examples
-
-### A summary carrying design argument
-
-```swift
-// Before
-/// A textual amount, captured as the trimmed text states it: one with no leading
-/// number, or one opening as a number it cannot finish, such as a decimal written with
-/// a comma. Reading the second reports it, so a number nobody wrote never scales.
-case imprecise(String)
-
-// After
-/// An amount with no usable leading number, such as "a pinch" or "1,5 l".
-/// Scaling leaves it unchanged.
-case imprecise(String)
-```
-
-Three sentences of reasoning collapse to one statement of the contract plus the one fact that
-changes what a caller writes: scaling will not move this value.
-
-### A property documented by argument
-
-```swift
-// Before
-/// Whether the fence's `=` marker fixes the amount, holding it constant when the recipe is
-/// scaled.
-///
-/// The marker opens the fence and states that the whole amount holds still, so it fixes an
-/// imprecise amount as readily as a numeric one, whatever whitespace separates the two. An
-/// imprecise amount never moves under scaling in any case, so there the marker records the
-/// author's intent and nothing more.
-public var isFixed: Bool
-
-// After
-/// Whether the fence's `=` marker holds this amount constant when the recipe is scaled.
-public var isFixed: Bool
-```
-
-The second paragraph argued for the design. It changed nothing a caller writes, so Rule 3 cut it.
-
-### An inline comment narrating the code
-
-```swift
-// Before
-// A line break bounds the search, so the region remembered as holding no brace
-// ends there and a fence opening past it starts a search of its own line.
-let cursor = StepParser.firstUnescaped(AmountFence.closing, in: characters, from: from)
-
-// After
-let cursor = StepParser.firstUnescaped(AmountFence.closing, in: characters, from: from)
-```
-
-The call names what it does. The comment restated it at greater length.
-
-### An enum case with a surviving second line
-
-```swift
-// Before
-/// The factor is negative, or is not a finite number, so nothing can be multiplied by it.
-///
-/// A scaled amount writes its value back as text, and a negative, infinite, or
-/// not-a-number factor leaves a value writing text no reader reads as an amount. Zero is
-/// allowed and negative zero is not, because only the second writes a sign.
-case unusableFactor
-
-// After
-/// The factor is negative, or is not a finite number.
-///
-/// Zero is permitted; negative zero is not.
-case unusableFactor
-```
-
-Here the second line survives, because it tells a caller that zero is safe to pass and negative
-zero is not. The case name does not convey that, and a caller who guesses wrong gets an error.
-The rest of the old paragraph explained why, which Rule 3 cuts.
+- ASCII only, in comments and string literals alike. Write a non-ASCII
+  character as an escape, as in "Cr\u{EA}pes". The build reports no literal
+  non-ASCII character, leaving this rule and the second command under Checking
+  as the only enforcement.
+- No em-dash constructions: neither the character itself nor a double hyphen
+  standing in for one.
+- Lines fit in 120 characters; SwiftLint reports the overruns.
+- A public declaration without a doc comment is reported by the SwiftLint rule
+  `missing_docs`, active because `.swiftlint.yml` sets `opt_in_rules: all`. Its
+  severity is warning; nothing fails on it.
+- Exempt from all of the above: the `// swift-tools-version:` line in
+  `Package.swift`, and any `// swiftlint:` comment.
 
 ## Checking
 
-Run from the repository root. Each command expects no output.
+Run these from the repository root. Each is expected to print nothing.
 
 ```bash
-# Banned vocabulary. Match conjugations too: an earlier check looked only for "states"
-# and missed "state different quantities" and "rewritten to state the target".
-# "State" as a noun is fine, as in "a parser holds no state".
-find Sources Tests -name '*.swift' | xargs grep -niE '^[[:space:]]*//.*\b(state|states|stating|stated|ask|asks|asking|owe|owes|of its own|which is what|nobody wrote)\b'
+# Banned vocabulary, conjugations included. "State" as a noun is fine,
+# as in "a parser holds no state".
+find Sources Tests -name '*.swift' | xargs grep -niE '^[[:space:]]*//.*\b(state|states|stating|stated|ask|asks|asking|owe|owes|of its own|which is what|nobody wrote)\b' | grep -v 'holds no state'
 
-# Non-ASCII in comments, which also catches a literal em-dash
-find Sources Tests -name '*.swift' | xargs grep -nE '^[[:space:]]*//' | LC_ALL=C grep '[^ -~]'
+# Non-ASCII anywhere in source, which also catches a literal em-dash
+LC_ALL=C grep -rn '[^ -~]' Sources Tests --include='*.swift'
 
 # Double hyphen standing in for an em-dash
 find Sources Tests -name '*.swift' | xargs grep -nE '^[[:space:]]*//.*[^-]-{2}[^-]'
 ```
 
-Coverage and line length are enforced by SwiftLint:
-
-```bash
-swiftlint lint Sources Tests
-```
+SwiftLint covers the rest: `swiftlint lint Sources Tests` reports line length
+and missing docs.
