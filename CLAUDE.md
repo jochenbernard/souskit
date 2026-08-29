@@ -1,16 +1,12 @@
-# Documentation and comments
-- All public symbols must have DocC documentation.
-- All documentation must:
-  - Follow `docs/documentation-style.md`.
-  - Be consistent in wording.
-  - Be consistent in meaning.
-  - Be as precise as possible.
-  - Be as concise as possible, without sacrificing preciseness.
-  - Not contain grammar or spelling mistakes.
-  - Not contain em-dash constructions.
-  - Not contain non-ASCII characters.
+# SousKit
 
-# Testing
-- Always use test-driven development.
-- All logic must be tested using SwiftTesting.
-- All edge cases must be covered by tests.
+## Comments and documentation
+
+`docs/documentation-style.md` is the single authority on comment and
+documentation conventions; follow it for every comment. Its Mechanics section
+also applies to the Markdown files in this repository, including this one.
+
+## Testing
+
+- Use test-driven development: write the test before the implementation.
+- Cover every edge case with a test.
