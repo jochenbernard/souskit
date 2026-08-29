@@ -1,6 +1,6 @@
 # SousKit
 
-A Swift package for Sous, a plain text format for recipes.
+A Swift package for [Sous](https://github.com/jochenbernard/sous), a plain text format for recipes.
 
 [![CI](https://github.com/jochenbernard/souskit/actions/workflows/ci.yml/badge.svg)](https://github.com/jochenbernard/souskit/actions/workflows/ci.yml)
 
@@ -39,6 +39,9 @@ Then add the product to a target:
 ```
 
 ## The format
+
+The [specification](https://github.com/jochenbernard/sous) defines the format. This section
+summarizes what SousKit reads.
 
 A recipe is a metadata header between `---` fences, followed by steps written as paragraphs. A
 blank line separates one step from the next.
