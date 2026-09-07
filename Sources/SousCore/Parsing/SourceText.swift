@@ -83,11 +83,10 @@ enum SourceText {
         escapesFollowing(characters[index], before: character(in: characters, at: index + 1))
     }
 
-    /// The index of the first unescaped occurrence of the character, or the index the line ends at
+    /// The index of the first unescaped occurrence of the character, or the index the text ends at
     /// when it holds none.
     ///
-    /// An escape is stepped over whole, so `\@` inside `@...@` stays part of the name. The search
-    /// stops at a line break, so a span closes on the line it opens on or not at all.
+    /// An escape is stepped over whole, so `\@` inside `@...@` stays part of the name.
     static func firstUnescaped(
         _ character: Character,
         in characters: [Character],
@@ -95,7 +94,7 @@ enum SourceText {
     ) -> Int {
         var cursor = start
 
-        while cursor < characters.count, !characters[cursor].isNewline {
+        while cursor < characters.count {
             if opensEscape(in: characters, at: cursor) {
                 cursor += 2
                 continue

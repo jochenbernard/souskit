@@ -2,7 +2,8 @@ extension Recipe {
     /// The recipe as Sous source text.
     ///
     /// Content is preserved and incidental layout such as repeated blank lines is normalized, so
-    /// re-reading the result yields the same recipe.
+    /// re-reading the result yields the same recipe. A step longer than 120 characters is wrapped
+    /// at a space; a heading and a header entry are written whole, whatever their length.
     ///
     /// - Returns: The recipe as Sous source text.
     public func serialized() -> String {

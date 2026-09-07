@@ -59,7 +59,18 @@ struct RecipeStructureTests {
         and beat in the oil.
         """
 
-        #expect(Recipe.read(source).steps.count == 1)
+        #expect(Recipe.read(source).steps.map(\.text) == ["Whisk the vinegar and beat in the oil."])
+    }
+
+    @Test
+    func foldsEveryLineBreakOfAStepWrappedOverSeveralLines() {
+        let source = """
+        Whisk the vinegar,
+        beat in the oil,
+        and season it.
+        """
+
+        #expect(Recipe.read(source).steps.map(\.text) == ["Whisk the vinegar, beat in the oil, and season it."])
     }
 
     @Test
@@ -74,9 +85,10 @@ struct RecipeStructureTests {
     }
 
     @Test
-    func normalizesLineEndingsWithinAMultiLineStep() throws {
+    func foldsALineBreakWithinAStepIntoOneSpaceWhateverTheSourceWrote() throws {
         let step = try #require(Recipe.read("Add @pearl\r\nonions@ to the casserole.").firstStep)
-        #expect(step.text == "Add @pearl\nonions@ to the casserole.")
+
+        #expect(step.text == "Add @pearl onions@ to the casserole.")
     }
 
     @Test
@@ -139,16 +151,23 @@ struct RecipeStructureTests {
     }
 
     @Test
-    func normalizesEveryKindOfLineBreakWithinAStep() {
+    func foldsEveryKindOfLineBreakWithinAStep() {
         let parsed = SousParser().parseRecipe("Whisk the vinegar\u{2028}and beat in the oil\u{0B}while it thickens.")
 
-        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar\nand beat in the oil\nwhile it thickens."])
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar and beat in the oil while it thickens."])
     }
 
     @Test
-    func normalizesALoneCarriageReturn() {
+    func foldsALoneCarriageReturnAndStillSeparatesStepsOnTwo() {
         let parsed = SousParser().parseRecipe("Whisk the vinegar.\rBeat in the oil.\r\rDress the salad.")
 
-        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar.\nBeat in the oil.", "Dress the salad."])
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar. Beat in the oil.", "Dress the salad."])
+    }
+
+    @Test
+    func keepsTheWhitespaceAroundAFoldedLineBreakVerbatim() {
+        let parsed = SousParser().parseRecipe("Whisk the vinegar \n  and beat in the oil.")
+
+        #expect(parsed.value.steps.map(\.text) == ["Whisk the vinegar    and beat in the oil."])
     }
 }

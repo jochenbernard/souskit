@@ -1,6 +1,7 @@
 /// The recipes the tests draw their example data from.
 ///
-/// Each is a complete, cookable version of a classic French dish that reads back byte for byte.
+/// Each is a complete, cookable version of a classic French dish that reads back unchanged but
+/// for the wraps inside its steps, which come back as the spaces they stand for.
 /// Every ingredient, cookware, group name, and reference target the tests use as vocabulary
 /// comes from one of these ten; bare parser placeholders such as `@a@` and `#p#` do not.
 enum Recipes {
