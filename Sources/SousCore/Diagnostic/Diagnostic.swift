@@ -46,7 +46,7 @@ public struct Diagnostic: Equatable, Hashable, Sendable {
         /// An annotation gave an amount but no name.
         case unnamedAnnotation
 
-        /// A reference matches no group.
+        /// A reference matches no group and no recipe file.
         case unresolvedReference
 
         /// Groups consume each other in a loop, or a group consumes itself.
