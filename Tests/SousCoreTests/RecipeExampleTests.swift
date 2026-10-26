@@ -15,11 +15,38 @@ struct RecipeExampleTests {
         Recipes.crepes,
         Recipes.madeleines
     ])
-    func writesEveryRecipeBackAsItWasRead(source: String) {
+    func writesEveryRecipeBackAsItWasReadButForTheWrapsInsideItsSteps(source: String) {
         let parsed = SousParser().parseRecipe(source)
 
-        #expect(parsed.value.serialized() == source)
+        #expect(unwrapped(parsed.value.serialized()) == unwrapped(source))
         #expect(parsed.value.reRead() == parsed.value)
+    }
+
+    /// The text with every line break folded into a space.
+    ///
+    /// A step wrapped over several lines comes back on one, so folding both the source and what
+    /// was written for it lets that difference through and holds every other character to
+    /// account.
+    private func unwrapped(_ text: String) -> String {
+        String(text.map({ $0.isNewline ? " " : $0 }))
+    }
+
+    @Test(arguments: [
+        Recipes.boeufBourguignon,
+        Recipes.moulesMarinieres,
+        Recipes.quicheLorraine,
+        Recipes.gratinDauphinois,
+        Recipes.vinaigrette,
+        Recipes.bouillabaisse,
+        Recipes.croqueMonsieur,
+        Recipes.brioche,
+        Recipes.crepes,
+        Recipes.madeleines
+    ])
+    func writesEveryRecipeWithinTheLineLimit(source: String) {
+        let written = SousParser().parseRecipe(source).value.serialized()
+
+        #expect(written.split(separator: "\n").allSatisfy({ $0.count <= 120 }))
     }
 
     @Test(arguments: [

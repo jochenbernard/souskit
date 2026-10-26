@@ -79,14 +79,14 @@ struct StepGroupTests {
 
         let value = Recipe.read(source)
         #expect(value.groups.map(\.name) == [nil])
-        #expect(value.steps.map(\.text) == [source])
+        #expect(value.steps.map(\.text) == ["Warm the oven. ## Pastry Rub in the butter."])
     }
 
     @Test
     func readsNoAnnotationInAHeadingReadAsProse() {
         let parsed = SousParser().parseRecipe("Warm the oven.\n## Pastry")
 
-        #expect(parsed.value.steps.map(\.text) == ["Warm the oven.\n## Pastry"])
+        #expect(parsed.value.steps.map(\.text) == ["Warm the oven. ## Pastry"])
         #expect(parsed.value.cookware.isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
@@ -262,11 +262,11 @@ struct StepGroupTests {
     }
 
     @Test
-    func dropsTheEscapeALineInsideAStepDoesNotNeed() {
+    func dropsTheEscapeAHeadingFoldedIntoAStepNoLongerNeeds() {
         let written = Recipe.read("Warm the oven.\n\\## Pastry").serialized()
 
-        #expect(written == "Warm the oven.\n## Pastry")
-        #expect(Recipe.read(written).steps.map(\.text) == ["Warm the oven.\n## Pastry"])
+        #expect(written == "Warm the oven. ## Pastry")
+        #expect(Recipe.read(written).steps.map(\.text) == ["Warm the oven. ## Pastry"])
     }
 
     @Test

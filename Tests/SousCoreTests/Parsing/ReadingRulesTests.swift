@@ -136,21 +136,30 @@ struct ReadingRulesTests {
     }
 
     @Test
-    func doesNotCloseASpanAcrossALineBreak() {
+    func closesASpanAcrossALineBreak() {
         let parsed = SousParser().parseRecipe("Add @pearl\nonions@ to the casserole.")
 
-        #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Add @pearl\nonions@ to the casserole."])
-        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])
+        #expect(parsed.value.ingredients.map(\.name) == ["pearl onions"])
+        #expect(parsed.value.steps.map(\.text) == ["Add @pearl onions@ to the casserole."])
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test
-    func doesNotCloseAnAmountFenceAcrossALineBreak() {
-        let parsed = SousParser().parseRecipe("Add @{200 g\nflour} butter@.")
+    func escapesNothingWithABackslashTheLineBreakFoldsASpaceAfter() {
+        let parsed = SousParser().parseRecipe("Season to taste \\\n@salt@ now.")
 
-        #expect(parsed.value.ingredients.isEmpty)
-        #expect(parsed.value.steps.map(\.text) == ["Add @{200 g\nflour} butter@."])
-        #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan, .unclosedSpan])
+        #expect(parsed.value.ingredients.map(\.name) == ["salt"])
+        #expect(parsed.value.steps.map(\.text) == ["Season to taste \\ @salt@ now."])
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func closesAnAmountFenceAcrossALineBreak() {
+        let parsed = SousParser().parseRecipe("Sift @{200\ng} flour@ into a bowl.")
+
+        #expect(parsed.value.ingredients.map({ $0.amount?.text }) == ["200 g"])
+        #expect(parsed.value.ingredients.map(\.name) == ["flour"])
+        #expect(parsed.diagnostics.isEmpty)
     }
 
     @Test

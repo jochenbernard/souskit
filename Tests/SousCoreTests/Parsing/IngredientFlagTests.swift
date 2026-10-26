@@ -103,6 +103,13 @@ struct IngredientFlagTests {
     }
 
     @Test
+    func opensNoFlagChainAcrossALineBreak() throws {
+        let step = try #require(Recipe.read("Season with @salt@\n:staple now.").firstStep)
+        #expect(step.ingredients.first?.flags.isStaple == false)
+        #expect(step.text == "Season with @salt@ :staple now.")
+    }
+
+    @Test
     func readsAHyphenAsPartOfAFlagWord() throws {
         let ingredient = try #require(Recipe.read("Add @beef stock@:home-made now.").firstIngredient)
         #expect(ingredient.flags.unrecognized == ["home-made"])

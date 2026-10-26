@@ -5,7 +5,7 @@ public struct Step: Equatable, Hashable, Sendable {
 
     /// The step as source text, sigils and escapes included.
     ///
-    /// Every line break is normalized to a line feed, whatever the source wrote. Scaling
+    /// A step wrapped over several lines carries a space where each break was. Scaling
     /// regenerates this from ``segments`` rather than carrying it over.
     public var text: String
 

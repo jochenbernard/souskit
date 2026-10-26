@@ -57,9 +57,17 @@ struct ReferenceTests {
         #expect(parsed.diagnostics.allSatisfy({ $0.severity == .warning }))
     }
 
-    @Test(arguments: ["Spread the >bechamel\nlayer> on top.", "Spread the >bechamel\n\nlayer> on top."])
-    func doesNotCloseAReferenceAcrossALineBreak(source: String) {
-        let parsed = SousParser().parseRecipe(source)
+    @Test
+    func closesAReferenceAcrossALineBreak() {
+        let parsed = SousParser().parseRecipe("Spread the >bechamel\nlayer> on top.")
+
+        #expect(parsed.value.references.map(\.target) == ["bechamel layer"])
+        #expect(parsed.diagnostics.isEmpty)
+    }
+
+    @Test
+    func doesNotCloseAReferenceAcrossAParagraphBreak() {
+        let parsed = SousParser().parseRecipe("Spread the >bechamel\n\nlayer> on top.")
 
         #expect(parsed.value.references.isEmpty)
         #expect(parsed.diagnostics.map(\.kind) == [.unclosedSpan])

@@ -18,9 +18,47 @@ extension Step {
         }
     }
 
-    /// The step as Sous source text.
+    /// How many characters a written line holds before the next word moves to the line below.
+    private static let lineLimit = 120
+
+    /// The step as Sous source text, wrapped to the line limit.
     func serialized() -> String {
-        Self.serialized(segments)
+        Self.wrapped(Self.serialized(segments))
+    }
+
+    /// The text with a line break in place of the space each line runs past the limit at.
+    ///
+    /// A break is taken at a space alone, and only with content both before it on the line and
+    /// after it in the text: reading folds a break back into one space, and a line of only
+    /// whitespace would end the step instead. A word longer than the limit overruns rather than
+    /// being split.
+    private static func wrapped(_ text: String) -> String {
+        let characters = Array(text)
+        guard let lastContent = characters.lastIndex(where: { !$0.isWhitespace }) else { return text }
+
+        var result = ""
+        var lineStart = 0
+        var lineHasContent = false
+        var candidate: Int?
+        var index = 0
+
+        while index < characters.count {
+            if !characters[index].isWhitespace { lineHasContent = true }
+            if characters[index] == " ", lineHasContent, index < lastContent { candidate = index }
+
+            guard index - lineStart >= lineLimit, let breakAt = candidate else {
+                index += 1
+                continue
+            }
+
+            result += "\(String(characters[lineStart..<breakAt]))\n"
+            lineStart = breakAt + 1
+            lineHasContent = false
+            candidate = nil
+            index = lineStart
+        }
+
+        return result + String(characters[lineStart...])
     }
 
     /// The segments as Sous source text, escaping whatever would otherwise read back as
