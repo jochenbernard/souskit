@@ -204,10 +204,9 @@ covers one construct, which is preserved, and the rest reads as written.
 let problems = recipe.validate()
 ```
 
-Validation applies five rules: the header declares each unit's yield at most once, counting
+Validation applies four rules: the header declares each unit's yield at most once, counting
 `servings` and every `yield` item together; it declares no yield of zero; no two group headings
-share a name; every reference matches a group; and no group consumes an intermediate that depends
-on it.
+share a name; and no group consumes an intermediate that depends on it.
 
 Its diagnostics carry no `range`, because validation reads a parsed recipe rather than source
 text.

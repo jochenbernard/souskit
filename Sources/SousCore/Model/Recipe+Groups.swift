@@ -12,8 +12,8 @@ extension Recipe {
 
     /// The groups a group consumes through its references.
     ///
-    /// Each group appears once, in the order its first reference occurs. A reference matching no
-    /// heading contributes nothing.
+    /// Each group appears once, in the order its first reference occurs. A reference to a recipe
+    /// file contributes nothing.
     ///
     /// - Parameter group: The group whose references to resolve.
     /// - Returns: The groups it depends on.
@@ -28,13 +28,18 @@ extension Recipe {
         return groups.firstIndex(where: { $0.name.map(Normalization.normalized) == normalized })
     }
 
+    /// The index in ``groups`` of the group a reference consumes, or `nil` when it leads to a recipe file.
+    func groupIndex(of reference: Reference) -> Int? {
+        reference.target.contains("/") ? nil : index(ofGroupNamed: reference.target)
+    }
+
     /// The indices in ``groups`` of the groups this group consumes, deduplicated.
     func dependencyIndices(of group: StepGroup) -> [Int] {
         var seen: Set<Int> = []
 
         return group.references.compactMap { reference in
             guard
-                let index = index(ofGroupNamed: reference.target),
+                let index = groupIndex(of: reference),
                 seen.insert(index).inserted
             else {
                 return nil
