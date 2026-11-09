@@ -28,12 +28,26 @@ struct GroupResolutionTests {
     }
 
     @Test
-    func matchesANameHoldingAPathSeparator() throws {
+    func matchesANameHoldingAPathSeparator() {
+        let value = Recipe.read("## sauces/rouille\nBlend it.")
+
+        #expect(value.group(named: "sauces/rouille")?.name == "sauces/rouille")
+    }
+
+    @Test
+    func dependsOnNoGroupThroughAReferenceHoldingAPathSeparator() throws {
         let value = Recipe.read("## sauces/rouille\nBlend it.\n\n## Assemble\nLayer the >sauces/rouille>.")
         let assemble = try #require(value.groups.last)
 
-        #expect(value.group(named: "sauces/rouille")?.name == "sauces/rouille")
-        #expect(value.dependencies(of: assemble).map(\.name) == ["sauces/rouille"])
+        #expect(value.dependencies(of: assemble).isEmpty)
+    }
+
+    @Test
+    func dependsOnNoGroupThroughAReferenceOpeningWithADotSlash() throws {
+        let value = Recipe.read("## Pastry\nRub in the butter.\n\n## Assemble\nLine a tin with the >./pastry>.")
+        let assemble = try #require(value.groups.last)
+
+        #expect(value.dependencies(of: assemble).isEmpty)
     }
 
     @Test

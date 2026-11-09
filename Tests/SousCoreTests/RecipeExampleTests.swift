@@ -186,7 +186,8 @@ struct RecipeExampleTests {
         #expect(reference.target == "bechamel")
         #expect(reference.amount?.text == "400 g")
 
-        #expect(recipe.validate().map(\.kind) == [.unresolvedReference])
+        #expect(recipe.destination(of: reference) == .file("bechamel"))
+        #expect(recipe.validate().isEmpty)
         #expect(parsed.diagnostics.isEmpty)
     }
 

@@ -7,23 +7,6 @@ extension Recipe {
             .map({ Diagnostic(.repeatedGroupName, "Recipe has more than one group named '\($0)'.") })
     }
 
-    /// One warning per reference target matching no group, reported at its first occurrence.
-    func unresolvedReferences() -> [Diagnostic] {
-        var reported: Set<String> = []
-
-        return references.compactMap { reference in
-            let normalized = Normalization.normalized(reference.target)
-            guard
-                index(ofGroupNamed: reference.target) == nil,
-                reported.insert(normalized).inserted
-            else {
-                return nil
-            }
-
-            return Diagnostic(.unresolvedReference, "Reference to '\(reference.target)' matches no group.")
-        }
-    }
-
     /// One warning per cycle of groups consuming each other, reported at the first group in it.
     ///
     /// Every group in a cycle reaches itself, so reporting each would repeat one problem. The

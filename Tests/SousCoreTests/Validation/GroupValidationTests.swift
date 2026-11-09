@@ -47,52 +47,32 @@ struct GroupValidationTests {
             == [.repeatedGroupName, .repeatedGroupName])
     }
 
-    @Test
-    func reportsAReferenceThatMatchesNoGroup() throws {
-        let diagnostics = validate("## Assemble\nLayer the >bechamel> in a dish.")
-
-        #expect(diagnostics.count == 1)
-        let diagnostic = try #require(diagnostics.first)
-        #expect(diagnostic.kind == .unresolvedReference)
-        #expect(diagnostic.severity == .warning)
-        #expect(diagnostic.range == nil)
-        #expect(diagnostic.message == "Reference to 'bechamel' matches no group.")
-    }
-
     @Test(arguments: [
         "## Filling\nBrown it.\n\n## Assemble\nLayer the >filling> in a dish.",
         "## B\u{E9}chamel\nWhisk it.\n\n## Assemble\nLayer the >bechamel> in a dish.",
-        "Layer the >filling> in a dish.\n\n## Filling\nBrown it.",
-        "## sauces/rouille\nBrown it.\n\n## Assemble\nLayer the >sauces/rouille> in a dish."
+        "Layer the >filling> in a dish.\n\n## Filling\nBrown it."
     ])
     func acceptsAReferenceThatMatchesAGroup(source: String) {
         #expect(validate(source).isEmpty)
     }
 
-    @Test
-    func reportsEachUnresolvedTargetOnce() {
-        let source = """
-        ## Assemble
-        Layer the >bechamel> in a dish, then the >rouille>, then the rest of the >bechamel>.
-        """
-
-        #expect(validate(source).map(\.message) == [
-            "Reference to 'bechamel' matches no group.",
-            "Reference to 'rouille' matches no group."
-        ])
+    @Test(arguments: [
+        "## Assemble\nLayer the >bechamel> in a dish.",
+        "## Assemble\nLayer the >sauces/rouille> in a dish.",
+        "## Assemble\nLayer the >../shared/stock> in a dish.",
+        "## sauces/rouille\nBrown it.\n\n## Assemble\nLayer the >sauces/rouille> in a dish.",
+        "## Bechamel\nWhisk it.\n\n## Assemble\nLayer the >./bechamel> in a dish."
+    ])
+    func leavesAReferenceToARecipeFileUnreported(source: String) {
+        #expect(validate(source).isEmpty)
     }
 
-    @Test
-    func reportsATargetTwoReferencesShareUnderNormalizationOnce() {
-        let source = "## Assemble\nLayer the >Bechamel> in a dish, then the rest of the >bechamel>."
-
-        #expect(validate(source).map(\.message) == ["Reference to 'Bechamel' matches no group."])
-    }
-
-    @Test
-    func reportsAReferenceHoldingAPathSeparator() {
-        #expect(validate("## Assemble\nLayer the >sauces/rouille> in a dish.").map(\.kind)
-            == [.unresolvedReference])
+    @Test(arguments: [
+        "## Filling\nStir the >./filling> again.",
+        "## sauces/rouille\nStir the >sauces/rouille> again."
+    ])
+    func findsNoLoopThroughAReferenceToARecipeFile(source: String) {
+        #expect(validate(source).isEmpty)
     }
 
     @Test
@@ -202,7 +182,7 @@ struct GroupValidationTests {
         """
 
         #expect(validate(source).map(\.kind) == [
-            .repeatedYield, .zeroYield, .repeatedGroupName, .unresolvedReference, .referenceCycle
+            .repeatedYield, .zeroYield, .repeatedGroupName, .referenceCycle
         ])
     }
 
