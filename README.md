@@ -14,7 +14,7 @@ SousKit is pre-1.0. Both the format and the API may change between minor version
 
 | | |
 |---|---|
-| Swift | 6.3 |
+| Swift | 6.4 |
 | Platforms | iOS 15, macCatalyst 15, macOS 12, tvOS 15, visionOS 1, watchOS 8 |
 
 ## Installation
