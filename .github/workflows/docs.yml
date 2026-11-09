@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Swift 6.3 is required by the swift-tools-version in Package.swift.
-  XCODE_VERSION: "26.6"
+  # Swift 6.4 is required by the swift-tools-version in Package.swift.
+  XCODE_VERSION: "27.2"
   # The site is served from https://jochenbernard.github.io/souskit, so every
   # generated link needs the repository name as its base path.
   HOSTING_BASE_PATH: souskit
@@ -26,7 +26,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - name: Check out the repository
