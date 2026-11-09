@@ -45,7 +45,11 @@ enum GroupParser {
         return runs
     }
 
-    /// The steps of a run, one per paragraph separated by blank lines.
+    /// The steps of a run, one per paragraph separated by blank lines, with each line break
+    /// inside a paragraph folded into a space.
+    ///
+    /// Exactly one space per break, and none of the whitespace around it trimmed: any other join
+    /// moves the offsets `Origin` maps a diagnostic back through.
     private static func steps(
         in lines: [Substring],
         map: SourceMap,
@@ -57,7 +61,7 @@ enum GroupParser {
             guard let first = paragraph.first else { continue }
 
             steps.append(StepParser.parse(
-                paragraph.joined(separator: "\n"),
+                paragraph.joined(separator: " "),
                 origin: Origin(start: map.offset(of: first.startIndex), map: map),
                 diagnostics: &diagnostics
             ))

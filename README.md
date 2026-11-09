@@ -46,6 +46,10 @@ summarizes what SousKit reads.
 A recipe is a metadata header between `---` fences, followed by steps written as paragraphs. A
 blank line separates one step from the next.
 
+A step may be wrapped over several lines to keep them short. A line break within one is layout,
+and reads as the space it stands for, the way a Markdown paragraph does, so a span may be wrapped
+across a break as well.
+
 ```
 ---
 title: Crepes
@@ -227,8 +231,10 @@ spellings. Fixed and imprecise amounts hold still, and so do timers. Of the head
 let text = recipe.serialized()
 ```
 
-Content is preserved and incidental layout such as repeated blank lines is normalized, so
-re-reading the result yields the same recipe.
+Content is preserved and incidental layout such as repeated blank lines and the wraps inside a
+step is normalized, so re-reading the result yields the same recipe. A step longer than 120
+characters is wrapped at a space, and reads back as the one step it was. A heading and a header
+entry are written whole, whatever their length, because neither can be wrapped.
 
 ## Modules
 

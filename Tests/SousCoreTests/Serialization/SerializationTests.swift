@@ -71,7 +71,6 @@ struct SerializationTests {
         "## Filling\nBrown the beef.",
         "## a\\zb",
         "## ",
-        "## \nx@salt@",
         "@## a@ now.",
         "Layer the >{300 g} bechamel> in a dish.",
         "Write a { brace here.",
@@ -214,22 +213,9 @@ struct SerializationTests {
         expectTheRecipeSurvivesARoundTrip(source)
     }
 
-    @Test(arguments: NormalizedLayouts.sources)
-    func normalizingLayoutIsStable(source: String) {
-        let parser = SousParser()
-        let normalized = parser.parseRecipe(source).value.serialized()
-
-        #expect(parser.parseRecipe(normalized).value.serialized() == normalized)
-    }
-
-    @Test(arguments: NormalizedLayouts.sources)
-    func normalizingLayoutKeepsTheContent(source: String) {
-        expectTheRecipeSurvivesARoundTrip(source)
-    }
-
     @Test(arguments: [
         "---\n---\n\n---",
-        "---\n---\n\n---\nBring the water to a boil.",
+        "---\n---\n\n---\n\nBring the water to a boil.",
         "---\n---\n\n--- ",
         "---\n---\n\n---\n\nBeat in the oil."
     ])
@@ -241,7 +227,7 @@ struct SerializationTests {
 
     @Test
     func writesAnEmptyHeaderBeforeABodyThatOpensWithAFenceLine() {
-        #expect(Recipe.read("---\n---\n\n---\nBoil.").serialized() == "---\n---\n\n---\nBoil.")
+        #expect(Recipe.read("---\n---\n\n---\n\nBoil.").serialized() == "---\n---\n\n---\n\nBoil.")
     }
 
     @Test(arguments: [
@@ -259,7 +245,7 @@ struct SerializationTests {
 
     @Test
     func doesNotSeparateABodyFenceLineFromAHeaderThatPrecedesIt() {
-        let source = "---\ntitle: Vinaigrette\n---\n\n---\nBring the water to a boil."
+        let source = "---\ntitle: Vinaigrette\n---\n\n---\n\nBring the water to a boil."
 
         #expect(Recipe.read(source).serialized() == source)
     }

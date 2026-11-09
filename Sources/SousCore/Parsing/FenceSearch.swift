@@ -1,8 +1,8 @@
 /// Finds the brace an amount fence closes on, remembering the region already searched.
 ///
-/// Memoized: a line holding no closing brace would otherwise have every fence on it scan to the
-/// line end, which is quadratic. A search starting outside the remembered region starts over, so
-/// the answer never depends on the order the questions arrive in.
+/// Memoized: a step holding no closing brace would otherwise have every fence in it scan to the
+/// end, which is quadratic. A search starting outside the remembered region starts over, so the
+/// answer never depends on the order the questions arrive in.
 struct FenceSearch {
     private var searchedFrom = 0
     private var searchedTo = 0

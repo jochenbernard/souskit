@@ -287,7 +287,7 @@ enum StepParser {
         )
     }
 
-    /// The index of the span's closing sigil, or `nil` when the line holds none.
+    /// The index of the span's closing sigil, or `nil` when the step holds none.
     private static func closingSigil(
         _ sigil: Character,
         in characters: [Character],

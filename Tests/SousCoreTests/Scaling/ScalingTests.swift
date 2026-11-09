@@ -152,13 +152,13 @@ struct ScalingTests {
     }
 
     @Test(arguments: [
-        (source: "Mix @{200 g} flour@\nand @{1 tsp} salt@.", text: "Mix @{400 g} flour@\nand @{2 tsp} salt@."),
+        (source: "Mix @{200 g} flour@\nand @{1 tsp} salt@.", text: "Mix @{400 g} flour@ and @{2 tsp} salt@."),
         (
             source: "Mix @{200 g} flour@,\nthen rest it,\nthen bake.",
-            text: "Mix @{400 g} flour@,\nthen rest it,\nthen bake."
+            text: "Mix @{400 g} flour@, then rest it, then bake."
         )
     ])
-    func rewritesEveryLineOfAStepItChanged(source: String, text: String) throws {
+    func rewritesTheWholeOfAWrappedStepItChanged(source: String, text: String) throws {
         #expect(try Recipe.read(source).scaled(by: 2.0).steps.first?.text == text)
     }
 

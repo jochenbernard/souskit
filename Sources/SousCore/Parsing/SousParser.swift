@@ -10,7 +10,7 @@ public struct SousParser: Sendable {
     ///
     /// Parsing always succeeds. Malformed constructs are recovered as literal text and reported
     /// as diagnostics, so a recipe is always returned. A leading byte order mark is dropped, and
-    /// every line break is normalized to a line feed.
+    /// a step wrapped over several lines is read with a space where each break was.
     ///
     /// - Parameter text: The Sous source text to parse.
     /// - Returns: The parsed recipe together with any diagnostics.

@@ -68,7 +68,7 @@ struct HeaderFormTests {
 
         let parsed = SousParser().parseRecipe(source)
         #expect(parsed.value.metadata.title == "First")
-        #expect(parsed.value.steps.map(\.text) == ["Body.\n---\ntitle: Second\n---"])
+        #expect(parsed.value.steps.map(\.text) == ["Body. --- title: Second ---"])
     }
 
     @Test

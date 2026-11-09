@@ -3,7 +3,7 @@ import Testing
 
 @Suite("Mutated models")
 struct MutatedModelTests {
-    @Test(arguments: ["", " salt", "\tsalt", "a\nb", "salt\n", "a\n\nb"])
+    @Test(arguments: ["", " salt", "\tsalt", "a\n\nb"])
     func writesAnIngredientNameThatNoLongerReadsBackAsOne(name: String) throws {
         var value = Recipe.read("Add @salt@ now.")
         var ingredient = try #require(value.ingredients.first)
@@ -13,7 +13,7 @@ struct MutatedModelTests {
         #expect(value.reRead().ingredients.isEmpty)
     }
 
-    @Test(arguments: ["", " casserole", "\tcasserole", "a\nb", "casserole\n", "a\n\nb"])
+    @Test(arguments: ["", " casserole", "\tcasserole", "a\n\nb"])
     func writesACookwareNameThatNoLongerReadsBackAsOne(name: String) throws {
         var value = Recipe.read("Use a #casserole# now.")
         var cookware = try #require(value.cookware.first)
@@ -35,7 +35,7 @@ struct MutatedModelTests {
         #expect(written.steps.count == 1)
     }
 
-    @Test(arguments: ["", " 40 min", "\t40 min", "a\nb", "40 min\n", "a\n\nb"])
+    @Test(arguments: ["", " 40 min", "\t40 min", "a\n\nb"])
     func writesATimerTextThatNoLongerReadsBackAsOne(text: String) throws {
         var value = Recipe.read("Wait ~40 min~ now.")
         var timer = try #require(value.timers.first)
@@ -45,7 +45,7 @@ struct MutatedModelTests {
         #expect(value.reRead().timers.isEmpty)
     }
 
-    @Test(arguments: ["", " bechamel", "\tbechamel", "a\nb", "bechamel\n", "a\n\nb"])
+    @Test(arguments: ["", " bechamel", "\tbechamel", "a\n\nb"])
     func writesAReferenceTargetThatNoLongerReadsBackAsOne(target: String) throws {
         var value = Recipe.read("Layer the >bechamel> in a dish.")
         var reference = try #require(value.references.first)
@@ -107,14 +107,66 @@ struct MutatedModelTests {
         #expect(written.name == "salt")
     }
 
-    @Test(arguments: ["a\nb", "a\n\nb"])
-    func writesAnAmountTextHoldingALineBreakThatLeavesTheFenceUnclosed(text: String) throws {
+    @Test
+    func writesAnAmountTextHoldingAParagraphBreakThatLeavesTheFenceUnclosed() throws {
         var value = Recipe.read("Add @{200 g} salt@ now.")
         var ingredient = try #require(value.ingredients.first)
-        ingredient.amount?.text = text
+        ingredient.amount?.text = "a\n\nb"
         value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
 
         #expect(value.reRead().ingredients.isEmpty)
+    }
+
+    @Test(arguments: [(name: "a\nb", read: "a b"), (name: "salt\n", read: "salt")])
+    func writesAnIngredientNameHoldingALineBreakThatReadsBackFolded(name: String, read: String) throws {
+        var value = Recipe.read("Add @salt@ now.")
+        var ingredient = try #require(value.ingredients.first)
+        ingredient.name = name
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
+
+        #expect(value.reRead().ingredients.map(\.name) == [read])
+    }
+
+    @Test(arguments: [(name: "a\nb", read: "a b"), (name: "casserole\n", read: "casserole")])
+    func writesACookwareNameHoldingALineBreakThatReadsBackFolded(name: String, read: String) throws {
+        var value = Recipe.read("Use a #casserole# now.")
+        var cookware = try #require(value.cookware.first)
+        cookware.name = name
+        value.groups[0].steps[0].segments[1] = .cookware(cookware)
+
+        #expect(value.reRead().cookware.map(\.name) == [read])
+    }
+
+    @Test(arguments: [(text: "a\nb", read: "a b"), (text: "40 min\n", read: "40 min")])
+    func writesATimerTextHoldingALineBreakThatReadsBackFolded(text: String, read: String) throws {
+        var value = Recipe.read("Wait ~40 min~ now.")
+        var timer = try #require(value.timers.first)
+        timer.text = text
+        value.groups[0].steps[0].segments[1] = .timer(timer)
+
+        #expect(value.reRead().timers.map(\.text) == [read])
+    }
+
+    @Test(arguments: [(target: "a\nb", read: "a b"), (target: "bechamel\n", read: "bechamel")])
+    func writesAReferenceTargetHoldingALineBreakThatReadsBackFolded(target: String, read: String) throws {
+        var value = Recipe.read("Layer the >bechamel> in a dish.")
+        var reference = try #require(value.references.first)
+        reference.target = target
+        value.groups[0].steps[0].segments[1] = .reference(reference)
+
+        #expect(value.reRead().references.map(\.target) == [read])
+    }
+
+    @Test
+    func writesAnAmountTextHoldingALineBreakThatReadsBackFolded() throws {
+        var value = Recipe.read("Add @{200 g} salt@ now.")
+        var ingredient = try #require(value.ingredients.first)
+        ingredient.amount?.text = "a\nb"
+        value.groups[0].steps[0].segments[1] = .ingredient(ingredient)
+
+        let written = try #require(value.reRead().ingredients.first)
+        #expect(written.amount?.text == "a b")
+        #expect(written.name == "salt")
     }
 
     @Test
@@ -130,13 +182,13 @@ struct MutatedModelTests {
     }
 
     @Test(arguments: [
-        (name: "", groups: [nil], steps: ["## \nBrown the beef."]),
-        (name: "Filling\nMore", groups: ["Filling"], steps: ["More\nBrown the beef."]),
+        (name: "", groups: [nil], steps: ["##  Brown the beef."]),
+        (name: "Filling\nMore", groups: ["Filling"], steps: ["More Brown the beef."]),
         (name: "Filling\n## Other", groups: ["Filling", "Other"], steps: ["Brown the beef."]),
         (name: " Filling", groups: ["Filling"], steps: ["Brown the beef."]),
         (name: "Filling ", groups: ["Filling"], steps: ["Brown the beef."]),
         (name: "\tFilling", groups: ["Filling"], steps: ["Brown the beef."]),
-        (name: " ", groups: [nil], steps: ["##  \nBrown the beef."])
+        (name: " ", groups: [nil], steps: ["##   Brown the beef."])
     ])
     func writesAGroupNameThatNoLongerReadsBackAsOne(
         name: String,
