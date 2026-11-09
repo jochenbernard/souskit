@@ -14,13 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Swift 6.3 is required by the swift-tools-version in Package.swift.
-  XCODE_VERSION: "26.6"
+  # Swift 6.4 is required by the swift-tools-version in Package.swift.
+  XCODE_VERSION: "27.2"
 
 jobs:
   test:
     name: Test (macOS)
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 15
     steps:
       - name: Check out the repository
@@ -43,7 +43,7 @@ jobs:
 
   build:
     name: Build (${{ matrix.platform }})
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     strategy:
       fail-fast: false
